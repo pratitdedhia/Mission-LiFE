@@ -11,7 +11,7 @@ This document specifies the architecture, environment variables, setup instructi
 | :--- | :--- |
 | **Provider** | OpenWeatherMap (`api.openweathermap.org/data/2.5/weather`) |
 | **Environment Variable** | `VITE_OPENWEATHER_API_KEY` |
-| **Exact Feature Powered** | Real-time ambient temperature alerts, heatwave AC 26°C nudges, and rooftop solar irradiance estimations ($5.4\text{ kWh/m}^2/\text{day}$) in [`Dashboard.jsx`](file:///c:/Users/dedhi/Downloads/hackcult/src/components/Dashboard.jsx). |
+| **Exact Feature Powered** | Real-time ambient temperature alerts, heatwave AC 26°C nudges, and rooftop solar irradiance estimations (~5.4 kWh/m²/day) in [`Dashboard.jsx`](file:///c:/Users/dedhi/Downloads/hackcult/src/components/Dashboard.jsx). |
 | **Implementation** | [`src/services/weatherService.js`](file:///c:/Users/dedhi/Downloads/hackcult/src/services/weatherService.js) |
 
 ### Setup Instructions
@@ -71,15 +71,15 @@ The application enforces strict visual and textual demarcation between verified 
 
 ### Scoring Matrix & Authoritative Rules
 1. **Base Mission Points:** 30 to 80 points depending on category difficulty:
-   * *AC at 26°C*: 50 pts ($-2.4\text{ kg CO}_2$)
-   * *Rooftop Solar Feasibility*: 80 pts ($-6.0\text{ kg CO}_2$)
-   * *Peak Load Shifting (11 PM - 6 AM)*: 60 pts ($-3.2\text{ kg CO}_2$)
-   * *Cloth Shopping Bag*: 30 pts ($-0.4\text{ kg CO}_2$)
-2. **Photo Verification Bonus:** $+25\text{ bonus points}$ when citizen uploads photographic proof to Firebase Storage.
+   * *AC at 26°C*: 50 pts (-2.4 kg CO₂)
+   * *Rooftop Solar Feasibility*: 80 pts (-6.0 kg CO₂)
+   * *Peak Load Shifting (11 PM - 6 AM)*: 60 pts (-3.2 kg CO₂)
+   * *Cloth Shopping Bag*: 30 pts (-0.4 kg CO₂)
+2. **Photo Verification Bonus:** +25 bonus points when citizen uploads photographic proof to Firebase Storage.
 3. **Streak Multipliers:**
-   * 3+ Consecutive Days: $+5\%$ bonus
-   * 7+ Consecutive Days: $+10\%$ bonus (*Weekly Champion*)
-   * 21+ Consecutive Days: $+25\%$ bonus (*Habit Master*)
+   * 3+ Consecutive Days: +5% bonus
+   * 7+ Consecutive Days: +10% bonus (*Weekly Champion*)
+   * 21+ Consecutive Days: +25% bonus (*Habit Master*)
 4. **Anti-Fraud & Deduplication Protection:**
    * **Idempotency Key:** `life_claim_{userId}_{missionId}_{dateString}` prevents claiming the same mission multiple times on the same date.
    * **Daily Points Cap:** Maximum 300 points per day per user prevents scripted bot submissions.
@@ -87,7 +87,7 @@ The application enforces strict visual and textual demarcation between verified 
 
 ---
 
-## 4. 🤖 Adaptation Platform Provider Interface ($500 Compute Credits)
+## 4. 🤖 Adaptation Platform Provider Interface (500 USD Compute Credits)
 
 | Attribute | Specification |
 | :--- | :--- |
@@ -98,7 +98,7 @@ The application enforces strict visual and textual demarcation between verified 
 | **Schema Specification** | [`adaptation_dataset_schema.json`](file:///c:/Users/dedhi/Downloads/hackcult/adaptation_dataset_schema.json) |
 
 ### Platform Architecture & Fallback
-The hackathon offers $500 per participant in credits for datasets and custom model training, but provider credentials and endpoint specifics are issued during the event. To adhere to strict software engineering standards:
+The hackathon offers 500 USD per participant in credits for datasets and custom model training, but provider credentials and endpoint specifics are issued during the event. To adhere to strict software engineering standards:
 * **No Invented Endpoints:** The code cleanly defines an abstract class `AdaptationProvider` and concrete client `CustomAdaptationPlatformClient`.
 * **Deterministic Fallback Engine:** If the cloud provider is unconfigured or offline, queries are handled by `DeterministicGEDAEngine` which calculates exact rooftop solar sizing, PM Surya Ghar subsidy amounts (up to ₹78,000), and ToD tariff savings (₹9.20 vs ₹5.40/unit) with 100% accuracy.
 * **Dataset Evaluation Schema:** [`adaptation_dataset_schema.json`](file:///c:/Users/dedhi/Downloads/hackcult/adaptation_dataset_schema.json) defines the standardized schema for training custom models on Gujarat domestic energy profiles.
