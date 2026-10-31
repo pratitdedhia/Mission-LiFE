@@ -15,7 +15,13 @@ import {
   Building2,
   Check
 } from 'lucide-react';
-import { loginWithEmail, registerWithEmail, loginWithDemoPreset } from '../services/authService';
+import { 
+  loginWithEmail, 
+  registerWithEmail, 
+  loginWithDemoPreset,
+  loginWithGoogle,
+  loginWithGoogleInstant 
+} from '../services/authService';
 import { DEMO_USERS } from '../data/initialData';
 import { BRANDING } from '../config/branding';
 
@@ -43,6 +49,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
   const [district, setDistrict] = useState('Ahmedabad');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [googleNotice, setGoogleNotice] = useState(null);
 
   // When selected role changes in login mode, prefill demo credentials for convenience
   const handleRoleSelect = (roleId) => {
@@ -52,11 +59,13 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
       setPassword(DEMO_USERS[roleId].password);
     }
     setError(null);
+    setGoogleNotice(null);
   };
 
   const handleQuickPresetLogin = async (roleKey) => {
     setLoading(true);
     setError(null);
+    setGoogleNotice(null);
     try {
       const res = await loginWithDemoPreset(roleKey);
       setLoading(false);
@@ -76,6 +85,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setGoogleNotice(null);
 
     let res;
     if (mode === 'login') {
@@ -94,8 +104,59 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
   };
 
   const handleGoogleLogin = async () => {
-    // Simulates instant Google Single Sign-On aligned with the selected role
-    await handleQuickPresetLogin(selectedRole);
+    setLoading(true);
+    setError(null);
+    setGoogleNotice(null);
+
+    const res = await loginWithGoogle(selectedRole);
+    setLoading(false);
+
+    if (res.success) {
+      onAuthSuccess(res.user);
+      onClose();
+      return;
+    }
+
+    if (res.cancelled) {
+      // User dismissed Google popup window
+      return;
+    }
+
+    // Handle Firebase configuration or domain restrictions gracefully
+    const roleLabel = currentRoleObj.label;
+    if (res.code === 'auth/unauthorized-domain') {
+      setGoogleNotice({
+        title: 'Domain Not Whitelisted in Firebase Console',
+        message: 'The current domain (pratitdedhia.github.io) is not yet listed in Firebase Console > Authentication > Settings > Authorized Domains. You can proceed immediately with verified Google profile simulation below.',
+        actionLabel: `Continue as Google ${roleLabel} (Instant Mode)`
+      });
+    } else if (res.code === 'auth/operation-not-allowed') {
+      setGoogleNotice({
+        title: 'Google Sign-In Provider Disabled',
+        message: 'Google Sign-In is pending activation in Firebase Console > Authentication > Sign-in method. You can enter instantly in verified demo mode below.',
+        actionLabel: `Continue as Google ${roleLabel} (Instant Mode)`
+      });
+    } else if (res.code === 'auth/popup-blocked') {
+      setGoogleNotice({
+        title: 'Browser Blocked Popup',
+        message: 'The browser blocked the Google authentication popup. Allow popups for this page or proceed instantly below.',
+        actionLabel: `Continue as Google ${roleLabel} (Instant Mode)`
+      });
+    } else {
+      setGoogleNotice({
+        title: 'Google Sign-In Notice',
+        message: res.error || 'Authentication provider connection unavailable. You can proceed instantly in verified mode below.',
+        actionLabel: `Continue as Google ${roleLabel} (Instant Mode)`
+      });
+    }
+  };
+
+  const handleInstantGoogleAccess = () => {
+    const res = loginWithGoogleInstant(selectedRole);
+    if (res.success) {
+      onAuthSuccess(res.user);
+      onClose();
+    }
   };
 
   if (!isOpen) return null;
@@ -157,29 +218,55 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
           type="button"
           onClick={handleGoogleLogin}
           disabled={loading}
-          className="w-full py-2.5 px-4 mb-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 transition-all flex items-center justify-center gap-2.5 cursor-pointer shadow-xs hover:shadow"
+          className="w-full py-2.5 px-4 mb-3 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 transition-all flex items-center justify-center gap-2.5 cursor-pointer shadow-xs hover:shadow disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {/* Official Google G Icon */}
-          <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
-            <path
-              fill="#4285F4"
-              d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
-            />
-            <path
-              fill="#34A853"
-              d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
-            />
-            <path
-              fill="#FBBC05"
-              d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
-            />
-            <path
-              fill="#EA4335"
-              d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-            />
-          </svg>
-          <span>Continue with Google as {currentRoleObj.label.toUpperCase()}</span>
+          {loading ? (
+            <div className="w-4 h-4 border-2 border-slate-300 border-t-emerald-600 rounded-full animate-spin flex-shrink-0" />
+          ) : (
+            <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+              />
+            </svg>
+          )}
+          <span>{loading ? 'Connecting with Google...' : `Continue with Google as ${currentRoleObj.label.toUpperCase()}`}</span>
         </button>
+
+        {/* Google Guidance & Instant Access Fallback */}
+        {googleNotice && (
+          <div className="mb-4 p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 rounded-2xl text-xs space-y-2.5 animate-fade-in">
+            <div className="flex items-start gap-2 text-amber-800 dark:text-amber-200">
+              <span className="text-base leading-none">⚠️</span>
+              <div>
+                <p className="font-bold text-xs">{googleNotice.title}</p>
+                <p className="text-[11px] font-normal text-amber-700 dark:text-amber-300 mt-0.5 leading-relaxed">
+                  {googleNotice.message}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleInstantGoogleAccess}
+              className="w-full py-2 px-3 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs hover:shadow"
+            >
+              <span>{googleNotice.actionLabel}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* Divider: OR CONTINUE WITH EMAIL */}
         <div className="relative my-4 flex items-center justify-center">

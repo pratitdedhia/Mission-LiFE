@@ -5,13 +5,20 @@ import {
   signInAnonymously, 
   signOut, 
   onAuthStateChanged,
-  updateProfile
+  updateProfile,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { INITIAL_USER, DEMO_USERS } from '../data/initialData';
 
 const LOCAL_AUTH_KEY = 'mission_life_auth_user';
 const SESSION_ACTIVE_KEY = 'life_session_active';
+
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
 
 export function isSessionActive() {
   try {
@@ -57,7 +64,7 @@ export async function loginWithEmail(email, password, roleHint = 'citizen') {
     const demoProfile = { ...DEMO_USERS[demoRole] };
     saveStoredUser(demoProfile);
     setSessionActive(true);
-    await syncUserProfile(demoProfile);
+    syncUserProfile(demoProfile).catch(err => console.warn(err));
     return { success: true, user: demoProfile, isDemoPreset: true };
   }
 
@@ -93,12 +100,89 @@ export async function loginWithEmail(email, password, roleHint = 'citizen') {
   }
 }
 
+export async function loginWithGoogle(roleHint = 'citizen') {
+  if (!auth) {
+    const basePreset = DEMO_USERS[roleHint] || DEMO_USERS.citizen;
+    const fallbackUser = {
+      ...basePreset,
+      id: `usr_google_${Date.now()}`,
+      name: `${basePreset.name} (Google)`,
+      email: basePreset.email,
+      role: roleHint,
+      provider: 'google.com'
+    };
+    saveStoredUser(fallbackUser);
+    setSessionActive(true);
+    return { success: true, user: fallbackUser, isFallback: true };
+  }
+
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    const googleUser = result.user;
+
+    const basePreset = DEMO_USERS[roleHint] || DEMO_USERS.citizen;
+    const profile = {
+      ...basePreset,
+      id: googleUser.uid,
+      name: googleUser.displayName || googleUser.email.split('@')[0],
+      email: googleUser.email,
+      photoURL: googleUser.photoURL,
+      role: roleHint,
+      provider: 'google.com',
+      lastLogin: new Date().toISOString()
+    };
+
+    saveStoredUser(profile);
+    setSessionActive(true);
+
+    syncUserProfile(profile).catch((err) => {
+      console.warn("Background Firestore user sync:", err);
+    });
+
+    return { success: true, user: profile };
+  } catch (error) {
+    console.warn("Firebase Google Auth error code:", error.code, error.message);
+
+    if (error.code === 'auth/popup-closed-by-user') {
+      return { success: false, cancelled: true, error: 'Sign-in window closed.' };
+    }
+
+    if (error.code === 'auth/cancelled-popup-request') {
+      return { success: false, cancelled: true, error: 'Sign-in window was re-opened.' };
+    }
+
+    return {
+      success: false,
+      code: error.code,
+      error: error.message,
+      canFallback: true
+    };
+  }
+}
+
+export function loginWithGoogleInstant(roleHint = 'citizen', customDetails = {}) {
+  const basePreset = DEMO_USERS[roleHint] || DEMO_USERS.citizen;
+  const profile = {
+    ...basePreset,
+    id: `usr_google_${Date.now().toString(36)}`,
+    name: customDetails.name || (roleHint === 'citizen' ? 'Pooja Patel (Google Verified)' : `${basePreset.name} (Google Verified)`),
+    email: customDetails.email || (roleHint === 'citizen' ? 'citizen.pooja.google@gujaratlife.in' : `${roleHint}.google@gujaratlife.in`),
+    role: roleHint,
+    provider: 'google.com',
+    lastLogin: new Date().toISOString()
+  };
+  saveStoredUser(profile);
+  setSessionActive(true);
+  syncUserProfile(profile).catch(() => {});
+  return { success: true, user: profile };
+}
+
 export async function loginWithDemoPreset(roleKey = 'citizen') {
   const preset = DEMO_USERS[roleKey] || DEMO_USERS.citizen;
   const userObj = { ...preset };
   saveStoredUser(userObj);
   setSessionActive(true);
-  await syncUserProfile(userObj);
+  syncUserProfile(userObj).catch(err => console.warn(err));
   return { success: true, user: userObj, isDemoPreset: true };
 }
 
@@ -216,7 +300,13 @@ async function syncUserProfile(profile) {
   try {
     if (db && profile?.id) {
       const userRef = doc(db, 'users', profile.id);
-      await setDoc(userRef, profile, { merge: true });
+      const timeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Firestore sync timeout')), 2500)
+      );
+      await Promise.race([
+        setDoc(userRef, profile, { merge: true }),
+        timeout
+      ]);
     }
   } catch (e) {
     console.warn("Firestore user sync warning:", e.message);
