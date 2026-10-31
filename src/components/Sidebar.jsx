@@ -73,7 +73,7 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
   const currentRoleMeta = rolePillMap[userRole] || rolePillMap.citizen;
 
   return (
-    <aside className="w-full md:w-64 flex-shrink-0 flex md:flex-col justify-between p-3 md:p-5 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/40 backdrop-blur-sm transition-colors">
+    <aside className="w-full md:w-64 flex-shrink-0 flex md:flex-col justify-between p-3 md:p-5 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-colors shadow-xs">
       <div className="w-full">
         
         {/* Active Role Card & Switcher Button */}

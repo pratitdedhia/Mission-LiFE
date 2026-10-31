@@ -31,28 +31,13 @@ export default function Navbar({
   onOpenOnboarding,
   activeTab,
   setActiveTab,
-  onOpenLanding
+  onOpenLanding,
+  theme = 'light',
+  isDark = false,
+  toggleTheme
 }) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [isDark, setIsDark] = useState(() => {
-    return document.documentElement.classList.contains('dark') ||
-      localStorage.getItem('life_theme') === 'dark';
-  });
-
-  useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('life_theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('life_theme', 'light');
-    }
-  }, [isDark]);
-
-  const toggleTheme = () => {
-    setIsDark(prev => !prev);
-  };
 
   // Check peak hour
   const currentHour = new Date().getHours();

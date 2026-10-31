@@ -53,6 +53,31 @@ export default function App() {
   const [lang, setLang] = useState('en');
   const [toast, setToast] = useState(null);
 
+  // Unified theme management across Landing, Auth, and Dashboard
+  // Default to 'light' for a clean, professional, high-contrast institutional aesthetic
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem('life_theme');
+      return saved === 'dark' ? 'dark' : 'light';
+    } catch (e) {
+      return 'light';
+    }
+  });
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('life_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('life_theme', 'light');
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
   // Modals
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isPledgeOpen, setIsPledgeOpen] = useState(false);
@@ -238,6 +263,9 @@ export default function App() {
           onEnterAsGuest={handleLandingGuest}
           lang={lang}
           setLang={setLang}
+          theme={theme}
+          isDark={theme === 'dark'}
+          toggleTheme={toggleTheme}
         />
 
         {/* Auth Modal with Login / Register toggle */}
@@ -268,6 +296,9 @@ export default function App() {
         lang={lang}
         setLang={setLang}
         user={user}
+        theme={theme}
+        isDark={theme === 'dark'}
+        toggleTheme={toggleTheme}
         isFirebaseConnected={isFirebaseConnected}
         onOpenAuth={() => { setAuthModalMode('login'); setIsAuthOpen(true); }}
         onLogout={handleLogout}

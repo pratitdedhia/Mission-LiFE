@@ -4,7 +4,8 @@ import {
   ArrowRight, 
   ShieldCheck, 
   Zap, 
-  Sun, 
+  Sun,
+  Moon, 
   Users, 
   GraduationCap, 
   Building2, 
@@ -83,7 +84,32 @@ export default function LandingPage({
           </nav>
 
           {/* Right Action Buttons */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Theme Toggle Button */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+              title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              aria-label="Toggle Theme"
+            >
+              {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+            </button>
+
+            {/* Language Selector */}
+            <div className="relative flex items-center">
+              <select
+                value={lang}
+                onChange={(e) => setLang(e.target.value)}
+                className="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold pl-6 pr-6 py-2 rounded-xl border border-slate-200/80 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:outline-none cursor-pointer"
+              >
+                <option value="en">EN</option>
+                <option value="hi">HI</option>
+                <option value="gu">GU</option>
+                <option value="mr">MR</option>
+              </select>
+              <Globe className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
+            </div>
+
             {/* Sign In Button */}
             <button
               onClick={onOpenLogin}

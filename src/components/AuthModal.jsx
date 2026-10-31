@@ -164,7 +164,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
   const currentRoleObj = ROLES.find(r => r.id === selectedRole) || ROLES[0];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in overflow-y-auto">
       <div className="relative w-full max-w-[500px] my-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl transition-all">
         
         {/* Close Button */}
@@ -432,8 +432,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
         {/* Quick Demo Login Presets bar matching the reference image */}
         <div className="mt-5 pt-4 border-t border-slate-200 dark:border-slate-800">
           <div className="flex justify-center mb-3">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 text-white dark:bg-slate-800 text-[10px] font-bold tracking-wider font-mono uppercase">
-              <Sparkles className="w-3 h-3 text-amber-400" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-[10px] font-bold tracking-wider font-mono uppercase">
+              <Sparkles className="w-3 h-3 text-amber-500" />
               <span>⚡ Quick Demo Login Presets:</span>
             </div>
           </div>
