@@ -1,136 +1,157 @@
-# Mission LiFE Citizen Engagement Platform
+# LiFE+ : Mission LiFE Citizen Engagement Platform
 ### Gujarat Energy Development Agency (GEDA) • HackCult '26
-**Problem Statement 1 (HC26-GEDA01): Development of an Interactive "Mission LiFE" Citizen Engagement Application**
+**Problem Statement ID: HC26-GEDA01 | Track: Green Energy & Sustainability | Category: Software**
 
-[![Vite](https://img.shields.io/badge/Vite-6.1-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
-[![React](https://img.shields.io/badge/React-19.0-61DAFB?logo=react&logoColor=black)](https://react.dev/)
-[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Firebase](https://img.shields.io/badge/Firebase-v11.3-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
-[![License](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
+[![Vite](https://img.shields.io/badge/Vite-6.1-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![React](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Firebase](https://img.shields.io/badge/Firebase-v11.3-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![GEDA](https://img.shields.io/badge/GEDA-Mission%20LiFE-047857?style=for-the-badge&logo=leaf&logoColor=white)](https://geda.gujarat.gov.in/)
+
+> **Product Promise:** *“Mission LiFE turns sustainability from something citizens know about into something they do every day.”*
 
 ---
 
 ## 🌍 Executive Summary
 
-**Mission LiFE (Lifestyle for Environment)** is an India-led global mass movement to mobilise individuals for climate-friendly daily habits. While awareness is high, citizens face friction connecting macro climate targets to daily domestic behaviors.
+**Mission LiFE (Lifestyle for Environment)** is an India-led global mass movement to mobilise individuals for climate-friendly daily habits. While public awareness of climate change is high, citizens encounter substantial friction translating knowledge into daily domestic energy conservation.
 
-Developed for **Gujarat Energy Development Agency (GEDA)**, this production-ready web application operationalises Mission LiFE into an engaging, verified, community-driven digital companion. It empowers residential citizens to calculate their baseline emissions, receive real-time grid peak-hour nudges, complete micro-tasks across the **7 official Mission LiFE themes**, model **PM Surya Ghar rooftop solar** potential, verify green actions with photo evidence, and compete on state/district leaderboards.
+Developed for the **Gujarat Energy Development Agency (GEDA)**, **LiFE+** is an interactive, role-based, production-ready web application designed specifically for Gujarat's residential consumers, campus youth squads, empanelled solar installers, and state administrators. It turns abstract sustainability into a transparent, gamified behavior-change loop:
+
+$$\text{User Profile \& Baseline} \longrightarrow \text{Personalized Nudge} \longrightarrow \text{Accept Mission} \longrightarrow \text{Photo Verification} \longrightarrow \text{Points \& CO}_2 \text{ Impact} \longrightarrow \text{Community Progress}$$
 
 ---
 
-## 🏛 System Architecture
+## 👥 Role-Based Portals & Quick Demo Credentials
+
+LiFE+ features a role-based access management portal with quick one-click demo presets:
+
+| Role | Demo Identity | Email | Password | Primary Capabilities |
+| :--- | :--- | :--- | :--- | :--- |
+| **🌱 Citizen** | Pooja Patel *(Ahmedabad)* | `citizen.pooja@gujaratlife.in` | `Password123!` | Energy footprint tracker, AC 26°C challenge, rooftop solar calculator, Mission LiFE certificate |
+| **🎓 Campus Leader** | Aarav Mehta *(IIT Gandhinagar)* | `campus.aarav@iitgn.ac.in` | `Password123!` | Campus Squad Hub, Inter-Hostel AC sprint, zero-waste mess challenge, Gujarat Campus League (#1) |
+| **☀️ Solar Partner** | Rajesh Shah *(Surya Urja Solutions)* | `vendor.rajesh@suryaurjagujarat.in` | `Password123!` | GEDA Empanelled Installer Portal, live citizen rooftop leads queue, site survey booking, subsidy quotes |
+| **🏛️ State Admin** | Dr. Neha Joshi *(GEDA Energy Directorate)* | `admin.neha@geda.gujarat.gov.in` | `Password123!` | 33-district monitoring heatmap, Time-of-Day (ToD) peak grid compliance %, statewide CSV export |
+
+---
+
+## 🏛️ System Architecture
 
 ```mermaid
 flowchart TD
-    subgraph Frontend["Client Layer (React 19 + Vite + Tailwind v4)"]
-        UI[Responsive Modern Interface]
-        AuthUI[Firebase Auth Modal & Guest Demo]
-        Tracker[Personal Footprint Tracker & History]
-        Missions[7-Theme Micro-Tasks & Photo Proof]
-        SolarCalc[Rooftop Solar & Subsidy Advisor]
-        Community[Leaderboards & Peer Social Wall]
-        AICoach[LiFE AI Sustainability Companion]
-        AdminView[GEDA State Administrator Analytics]
-        PledgeCert[Mission LiFE Certificate Engine]
+    subgraph Client["Client Application (React 19 + Vite + Tailwind CSS v4)"]
+        UI["Modern Responsive UI\n(Light & Dark Mode)"]
+        AuthModal["Role-Based Auth Portal\n(Citizen / Campus / Vendor / Admin)"]
+        
+        subgraph Dashboards["Role-Tailored Portals"]
+            CitizenView["Citizen Companion View\n(Footprint, Nudges, Solar, Badges)"]
+            CampusView["Campus Youth Squad Hub\n(Inter-Hostel Sprints & League)"]
+            VendorView["Solar Partner Leads Portal\n(Surveys, Subsidy Quotes, Net-Metering)"]
+            AdminView["GEDA State Command Center\n(33 Districts, ToD Peak Load, CSV Audit)"]
+        end
+        
+        subgraph Engines["Core Application Engines"]
+            FootprintEngine["Footprint & Energy Baseline Engine"]
+            SolarEngine["Rooftop Solar & PM Surya Ghar CFA Engine"]
+            CertEngine["Verifiable Canvas Certificate Generator"]
+            AIEngine["LiFE AI Energy & Habit Coach"]
+        end
     end
 
-    subgraph Resilience["Resilient Data & Storage Abstraction"]
-        DataLayer[Resilient Client Data Service]
-        LocalCache[IndexedDB / LocalStorage Persistent Cache]
+    subgraph DataServices["Resilient Data & Sync Layer"]
+        AuthService["Authentication Service\n(Firebase Auth + Offline Fallbacks)"]
+        FirestoreService["Firestore Service\n(Live Data Sync with Local Persistence)"]
+        StorageService["Firebase Storage Service\n(Task Photo Proofs & Badges)"]
     end
 
-    subgraph FirebaseCloud["Google Firebase Cloud Services"]
-        FBAuth["Firebase Authentication\n(Email/Password, Anonymous, User Profiles)"]
-        Firestore["Cloud Firestore\n(users, footprints, feedPosts, solarInquiries, verifiedActions)"]
-        Storage["Firebase Storage\n(Task Photo Proofs, Social Feed Images)"]
-        Analytics["Firebase Analytics\n(Defensive Web Metric Tracking)"]
+    subgraph FirebaseCloud["Google Firebase Cloud Infrastructure"]
+        FBAuth["Firebase Authentication\n(Email/Password, Anonymous, Profiles)"]
+        FBDb["Cloud Firestore\n(users, footprints, solarInquiries, feedPosts)"]
+        FBStorage["Firebase Storage\n(hackcult-f9a20.firebasestorage.app)"]
+        FBHosting["Firebase Hosting\n(Global CDN Edge Distribution)"]
     end
 
-    UI --> DataLayer
-    Tracker --> DataLayer
-    Missions --> DataLayer
-    SolarCalc --> DataLayer
-    Community --> DataLayer
-    DataLayer --> FBAuth
-    DataLayer --> Firestore
-    DataLayer --> Storage
-    DataLayer --> LocalCache
+    UI --> AuthModal
+    AuthModal --> Dashboards
+    Dashboards --> Engines
+    Engines --> DataServices
+    DataServices --> FBAuth
+    DataServices --> FBDb
+    DataServices --> FBStorage
 ```
 
 ---
 
-## 🚀 Key Features
+## 🚀 Key Features End-to-End
 
-### 1. 👣 Personalised Footprint Tracker
-- **Multi-Vector Assessment**: Measures residential electricity & AC runtime, commute & fuel type, cooking gas (LPG/Induction), water consumption, and waste segregation.
-- **Improvement Over Time**: Visualizes historical trend across monthly logs, displaying verified decline in carbon footprint.
-- **State Benchmark Comparison**: Real-time delta against the Gujarat urban residential average (510 kg CO₂e/month) and India national target (< 150 kg CO₂e/month).
-- **Emissions Vector Breakdown**: Interactive stacked distribution across Energy, Transport, Gas, Water, and Waste.
+### 1. 👣 Personalized Footprint Tracker
+* **Multi-Vector Domestic Assessment:** Calculates residential electricity (kWh), air-conditioner hours, vehicle commute, LPG cylinders, water consumption, and waste segregation.
+* **Gujarat Residential Benchmark:** Measures citizen delta against the Gujarat urban average (428 kg vs. 510 kg CO₂e/month) and national targets.
+* **Vector Breakdown:** Interactive visual distribution across Energy, Transport, Cooking Gas, Water, and Waste.
+* **Editable Gujarat Localities:** Editable local data across all 33 Gujarat districts (Ahmedabad, Surat, Vadodara, Gandhinagar, Rajkot, Bhavnagar, Kutch, etc.) and major DISCOMs (UGVCL, DGVCL, MGVCL, PGVCL, Torrent Power).
 
-### 2. ⚡ Real-Time Smart Grid Peak-Hour Nudges & Micro-Tasks
-- **Gujarat DISCOM Grid Alert**: Dynamic time-of-day (ToD) indicator alerting users during evening peak hours (**18:00 – 22:00 IST**) to defer heavy loads (washing machines, EV chargers, water pumps) to prevent thermal peaker coal plant emissions.
-- **7 Mission LiFE Themes Covered**:
-  1. *Save Energy* (AC at 26°C+, phantom standby cutoff, LED retrofits)
-  2. *Save Water* (Bucket baths, low-flow aerators, leak detection)
-  3. *Reduce Single-Use Plastic* (Reusable cloth tote bags, stainless steel containers)
-  4. *Sustainable Food* (Millets / Bajra-Jowar earth plate, zero food waste)
-  5. *Waste Reduction & Composting* (Dual-bin source segregation, organic compost)
-  6. *Healthy & Green Lifestyle* (Bicycle commute under 3 km, stair climbing)
-  7. *E-Waste Management* (Authorized GEDA collection points)
-- **Photo Evidence Verification**: Allows users to upload photo proof to **Firebase Storage** (e.g. thermostat set to 26°C or cloth shopping bag) to validate habits and earn points.
+### 2. ⚡ Real-Time Smart Grid Time-of-Day (ToD) Nudges
+* **Live Grid Peak-Hour Alert:** Dynamic header indicator alerting users during peak grid hours (**18:00 – 22:00 IST**) to shift heavy loads (washing machines, EV chargers, water pumps) to prevent thermal peaker coal generation.
+* **7 Official Mission LiFE Themes:**
+  1. *Save Energy* (AC setpoint at 26°C+, phantom standby switch-off, BLDC fans).
+  2. *Save Water* (Bucket baths, tap aerators, greywater recycling).
+  3. *Reduce Single-Use Plastic* (Cloth shopping totes, refillable bottles).
+  4. *Sustainable Food Habits* (Millet meals, zero food waste).
+  5. *Waste Segregation & Composting* (Wet/dry segregation, home composting).
+  6. *Healthy & Green Lifestyle* (Bicycle commute under 3 km, taking stairs).
+  7. *E-Waste Management* (Authorised collection and drop-off points).
+* **Photo Proof Verification:** Citizens upload photo evidence to **Firebase Storage** (e.g. AC thermostat display, cloth bag) with verification notes.
 
-### 3. ☀️ Rooftop Solar Feasibility & PM Surya Ghar Subsidy Advisor
-- **Automated Sizing Engine**: Computes required kW capacity based on monthly bill (₹), consumption (kWh), and shadow-free roof area (sq. ft).
-- **Subsidies Calculator**: Central Financial Assistance (CFA) under **PM Surya Ghar: Muft Bijli Yojana** (up to ₹78,000 for 3 kW+) plus Gujarat state incentives.
-- **Financial Projections**: Net investment cost, annual bill savings (₹), and accelerated payback period (typically 3.4 years).
-- **Environmental Returns**: 25-year lifetime CO₂ offset (tonnes) and tree equivalent.
-- **Empanelled Installer Callback**: Citizen inquiry form submitted directly to Cloud Firestore with an official reference code (`GEDA-SOLAR-XXXXXX`).
+### 3. ☀️ Rooftop Solar Feasibility & PM Surya Ghar Subsidy Engine
+* **Automated Solar Sizing:** Calculates recommended kWp capacity, annual units generated, and required roof area.
+* **Financial Model & Subsidies:** Models Central Financial Assistance (CFA) under **PM Surya Ghar: Muft Bijli Yojana** (up to ₹78,000 for 3 kW+) with accelerated payback period (~3.4 years).
+* **Direct Lead Generation:** Citizens can submit an inquiry directly to Cloud Firestore with an official reference code (`GEDA-SOLAR-XXXXXX`).
 
-### 4. 🏆 Gamification, Multi-Tier Leaderboards & Social Wall
-- **Points, Badges & Tiers**: *Prakriti Mitra*, *Urja Rakshak*, *Jal Samrakshak*, *Zero-Waste Champion*, and *Solar Ambassador*.
-- **Multi-Level Leaderboards**:
-  - Gujarat Districts (Ahmedabad, Surat, Gandhinagar, Vadodara, Rajkot, etc.)
-  - Universities & Youth Squads (IIT Gandhinagar, NMIMS, PDEU, LDCE, MSU Baroda)
-  - Individual Citizens with rank and active streaks.
-- **Community Sprints**: Collective progress tracking (e.g. *Gujarat 200,000 kg CO₂ Avoided Sprint*).
-- **Community Social Wall / Feed**: Real-time peer feed of completed green actions with photos, badges, and "👏 Kudos" interaction.
+### 4. 🛠️ GEDA Empanelled Solar Partner Portal (`solar_vendor`)
+* **Dedicated Installer Dashboard:** Built for authorised Gujarat solar vendors (Surya Urja Solutions Gujarat).
+* **Live Inquiries Queue:** Instant access to citizen solar feasibility leads (`solarInquiries` Firestore collection).
+* **Site Survey Scheduler:** Book field inspection dates, time slots, and assign certified field engineers.
+* **Subsidy Quote Generator:** Automatically computes net payable amount after GEDA/MNRE CFA subsidies and sends quote updates.
+* **Net-Meter Tracker:** Manages lifecycle status from *Site Survey Pending* → *Quote Dispatched* → *Net-Meter Approved* → *Installed*.
 
-### 5. 📜 Mission LiFE Citizen Pledge & Certificate Generator
-- Built-in pledge modal where citizens make a formal commitment to sustainable living.
-- Dynamic digital certificate generator using HTML5 Canvas with the citizen's name, city, unique verification ID (`GEDA-LIFE-2026-AHM-XXXX`), and official GEDA seal, downloadable as a high-resolution PNG.
+### 5. 🎓 Campus Youth Squad Hub (`campus_leader`)
+* **Inter-Hostel AC 26°C Challenge:** Hostels compete to keep thermostats at 26°C and avoid peak-hour laundry.
+* **Zero-Waste Dining Mess Campaign:** Tracks organic food waste diverted to campus biogas plants.
+* **Campus Sprint Broadcaster:** Youth leaders broadcast new eco-challenges to 420+ student volunteers.
+* **Gujarat Inter-Campus League:** Live leaderboard ranking IIT Gandhinagar, NMIMS, PDEU, LDCE, and MSU Baroda.
 
-### 6. 🤖 AI Sustainability Coach (LiFE Companion)
-- Integrated with Adaptation AI Platform (`deepseek-v4-flash`) and equipped with a deterministic local intelligence engine.
-- Personalised context: Evaluates the citizen's actual monthly units, AC runtime, and peak footprint sources.
-- Suggests immediate savings, quantified rupee reductions, and one-click action links.
+### 6. 📜 Mission LiFE Citizen Pledge & Verifiable Certificate
+* Built-in pledge modal where citizens make a formal commitment to sustainable living.
+* Dynamic digital certificate generator rendered using HTML5 Canvas with citizen name, city, unique verification ID (`GEDA-LIFE-2026-AHM-8821`), and official seal, downloadable as a high-resolution PNG.
 
-### 7. 🏢 GEDA State Administrator View
-- Built for state energy policymakers and municipal commissioners to monitor:
-  - Aggregate statewide energy saved (GWh) and CO₂ mitigated (tonnes).
-  - District compliance with Time-of-Day (ToD) off-peak energy consumption.
-  - Rooftop solar installed capacity across Gujarat.
-  - One-click **Export State CSV Report** for regulatory reviews.
+### 7. 🏛️ GEDA State Command Center (`admin`)
+* **33-District Oversight:** Heatmap and rankings of energy savings across all Gujarat districts.
+* **Time-of-Day (ToD) Compliance:** Real-time residential peak load shift metrics.
+* **1-Click Audit Export:** Generates official CSV audit reports for GEDA and state regulatory compliance.
 
 ---
 
-## 🛠 Tech Stack
+## 🛠️ Technology Stack
 
-- **Framework**: React 19, Vite 6, Tailwind CSS v4
-- **Icons & Visuals**: Lucide React, Canvas Confetti
-- **Backend & Cloud**:
-  - **Firebase Authentication** (Modular SDK v11.3)
-  - **Cloud Firestore** (Real-time NoSQL document database)
-  - **Firebase Storage** (User photo evidence uploads)
-  - **Firebase Analytics** (Defensive initialization)
-- **Internationalization**: English (EN), Hindi (HI), Gujarati (GU), Marathi (MR)
+| Layer | Technologies |
+| :--- | :--- |
+| **Frontend Framework** | React 19, Vite 6, Modern Functional Components & Hooks |
+| **Styling & Design** | Tailwind CSS v4, Custom CSS Variables, Dark / Light Theme System |
+| **Icons & Visuals** | Lucide React, Canvas Confetti |
+| **Authentication** | Firebase Authentication (Email/Password, Anonymous Guest Auth) |
+| **Database** | Cloud Firestore (NoSQL Document Store with Offline Persistence) |
+| **Media Storage** | Firebase Storage (Photo proofs and certificates) |
+| **Analytics** | Firebase Analytics (Defensive Initialization) |
+| **Internationalization** | English (EN), Hindi (HI), Gujarati (GU), Marathi (MR) |
 
 ---
 
-## ⚙️ Firebase Setup & Credentials
+## ⚙️ Firebase Setup & Configuration
 
-The application uses the Firebase JavaScript modular SDK configured with the provided project:
+The application uses the Firebase JavaScript modular SDK (v11.3):
 
 ```ts
+// src/firebase.js
 import { initializeApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
@@ -151,53 +172,68 @@ export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
-export const analyticsPromise = isSupported().then((supported) =>
-  supported ? getAnalytics(app) : null
-);
 ```
 
-### Resilient Offline-First Data Architecture
-To ensure seamless operation during demonstrations or hackathon judging, the application implements an automatic fallback architecture:
-1. Every write and read operation interacts with live Firebase services (Auth, Firestore, Storage).
-2. If the Cloud Firestore API or Firebase Auth has not yet been toggled active in the GCP console for this project, the data layer automatically falls back to an in-memory/IndexedDB/LocalStorage sync mechanism.
-3. Once enabled in the Firebase console, the application connects to the cloud backend without requiring any code modifications!
+### Firestore Security Rules (`firestore.rules`)
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
+```
+
+### Storage Security Rules (`storage.rules`)
+```javascript
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /proofs/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+  }
+}
+```
 
 ---
 
-## 🏃 Quick Start Guide
+## 💻 Getting Started Locally
 
 ### Prerequisites
-- Node.js (v18 or higher)
-- npm or yarn
+* Node.js 18+ and npm installed
 
-### Installation
+### 1. Clone the Repository
 ```bash
-# Clone the repository
-git clone https://github.com/<your-repo>/hackcult.git
-cd hackcult
-
-# Install dependencies
-npm install
-
-# Start the Vite local development server
-npm run dev
+git clone https://github.com/pratitdedhia/Mission-LiFE.git
+cd Mission-LiFE
 ```
 
-### Production Build
+### 2. Install Dependencies
 ```bash
-# Build production bundle with optimized chunking
-npm run build
+npm install
+```
 
-# Preview production build locally
-npm run preview
+### 3. Run Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+### 4. Build for Production
+```bash
+npm run build
 ```
 
 ---
 
-## 👥 Authors & Acknowledgments
+## 📄 License
 
-- **Organization**: Gujarat Energy Development Agency (GEDA)
-- **Event**: HackCult '26
-- **Track**: Track 1: Green Energy & Sustainability (HC26-GEDA01)
-- Built with commitment to Mission LiFE principles: Mindful consumption over mindless destruction.
-
+This project is developed for the **HackCult '26 Hackathon** in alignment with the **Gujarat Energy Development Agency (GEDA)** Mission LiFE guidelines and is licensed under the [MIT License](LICENSE).
