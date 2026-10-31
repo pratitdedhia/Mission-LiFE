@@ -102,3 +102,4 @@ The hackathon offers $500 per participant in credits for datasets and custom mod
 * **No Invented Endpoints:** The code cleanly defines an abstract class `AdaptationProvider` and concrete client `CustomAdaptationPlatformClient`.
 * **Deterministic Fallback Engine:** If the cloud provider is unconfigured or offline, queries are handled by `DeterministicGEDAEngine` which calculates exact rooftop solar sizing, PM Surya Ghar subsidy amounts (up to ₹78,000), and ToD tariff savings (₹9.20 vs ₹5.40/unit) with 100% accuracy.
 * **Dataset Evaluation Schema:** [`adaptation_dataset_schema.json`](file:///c:/Users/dedhi/Downloads/hackcult/adaptation_dataset_schema.json) defines the standardized schema for training custom models on Gujarat domestic energy profiles.
+

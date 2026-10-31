@@ -187,3 +187,4 @@ export function getGoogleMapsNavigationUrl(address, name) {
   const query = encodeURIComponent(`${name}, ${address}`);
   return `https://www.google.com/maps/search/?api=1&query=${query}`;
 }
+

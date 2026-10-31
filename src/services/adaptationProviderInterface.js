@@ -225,3 +225,4 @@ export async function getActiveAdaptationProvider() {
   const client = new CustomAdaptationPlatformClient();
   return client;
 }
+

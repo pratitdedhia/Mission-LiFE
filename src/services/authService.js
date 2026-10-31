@@ -11,6 +11,25 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { INITIAL_USER, DEMO_USERS } from '../data/initialData';
 
 const LOCAL_AUTH_KEY = 'mission_life_auth_user';
+const SESSION_ACTIVE_KEY = 'life_session_active';
+
+export function isSessionActive() {
+  try {
+    return localStorage.getItem(SESSION_ACTIVE_KEY) === 'true';
+  } catch (e) {
+    return false;
+  }
+}
+
+export function setSessionActive(active) {
+  try {
+    if (active) {
+      localStorage.setItem(SESSION_ACTIVE_KEY, 'true');
+    } else {
+      localStorage.removeItem(SESSION_ACTIVE_KEY);
+    }
+  } catch (e) {}
+}
 
 export function getStoredUser() {
   try {
@@ -37,6 +56,7 @@ export async function loginWithEmail(email, password, roleHint = 'citizen') {
   if (demoRole) {
     const demoProfile = { ...DEMO_USERS[demoRole] };
     saveStoredUser(demoProfile);
+    setSessionActive(true);
     await syncUserProfile(demoProfile);
     return { success: true, user: demoProfile, isDemoPreset: true };
   }
@@ -51,6 +71,7 @@ export async function loginWithEmail(email, password, roleHint = 'citizen') {
         role: roleHint
       });
       saveStoredUser(profile);
+      setSessionActive(true);
       return { success: true, user: profile };
     }
   } catch (error) {
@@ -65,6 +86,7 @@ export async function loginWithEmail(email, password, roleHint = 'citizen') {
         role: roleHint
       };
       saveStoredUser(fallbackUser);
+      setSessionActive(true);
       return { success: true, user: fallbackUser, isFallback: true };
     }
     return { success: false, error: error.message };
@@ -75,6 +97,7 @@ export async function loginWithDemoPreset(roleKey = 'citizen') {
   const preset = DEMO_USERS[roleKey] || DEMO_USERS.citizen;
   const userObj = { ...preset };
   saveStoredUser(userObj);
+  setSessionActive(true);
   await syncUserProfile(userObj);
   return { success: true, user: userObj, isDemoPreset: true };
 }
@@ -97,6 +120,7 @@ export async function registerWithEmail(email, password, displayName, district =
       };
       await syncUserProfile(newProfile);
       saveStoredUser(newProfile);
+      setSessionActive(true);
       return { success: true, user: newProfile };
     }
   } catch (error) {
@@ -113,6 +137,7 @@ export async function registerWithEmail(email, password, displayName, district =
         joinedDate: new Date().toISOString()
       };
       saveStoredUser(fallbackUser);
+      setSessionActive(true);
       return { success: true, user: fallbackUser, isFallback: true };
     }
     return { success: false, error: error.message };
@@ -133,6 +158,7 @@ export async function loginAsGuest() {
       };
       await syncUserProfile(guestProfile);
       saveStoredUser(guestProfile);
+      setSessionActive(true);
       return { success: true, user: guestProfile };
     }
   } catch (error) {
@@ -144,6 +170,7 @@ export async function loginAsGuest() {
       isAnonymous: true
     };
     saveStoredUser(guestUser);
+    setSessionActive(true);
     return { success: true, user: guestUser, isFallback: true };
   }
 }
@@ -156,6 +183,7 @@ export async function logoutUser() {
   } catch (e) {
     console.warn("Sign out fallback error:", e);
   }
+  setSessionActive(false);
   const resetUser = INITIAL_USER;
   saveStoredUser(resetUser);
   return resetUser;

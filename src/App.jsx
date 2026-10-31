@@ -11,6 +11,7 @@ import AICoach from './components/AICoach';
 import AdminDashboard from './components/AdminDashboard';
 import SolarVendorDashboard from './components/SolarVendorDashboard';
 import CampusLeaderDashboard from './components/CampusLeaderDashboard';
+import LandingPage from './components/LandingPage';
 import AuthModal from './components/AuthModal';
 import PledgeModal from './components/PledgeModal';
 import OnboardingModal from './components/OnboardingModal';
@@ -27,12 +28,17 @@ import {
   getStoredUser, 
   saveStoredUser, 
   logoutUser, 
-  subscribeAuth 
+  subscribeAuth,
+  isSessionActive,
+  loginWithDemoPreset,
+  loginAsGuest
 } from './services/authService';
 import { recordAuthoritativeMission } from './services/gamificationEngine';
 import { Check } from 'lucide-react';
 
 export default function App() {
+  const [currentView, setCurrentView] = useState(() => isSessionActive() ? 'app' : 'landing');
+  const [authModalMode, setAuthModalMode] = useState('login');
   const [user, setUser] = useState(() => getStoredUser());
   const [community, setCommunity] = useState(() => {
     try {
@@ -184,6 +190,7 @@ export default function App() {
 
   const handleAuthSuccess = (authenticatedUser) => {
     setUser(authenticatedUser);
+    setCurrentView('app');
     showToast(`Signed in as ${authenticatedUser.name} (${authenticatedUser.roleTitle || authenticatedUser.role})`);
     
     // Automatically route to their designated primary dashboard
@@ -201,9 +208,58 @@ export default function App() {
   const handleLogout = async () => {
     const resetUser = await logoutUser();
     setUser(resetUser);
+    setCurrentView('landing');
     setActiveTab('dashboard');
-    showToast("Signed out. Switched to guest residential profile.");
+    showToast("Signed out. Returned to landing page.");
   };
+
+  const handleLandingQuickDemo = async (roleKey) => {
+    const res = await loginWithDemoPreset(roleKey);
+    if (res.success) {
+      handleAuthSuccess(res.user);
+    }
+  };
+
+  const handleLandingGuest = async () => {
+    const res = await loginAsGuest();
+    if (res.success) {
+      handleAuthSuccess(res.user);
+    }
+  };
+
+  // Dedicated Landing Page View with Login & Register
+  if (currentView === 'landing') {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+        <LandingPage
+          onOpenLogin={() => { setAuthModalMode('login'); setIsAuthOpen(true); }}
+          onOpenRegister={() => { setAuthModalMode('signup'); setIsAuthOpen(true); }}
+          onQuickDemoLogin={handleLandingQuickDemo}
+          onEnterAsGuest={handleLandingGuest}
+          lang={lang}
+          setLang={setLang}
+        />
+
+        {/* Auth Modal with Login / Register toggle */}
+        <AuthModal
+          isOpen={isAuthOpen}
+          initialMode={authModalMode}
+          onClose={() => setIsAuthOpen(false)}
+          onAuthSuccess={handleAuthSuccess}
+        />
+
+        {/* Toast */}
+        {toast && (
+          <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-800 shadow-xl text-xs font-semibold animate-fade-in">
+            <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+              <Check className="w-3.5 h-3.5" />
+            </div>
+            <span>{toast}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors selection:bg-emerald-500/20 selection:text-emerald-800 dark:selection:text-emerald-200">
@@ -213,12 +269,13 @@ export default function App() {
         setLang={setLang}
         user={user}
         isFirebaseConnected={isFirebaseConnected}
-        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenAuth={() => { setAuthModalMode('login'); setIsAuthOpen(true); }}
         onLogout={handleLogout}
         onOpenPledge={() => setIsPledgeOpen(true)}
         onOpenOnboarding={() => setIsOnboardingOpen(true)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        onOpenLanding={() => setCurrentView('landing')}
       />
 
       {/* Main Layout with Sidebar and Content Area */}
@@ -229,7 +286,8 @@ export default function App() {
           lang={lang}
           onOpenPledge={() => setIsPledgeOpen(true)}
           user={user}
-          onOpenAuth={() => setIsAuthOpen(true)}
+          onOpenAuth={() => { setAuthModalMode('login'); setIsAuthOpen(true); }}
+          onOpenLanding={() => setCurrentView('landing')}
         />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">

@@ -30,7 +30,8 @@ export default function Navbar({
   onOpenPledge,
   onOpenOnboarding,
   activeTab,
-  setActiveTab
+  setActiveTab,
+  onOpenLanding
 }) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -228,6 +229,16 @@ export default function Navbar({
                     <User className="w-4 h-4 text-violet-500" />
                     <span>Switch Role / Demo Presets</span>
                   </button>
+
+                  {onOpenLanding && (
+                    <button
+                      onClick={() => { setShowProfileMenu(false); onOpenLanding(); }}
+                      className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                    >
+                      <Leaf className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <span>Public Landing Page</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="pt-1 border-t border-slate-100 dark:border-slate-700">

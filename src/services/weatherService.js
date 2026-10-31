@@ -144,3 +144,4 @@ function cacheWeatherData(city, data) {
     // Ignore storage quota
   }
 }
+

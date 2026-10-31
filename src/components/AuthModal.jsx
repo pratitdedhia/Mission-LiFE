@@ -26,8 +26,14 @@ const ROLES = [
   { id: 'admin', label: 'State Admin', icon: '🏛️' }
 ];
 
-export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
-  const [mode, setMode] = useState('login'); // 'login' | 'signup'
+export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode = 'login' }) {
+  const [mode, setMode] = useState(initialMode); // 'login' | 'signup'
+
+  useEffect(() => {
+    if (isOpen && initialMode) {
+      setMode(initialMode);
+    }
+  }, [isOpen, initialMode]);
   const [selectedRole, setSelectedRole] = useState('citizen');
   const [email, setEmail] = useState(DEMO_USERS.citizen.email);
   const [password, setPassword] = useState(DEMO_USERS.citizen.password);

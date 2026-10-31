@@ -12,12 +12,13 @@ import {
   GraduationCap,
   Sparkles,
   ShieldCheck,
-  ChevronRight
+  ChevronRight,
+  Leaf
 } from 'lucide-react';
 import { TRANSLATIONS } from '../data/initialData';
 import { BRANDING } from '../config/branding';
 
-export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, user, onOpenAuth }) {
+export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, user, onOpenAuth, onOpenLanding }) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
   const userRole = user?.role || 'citizen';
 
@@ -124,6 +125,17 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
               </button>
             );
           })}
+
+          {onOpenLanding && (
+            <button
+              onClick={onOpenLanding}
+              className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800/60 transition-all cursor-pointer mt-1"
+              title="Return to the public landing page"
+            >
+              <Leaf className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+              <span>Public Landing Page</span>
+            </button>
+          )}
         </nav>
       </div>
 
