@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { 
-  Zap, 
-  ArrowRight, 
-  Check, 
-  Sparkles, 
-  CheckCircle2, 
-  Info, 
-  Camera, 
-  Flame, 
+import {
+  Zap,
+  ArrowRight,
+  Check,
+  Sparkles,
+  CheckCircle2,
+  Info,
+  Camera,
+  Flame,
   Award,
   TrendingDown
 } from 'lucide-react';
@@ -15,11 +15,11 @@ import confetti from 'canvas-confetti';
 import { getAdaptiveRecommendation } from '../services/recommendationEngine';
 import PhotoProofModal from './PhotoProofModal';
 
-export default function BehaviorLoopCard({ 
-  user, 
-  onAcceptMission, 
-  onCompleteMission, 
-  onNavigate 
+export default function BehaviorLoopCard({
+  user,
+  onAcceptMission,
+  onCompleteMission,
+  onNavigate
 }) {
   const [activeProofModal, setActiveProofModal] = useState(false);
   const rec = getAdaptiveRecommendation(user);
@@ -51,7 +51,7 @@ export default function BehaviorLoopCard({
 
   return (
     <div className="human-card p-6 sm:p-7 border-emerald-500/20 bg-gradient-to-br from-emerald-50/50 via-white to-slate-50 dark:from-emerald-950/20 dark:via-slate-900 dark:to-slate-900 shadow-sm relative overflow-hidden transition-all">
-      
+
       {/* Header Pill & Reward */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-2">

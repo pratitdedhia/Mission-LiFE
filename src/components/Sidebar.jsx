@@ -9,51 +9,123 @@ import {
   Building2,
   BookOpen,
   Award,
-  Sparkles
+  GraduationCap,
+  Sparkles,
+  ShieldCheck,
+  ChevronRight
 } from 'lucide-react';
 import { TRANSLATIONS } from '../data/initialData';
 import { BRANDING } from '../config/branding';
 
-export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge }) {
+export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, user, onOpenAuth }) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+  const userRole = user?.role || 'citizen';
 
-  const navItems = [
-    { id: 'dashboard', label: t.navDashboard, icon: LayoutDashboard },
-    { id: 'footprint', label: t.navFootprint, icon: Footprints },
-    { id: 'missions', label: t.navMissions, icon: CheckCircle2 },
-    { id: 'community', label: t.navCommunity, icon: Users },
-    { id: 'solar', label: t.navSolar, icon: SunMedium },
-    { id: 'directory', label: t.navDirectory, icon: BookOpen },
-    { id: 'coach', label: t.navCoach, icon: Bot },
-    { id: 'admin', label: t.navAdmin, icon: Building2 },
-  ];
+  // Base navigation items tailored by role
+  let navItems = [];
+
+  if (userRole === 'solar_vendor') {
+    navItems = [
+      { id: 'solar_vendor', label: 'Installer Leads Queue', icon: SunMedium, badge: 'Partner' },
+      { id: 'solar', label: 'Solar Rooftop Engine', icon: SunMedium },
+      { id: 'directory', label: t.navDirectory, icon: BookOpen },
+      { id: 'admin', label: 'GEDA State View', icon: Building2 },
+      { id: 'dashboard', label: 'Citizen View', icon: LayoutDashboard }
+    ];
+  } else if (userRole === 'campus_leader') {
+    navItems = [
+      { id: 'campus_leader', label: 'Campus Squad Hub', icon: GraduationCap, badge: 'Leader' },
+      { id: 'dashboard', label: t.navDashboard, icon: LayoutDashboard },
+      { id: 'missions', label: t.navMissions, icon: CheckCircle2 },
+      { id: 'community', label: 'Campus Rankings', icon: Users },
+      { id: 'coach', label: t.navCoach, icon: Bot }
+    ];
+  } else if (userRole === 'admin') {
+    navItems = [
+      { id: 'admin', label: 'GEDA Command Center', icon: Building2, badge: 'Officer' },
+      { id: 'dashboard', label: 'Citizen Metrics View', icon: LayoutDashboard },
+      { id: 'community', label: '33-District Impact', icon: Users },
+      { id: 'solar', label: 'Rooftop Pipeline', icon: SunMedium },
+      { id: 'directory', label: t.navDirectory, icon: BookOpen }
+    ];
+  } else {
+    // Default Citizen role
+    navItems = [
+      { id: 'dashboard', label: t.navDashboard, icon: LayoutDashboard },
+      { id: 'footprint', label: t.navFootprint, icon: Footprints },
+      { id: 'missions', label: t.navMissions, icon: CheckCircle2 },
+      { id: 'community', label: t.navCommunity, icon: Users },
+      { id: 'solar', label: t.navSolar, icon: SunMedium },
+      { id: 'directory', label: t.navDirectory, icon: BookOpen },
+      { id: 'coach', label: t.navCoach, icon: Bot },
+      { id: 'admin', label: t.navAdmin, icon: Building2 }
+    ];
+  }
+
+  const rolePillMap = {
+    citizen: { label: "Citizen", color: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200" },
+    campus_leader: { label: "Campus Leader", color: "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200" },
+    solar_vendor: { label: "Solar Partner", color: "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200" },
+    admin: { label: "State Admin", color: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border-slate-300" }
+  };
+
+  const currentRoleMeta = rolePillMap[userRole] || rolePillMap.citizen;
 
   return (
     <aside className="w-full md:w-64 flex-shrink-0 flex md:flex-col justify-between p-3 md:p-5 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/40 backdrop-blur-sm transition-colors">
-      <nav className="flex md:flex-col gap-1 w-full overflow-x-auto md:overflow-visible pb-1 md:pb-0">
-        <div className="hidden md:block px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 font-mono">
-          Navigation
+      <div className="w-full">
+        
+        {/* Active Role Card & Switcher Button */}
+        <div 
+          onClick={onOpenAuth}
+          className="hidden md:flex items-center justify-between p-2.5 mb-3 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/50 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 transition-colors cursor-pointer group"
+          title="Click to switch persona / demo login"
+        >
+          <div className="flex items-center gap-2 overflow-hidden">
+            <div className="w-7 h-7 rounded-lg bg-emerald-800 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+              {userRole === 'campus_leader' ? '🎓' : userRole === 'solar_vendor' ? '☀️' : userRole === 'admin' ? '🏛️' : '🌱'}
+            </div>
+            <div className="truncate">
+              <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider">Active Role</p>
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{currentRoleMeta.label}</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
         </div>
 
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                isActive
-                  ? 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 font-bold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800/60'
-              }`}
-            >
-              <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`} />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
-      </nav>
+        {/* Navigation list */}
+        <nav className="flex md:flex-col gap-1 w-full overflow-x-auto md:overflow-visible pb-1 md:pb-0">
+          <div className="hidden md:block px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 font-mono">
+            Navigation
+          </div>
+
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                  isActive
+                    ? 'bg-emerald-800 text-white font-bold shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800/60'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`} />
+                  <span>{item.label}</span>
+                </div>
+                {item.badge && (
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
 
       {/* Citizen Pledge Quick Access & GEDA Footer */}
       <div className="hidden md:block pt-5 border-t border-slate-200 dark:border-slate-800 space-y-3">

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Leaf, 
-  Globe, 
-  User, 
-  LogOut, 
-  Award, 
-  ShieldCheck, 
+import {
+  Leaf,
+  Globe,
+  User,
+  LogOut,
+  Award,
+  ShieldCheck,
   Sparkles,
   Zap,
   Building2,
@@ -14,15 +14,16 @@ import {
   Sun,
   Moon,
   Menu,
+  GraduationCap,
   X
 } from 'lucide-react';
 import { TRANSLATIONS, GRID_HOURS } from '../data/initialData';
 import { BRANDING } from '../config/branding';
 
-export default function Navbar({ 
-  lang, 
-  setLang, 
-  user, 
+export default function Navbar({
+  lang,
+  setLang,
+  user,
   isFirebaseConnected,
   onOpenAuth,
   onLogout,
@@ -34,7 +35,7 @@ export default function Navbar({
   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isDark, setIsDark] = useState(() => {
-    return document.documentElement.classList.contains('dark') || 
+    return document.documentElement.classList.contains('dark') ||
       localStorage.getItem('life_theme') === 'dark';
   });
 
@@ -59,10 +60,10 @@ export default function Navbar({
   return (
     <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
-        
+
         {/* Brand & Identity */}
-        <div 
-          onClick={() => setActiveTab('dashboard')} 
+        <div
+          onClick={() => setActiveTab('dashboard')}
           className="flex items-center gap-3 cursor-pointer group"
         >
           <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-sm shadow-emerald-600/30 group-hover:scale-105 transition-transform">
@@ -85,15 +86,14 @@ export default function Navbar({
 
         {/* Live Grid Indicator & Top Controls */}
         <div className="flex items-center gap-2 sm:gap-3">
-          
+
           {/* Smart Grid Indicator Pill */}
-          <div 
+          <div
             onClick={() => setActiveTab('dashboard')}
-            className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-colors border ${
-              isPeakHour 
-                ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/50' 
+            className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-colors border ${isPeakHour
+                ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/50'
                 : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/50'
-            }`}
+              }`}
             title="Gujarat DISCOM Time-of-Day Tariff Status"
           >
             <Zap className="w-3.5 h-3.5" />
@@ -140,25 +140,35 @@ export default function Navbar({
           <div className="relative">
             <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
-              className="flex items-center gap-2 p-1 sm:px-3 sm:py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-colors cursor-pointer"
+              className="flex items-center gap-2 p-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-colors cursor-pointer"
             >
-              <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold">
-                {user.name?.[0] || 'C'}
+              <div className="w-6 h-6 rounded-full bg-emerald-700 text-white flex items-center justify-center text-xs font-bold">
+                {user.role === 'campus_leader' ? '🎓' : user.role === 'solar_vendor' ? '☀️' : user.role === 'admin' ? '🏛️' : (user.name?.[0] || 'C')}
               </div>
-              <span className="text-xs font-medium text-slate-800 dark:text-slate-200 hidden sm:inline max-w-[100px] truncate">
-                {user.name}
-              </span>
+              <div className="hidden sm:flex flex-col text-left leading-tight">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 max-w-[110px] truncate">
+                  {user.name}
+                </span>
+                <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold truncate">
+                  {user.roleTitle || user.role || 'Citizen'}
+                </span>
+              </div>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
             </button>
 
             {/* Dropdown Menu */}
             {showProfileMenu && (
-              <div 
+              <div
                 className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-2 z-50 text-xs animate-fade-in"
                 onMouseLeave={() => setShowProfileMenu(false)}
               >
                 <div className="px-3 py-2.5 border-b border-slate-100 dark:border-slate-700">
-                  <p className="font-bold text-slate-900 dark:text-white text-sm">{user.name}</p>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{user.name}</p>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      {user.role || 'citizen'}
+                    </span>
+                  </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{user.email || 'citizen@missionlife.in'}</p>
                   <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 mt-1">
                     <span>📍</span>
@@ -167,6 +177,26 @@ export default function Navbar({
                 </div>
 
                 <div className="py-1">
+                  {user.role === 'solar_vendor' && (
+                    <button
+                      onClick={() => { setShowProfileMenu(false); setActiveTab('solar_vendor'); }}
+                      className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                    >
+                      <Sun className="w-4 h-4 text-amber-500" />
+                      <span>Empanelled Solar Leads</span>
+                    </button>
+                  )}
+
+                  {user.role === 'campus_leader' && (
+                    <button
+                      onClick={() => { setShowProfileMenu(false); setActiveTab('campus_leader'); }}
+                      className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                    >
+                      <GraduationCap className="w-4 h-4 text-blue-500" />
+                      <span>Campus Youth Squad Hub</span>
+                    </button>
+                  )}
+
                   <button
                     onClick={() => { setShowProfileMenu(false); onOpenOnboarding(); }}
                     className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
@@ -180,7 +210,7 @@ export default function Navbar({
                     className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
                   >
                     <Award className="w-4 h-4 text-amber-500" />
-                    <span>View Mission LiFE Certificate</span>
+                    <span>Mission LiFE Certificate</span>
                   </button>
 
                   <button
@@ -196,7 +226,7 @@ export default function Navbar({
                     className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
                   >
                     <User className="w-4 h-4 text-violet-500" />
-                    <span>Account Profile & Login</span>
+                    <span>Switch Role / Demo Presets</span>
                   </button>
                 </div>
 
@@ -206,7 +236,7 @@ export default function Navbar({
                     className="w-full text-left px-3 py-2 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl flex items-center gap-2.5 text-rose-600 dark:text-rose-400 transition-colors cursor-pointer"
                   >
                     <LogOut className="w-4 h-4" />
-                    <span>Switch Profile / Sign Out</span>
+                    <span>Sign Out</span>
                   </button>
                 </div>
               </div>

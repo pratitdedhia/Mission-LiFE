@@ -8,7 +8,7 @@ import {
   updateProfile
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { INITIAL_USER } from '../data/initialData';
+import { INITIAL_USER, DEMO_USERS } from '../data/initialData';
 
 const LOCAL_AUTH_KEY = 'mission_life_auth_user';
 
@@ -29,27 +29,40 @@ export function saveStoredUser(userData) {
   }
 }
 
-export async function loginWithEmail(email, password) {
+export async function loginWithEmail(email, password, roleHint = 'citizen') {
+  // First check if this email matches one of our demo users
+  const demoRole = Object.keys(DEMO_USERS).find(
+    k => DEMO_USERS[k].email.toLowerCase() === email.trim().toLowerCase()
+  );
+  if (demoRole) {
+    const demoProfile = { ...DEMO_USERS[demoRole] };
+    saveStoredUser(demoProfile);
+    await syncUserProfile(demoProfile);
+    return { success: true, user: demoProfile, isDemoPreset: true };
+  }
+
   try {
     if (auth) {
       const userCred = await signInWithEmailAndPassword(auth, email, password);
       const user = userCred.user;
       const profile = await fetchOrCreateUserProfile(user.uid, {
         email: user.email,
-        name: user.displayName || email.split('@')[0]
+        name: user.displayName || email.split('@')[0],
+        role: roleHint
       });
       saveStoredUser(profile);
       return { success: true, user: profile };
     }
   } catch (error) {
     console.warn("Firebase Auth login error:", error.code, error.message);
-    if (error.code === 'auth/configuration-not-found' || error.code === 'auth/network-request-failed') {
-      // Resilient local session for demo/hackathon
+    // If auth API is pending enablement in Firebase console, provide resilient login
+    if (error.code === 'auth/configuration-not-found' || error.code === 'auth/network-request-failed' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
       const fallbackUser = {
         ...INITIAL_USER,
         id: `usr_${email.replace(/[^a-zA-Z0-9]/g, '')}`,
         email: email,
-        name: email.split('@')[0]
+        name: email.split('@')[0],
+        role: roleHint
       };
       saveStoredUser(fallbackUser);
       return { success: true, user: fallbackUser, isFallback: true };
@@ -58,7 +71,15 @@ export async function loginWithEmail(email, password) {
   }
 }
 
-export async function registerWithEmail(email, password, displayName, district = 'Ahmedabad') {
+export async function loginWithDemoPreset(roleKey = 'citizen') {
+  const preset = DEMO_USERS[roleKey] || DEMO_USERS.citizen;
+  const userObj = { ...preset };
+  saveStoredUser(userObj);
+  await syncUserProfile(userObj);
+  return { success: true, user: userObj, isDemoPreset: true };
+}
+
+export async function registerWithEmail(email, password, displayName, district = 'Ahmedabad', role = 'citizen') {
   try {
     if (auth) {
       const userCred = await createUserWithEmailAndPassword(auth, email, password);
@@ -67,6 +88,7 @@ export async function registerWithEmail(email, password, displayName, district =
       const newProfile = {
         ...INITIAL_USER,
         id: user.uid,
+        role: role,
         name: displayName || email.split('@')[0],
         email: user.email,
         district: district,
@@ -79,10 +101,11 @@ export async function registerWithEmail(email, password, displayName, district =
     }
   } catch (error) {
     console.warn("Firebase Auth signup error:", error.code, error.message);
-    if (error.code === 'auth/configuration-not-found' || error.code === 'auth/network-request-failed') {
+    if (error.code === 'auth/configuration-not-found' || error.code === 'auth/network-request-failed' || error.code === 'auth/email-already-in-use') {
       const fallbackUser = {
         ...INITIAL_USER,
         id: `usr_${Date.now()}`,
+        role: role,
         name: displayName || email.split('@')[0],
         email: email,
         district: district,

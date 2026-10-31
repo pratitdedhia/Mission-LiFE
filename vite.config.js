@@ -8,14 +8,6 @@ export default defineConfig({
     react(),
     tailwindcss()
   ],
-  server: {
-    proxy: {
-      '/api/adaption': {
-        target: 'http://127.0.0.1:5001',
-        changeOrigin: true,
-      }
-    }
-  },
   build: {
     chunkSizeWarningLimit: 1200,
     rollupOptions: {

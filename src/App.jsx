@@ -9,6 +9,8 @@ import SolarAdvisor from './components/SolarAdvisor';
 import GreenDirectory from './components/GreenDirectory';
 import AICoach from './components/AICoach';
 import AdminDashboard from './components/AdminDashboard';
+import SolarVendorDashboard from './components/SolarVendorDashboard';
+import CampusLeaderDashboard from './components/CampusLeaderDashboard';
 import AuthModal from './components/AuthModal';
 import PledgeModal from './components/PledgeModal';
 import OnboardingModal from './components/OnboardingModal';
@@ -164,13 +166,25 @@ export default function App() {
 
   const handleAuthSuccess = (authenticatedUser) => {
     setUser(authenticatedUser);
-    showToast(`Signed in as ${authenticatedUser.name}`);
+    showToast(`Signed in as ${authenticatedUser.name} (${authenticatedUser.roleTitle || authenticatedUser.role})`);
+    
+    // Automatically route to their designated primary dashboard
+    if (authenticatedUser.role === 'solar_vendor') {
+      setActiveTab('solar_vendor');
+    } else if (authenticatedUser.role === 'campus_leader') {
+      setActiveTab('campus_leader');
+    } else if (authenticatedUser.role === 'admin') {
+      setActiveTab('admin');
+    } else {
+      setActiveTab('dashboard');
+    }
   };
 
   const handleLogout = async () => {
     const resetUser = await logoutUser();
     setUser(resetUser);
-    showToast("Signed out. Using local guest demo profile.");
+    setActiveTab('dashboard');
+    showToast("Signed out. Switched to guest residential profile.");
   };
 
   return (
@@ -196,6 +210,8 @@ export default function App() {
           setActiveTab={setActiveTab}
           lang={lang}
           onOpenPledge={() => setIsPledgeOpen(true)}
+          user={user}
+          onOpenAuth={() => setIsAuthOpen(true)}
         />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
@@ -261,6 +277,19 @@ export default function App() {
           {activeTab === 'admin' && (
             <AdminDashboard
               community={community}
+            />
+          )}
+
+          {activeTab === 'solar_vendor' && (
+            <SolarVendorDashboard
+              user={user}
+            />
+          )}
+
+          {activeTab === 'campus_leader' && (
+            <CampusLeaderDashboard
+              user={user}
+              onCompleteMission={handleCompleteMission}
             />
           )}
         </main>
