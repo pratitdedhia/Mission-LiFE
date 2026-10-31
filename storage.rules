@@ -1,14 +1,36 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /proofs/{userId}/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.resource.size < 10 * 1024 * 1024
-                   && request.resource.contentType.matches('image/.*');
+    
+    function isAuthenticated() {
+      return request.auth != null;
     }
-    match /{allPaths=**} {
-      allow read, write: if true;
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidImage() {
+      return request.resource.size < 5 * 1024 * 1024 // 5 MB max
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+
+    // Bill uploads for OCR
+    match /bills/{userId}/{fileName} {
+      allow read: if isOwner(userId) || request.auth.token.role == 'admin';
+      allow write: if isOwner(userId) && isValidImage();
+    }
+
+    // Task proof photographic evidence
+    match /task_proofs/{userId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId) && isValidImage();
+    }
+
+    // Public avatars and certificates
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth.token.role == 'admin';
     }
   }
 }
-

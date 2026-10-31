@@ -20,15 +20,16 @@ import {
   Thermometer,
   RefreshCw
 } from 'lucide-react';
-import { TRANSLATIONS, GRID_HOURS } from '../data/initialData';
+import { useTranslation } from 'react-i18next';
+import { GRID_HOURS } from '../data/initialData';
 import { BRANDING } from '../config/branding';
 import BehaviorLoopCard from './BehaviorLoopCard';
 import { getCityWeather } from '../services/weatherService';
 
 export default function Dashboard({ 
-  user, 
-  community, 
-  lang, 
+  user = {}, 
+  community = {}, 
+  lang = 'en', 
   onAcceptMission, 
   onCompleteMission, 
   onNavigate, 
@@ -36,7 +37,7 @@ export default function Dashboard({
   onOpenPledge, 
   onOpenOnboarding 
 }) {
-  const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+  const { t } = useTranslation();
   const [weatherData, setWeatherData] = useState(null);
   const [loadingWeather, setLoadingWeather] = useState(false);
 
@@ -164,7 +165,7 @@ export default function Dashboard({
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            {t.goodEvening}, {user.name}
+            {t('dashboard.goodEvening', 'Good evening')}, {user.name}
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
             {BRANDING.promise}

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   Leaf, 
   ArrowRight, 
@@ -31,12 +32,20 @@ export default function LandingPage({
   onOpenRegister, 
   onQuickDemoLogin, 
   onEnterAsGuest,
-  lang,
+  lang = 'en',
   setLang,
   isDark,
   toggleTheme
 }) {
+  const { t, i18n } = useTranslation();
   const [selectedDemoRole, setSelectedDemoRole] = useState('citizen');
+
+  const handleLanguageChange = (newLang) => {
+    if (setLang) setLang(newLang);
+    if (i18n && i18n.changeLanguage) {
+      i18n.changeLanguage(newLang);
+    }
+  };
 
   const THEMES_PREVIEW = [
     { title: "Save Energy", icon: Zap, desc: "AC at 26°C, ToD off-peak washing, and phantom standby cutoff.", color: "text-amber-500 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900" },
@@ -99,7 +108,7 @@ export default function LandingPage({
             <div className="relative flex items-center">
               <select
                 value={lang}
-                onChange={(e) => setLang(e.target.value)}
+                onChange={(e) => handleLanguageChange(e.target.value)}
                 className="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold pl-6 pr-6 py-2 rounded-xl border border-slate-200/80 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:outline-none cursor-pointer"
               >
                 <option value="en">EN</option>

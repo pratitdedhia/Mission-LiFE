@@ -1,8 +1,8 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getStorage, connectStorageEmulator } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAFOm7HLfYxob_v2CWH6urwCgs6LqqJrtQ",
@@ -18,6 +18,23 @@ export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+
+// Connect to Firebase Emulator Suite if configured
+if (import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true') {
+  try {
+    const authUrl = import.meta.env.VITE_EMULATOR_AUTH_URL || 'http://localhost:9099';
+    const host = import.meta.env.VITE_EMULATOR_FIRESTORE_HOST || 'localhost';
+    const firestorePort = Number(import.meta.env.VITE_EMULATOR_FIRESTORE_PORT) || 8080;
+    const storagePort = Number(import.meta.env.VITE_EMULATOR_STORAGE_PORT) || 9199;
+
+    connectAuthEmulator(auth, authUrl, { disableWarnings: true });
+    connectFirestoreEmulator(db, host, firestorePort);
+    connectStorageEmulator(storage, host, storagePort);
+    console.log('⚡ Connected to local Firebase Emulator Suite (Auth, Firestore, Storage)');
+  } catch (e) {
+    console.warn('Firebase emulator connection warning:', e);
+  }
+}
 
 // Analytics must be initialized defensively because it is not supported
 // in every browser or local development environment.

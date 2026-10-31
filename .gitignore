@@ -7,9 +7,20 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Dependencies
+node_modules/
+functions/node_modules/
+
+# Build artifacts
+dist/
+dist-ssr/
+functions/lib/
+*.tsbuildinfo
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
 *.local
 
 # Editor directories and files
@@ -25,4 +36,6 @@ dist-ssr
 
 # Firebase
 .firebase/
-
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*

@@ -1,0 +1,164 @@
+{
+  "app": {
+    "title": "LiFE Loop",
+    "subtitle": "Gujarat Energy Development Agency (GEDA) • Mission LiFE",
+    "promise": "Turning climate awareness into daily domestic habits across Gujarat."
+  },
+  "nav": {
+    "dashboard": "Bento Dashboard",
+    "footprint": "Footprint Tracker",
+    "missions": "7 LiFE Themes",
+    "community": "Community & League",
+    "solar": "Rooftop Solar Hub",
+    "directory": "GEDA Vendors Map",
+    "coach": "AI LiFE Coach",
+    "admin": "GEDA Command Center"
+  },
+  "auth": {
+    "loginTitle": "Access LiFE Loop Portal",
+    "loginSubtitle": "Sign in with phone OTP or Google Single Sign-On",
+    "continueGoogle": "Continue with Google",
+    "phoneLabel": "Mobile Number",
+    "phonePlaceholder": "+91 98765 43210",
+    "otpLabel": "6-Digit Verification Code",
+    "sendOtp": "Send Verification Code",
+    "verifyOtp": "Verify & Enter",
+    "citizenRole": "Residential Citizen",
+    "adminRole": "State Administrator",
+    "quickDemoPresets": "One-Click Evaluation Presets",
+    "instantAccess": "Continue in Instant Verified Mode"
+  },
+  "onboarding": {
+    "title": "Establish Your Domestic Baseline",
+    "subtitle": "Calculate your household carbon baseline in under 30 seconds.",
+    "step1": "Household Profile",
+    "step2": "Scan Electricity Bill",
+    "step3": "Review Verified Breakdown",
+    "district": "Gujarat District",
+    "discom": "Electricity DISCOM",
+    "occupants": "Household Occupants",
+    "acCount": "Air Conditioners",
+    "uploadBill": "Upload Electricity Bill Photo (JPG/PNG)",
+    "ocrAnalyzing": "Gemini Vision analyzing billing period & kWh...",
+    "manualEntryFallback": "Or enter units manually",
+    "unitsPlaceholder": "e.g. 280 kWh",
+    "billAmountPlaceholder": "e.g. ₹2,120",
+    "confirmBaseline": "Save Verified Baseline →"
+  },
+  "dashboard": {
+    "monthlyFootprint": "Monthly Footprint",
+    "deltaBaseline": "vs Baseline",
+    "treesEquivalent": "Trees Needed to Offset",
+    "kmAvoided": "Car Km Equivalent",
+    "inrSaved": "Estimated Tariff Savings",
+    "gridStatus": "Gujarat Grid ToD Tariff Window",
+    "peakActive": "🔴 Peak Grid Window (6:00 PM – 10:00 PM IST)",
+    "offPeakActive": "🟢 Green Off-Peak Window Active",
+    "todNudge": "Defer heavy appliances until after 10 PM to avoid thermal peaker rates.",
+    "climateSolarIndex": "Live Solar Irradiance Index"
+  },
+  "nudges": {
+    "inboxTitle": "Contextual Energy Nudges",
+    "accept": "Accept Nudge",
+    "dismiss": "Dismiss",
+    "accepted": "Nudge Accepted! -{{kwh}} kWh estimated impact",
+    "peakHour": {
+      "headline": "Peak Grid Surcharge Approaching (6 PM - 10 PM)",
+      "body": "Shift washing machine and EV charging to off-peak hours to save up to 25% on your DISCOM bill."
+    },
+    "heatwave": {
+      "headline": "Heatwave AC Recommendation",
+      "body": "Set room temperature to 24°C instead of 18°C. Every 1°C increase saves 6% power consumption."
+    }
+  },
+  "tasks": {
+    "title": "7 Mission LiFE Action Catalog",
+    "filterAll": "All Themes",
+    "uploadProof": "Upload Photo Proof (+25 pts bonus)",
+    "recordAction": "Record Action",
+    "completedToday": "Completed Today",
+    "ac24": {
+      "title": "Set Domestic AC to 24°C",
+      "desc": "Run air conditioner at Bureau of Energy Efficiency (BEE) recommended 24°C."
+    },
+    "peakShift": {
+      "title": "Shift Heavy Load to Off-Peak (Post 10 PM)",
+      "desc": "Run washing machine or recharge EV battery during green off-peak grid hours."
+    },
+    "solarCalc": {
+      "title": "Evaluate Rooftop Solar Potential",
+      "desc": "Calculate annual generation and PM Surya Ghar subsidy eligibility for your home."
+    },
+    "bucketBath": {
+      "title": "Bucket Bath Over Shower",
+      "desc": "Conserve ~65 liters of pumped municipal water by using a standard bucket."
+    },
+    "clothBag": {
+      "title": "Carry Reusable Cloth Shopping Tote",
+      "desc": "Eliminate virgin polybags during local grocery shopping."
+    },
+    "milletThali": {
+      "title": "Adopt Gujarat Millet Diet (Bajra/Jowar)",
+      "desc": "Incorporate water-efficient, drought-resilient millets into your meal."
+    },
+    "wasteSeg": {
+      "title": "Segregate Wet & Dry Kitchen Waste",
+      "desc": "Keep organic food scraps separate for municipal composting."
+    },
+    "walkShort": {
+      "title": "Walk / Cycle for Short Trips (<2 km)",
+      "desc": "Avoid petrol vehicle combustion for neighborhood errands."
+    },
+    "ewasteHub": {
+      "title": "Deposit E-Waste at GEDA Collection Point",
+      "desc": "Hand over retired lithium cells, cords, and electronics for recycling."
+    }
+  },
+  "solar": {
+    "title": "Rooftop Solar & PM Surya Ghar Advisor",
+    "subtitle": "Grounded in official MNRE benchmark rates and GEDA net-metering regulations.",
+    "monthlyBill": "Average Monthly Bill (₹)",
+    "roofArea": "Available Shadow-Free Roof Area (sq. ft.)",
+    "calculate": "Calculate Feasibility",
+    "recommendedSize": "Recommended Capacity",
+    "annualYield": "Annual Solar Generation",
+    "subsidyAmount": "PM Surya Ghar Subsidy",
+    "netInvestment": "Net Payable Investment",
+    "annualSavings": "Annual Energy Savings",
+    "paybackYears": "Simple Payback Period",
+    "co2Offset": "25-Year Lifetime CO₂ Offset",
+    "requestQuote": "Request Site Survey & Official Subsidy Quote"
+  },
+  "vendors": {
+    "mapTitle": "GEDA Empanelled Solar Installers",
+    "verifiedBadge": "GEDA Certified Installer",
+    "projects": "Projects Executed",
+    "contact": "Contact Installer",
+    "requestSurvey": "Book Site Survey"
+  },
+  "gamification": {
+    "points": "LiFE Points",
+    "streak": "Daily Streak",
+    "level": "Level",
+    "badgesUnlocked": "Badges Earned",
+    "leaderboardTitle": "Gujarat State Impact League",
+    "rank": "Rank",
+    "citizen": "Citizen",
+    "co2Avoided": "CO₂ Avoided",
+    "rewardsTitle": "Citizen Rewards Catalog",
+    "redeem": "Redeem Voucher",
+    "pointsNeeded": "Points Needed"
+  },
+  "admin": {
+    "title": "GEDA State Monitoring Command Center",
+    "subtitle": "Real-time state overview across 33 Gujarat districts",
+    "totalAvoided": "Total Statewide CO₂ Avoided",
+    "activeCitizens": "Active Participating Citizens",
+    "peakCompliance": "Peak Grid Compliance Rate",
+    "solarLeadsGenerated": "Rooftop Solar Pipeline",
+    "exportCsv": "Export Statewide Audit CSV",
+    "broadcastNudge": "Broadcast District Emergency Nudge",
+    "verificationQueue": "Photo Proof Audit Queue"
+  }
+}
+

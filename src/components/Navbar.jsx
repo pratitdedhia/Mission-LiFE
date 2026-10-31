@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Leaf,
   Globe,
@@ -17,11 +18,11 @@ import {
   GraduationCap,
   X
 } from 'lucide-react';
-import { TRANSLATIONS, GRID_HOURS } from '../data/initialData';
+import { GRID_HOURS } from '../data/initialData';
 import { BRANDING } from '../config/branding';
 
 export default function Navbar({
-  lang,
+  lang = 'en',
   setLang,
   user,
   isFirebaseConnected,
@@ -36,8 +37,15 @@ export default function Navbar({
   isDark = false,
   toggleTheme
 }) {
-  const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+  const { t, i18n } = useTranslation();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  const handleLanguageChange = (newLang) => {
+    if (setLang) setLang(newLang);
+    if (i18n && i18n.changeLanguage) {
+      i18n.changeLanguage(newLang);
+    }
+  };
 
   // Check peak hour
   const currentHour = new Date().getHours();
@@ -111,7 +119,7 @@ export default function Navbar({
           <div className="relative flex items-center">
             <select
               value={lang}
-              onChange={(e) => setLang(e.target.value)}
+              onChange={(e) => handleLanguageChange(e.target.value)}
               className="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold pl-6 pr-6 py-2 rounded-xl border border-slate-200/80 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:outline-none cursor-pointer"
             >
               <option value="en">EN</option>
