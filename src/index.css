@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #0c0d0e;
+    color: #e4e4e7;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Minimalist container & card styles - no heavy neon, no glow */
+.card-minimal {
+  background-color: #121315;
+  border: 1px solid #232529;
+}
+
+.card-minimal:hover {
+  border-color: #32353b;
+}
+
+.card-subtle {
+  background-color: #17181c;
+  border: 1px solid #26292f;
+}
+
+/* Minimal input slider styling */
+input[type="range"] {
+  accent-color: #10b981;
+}
+
+/* Minimal custom scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
