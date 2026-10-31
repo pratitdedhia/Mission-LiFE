@@ -1,46 +1,82 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
+  :root {
+    --bg-page: #f8fafc;
+    --bg-card: #ffffff;
+    --bg-card-subtle: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #64748b;
+    --border-subtle: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --accent-emerald: #10b981;
+    --accent-emerald-subtle: #ecfdf5;
+  }
+
+  .dark {
+    --bg-page: #0b0f19;
+    --bg-card: #111827;
+    --bg-card-subtle: #1e293b;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --border-subtle: #1e293b;
+    --border-strong: #334155;
+    --accent-emerald: #10b981;
+    --accent-emerald-subtle: rgba(16, 185, 129, 0.12);
+  }
+
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background-color: #0c0d0e;
-    color: #e4e4e7;
-    letter-spacing: -0.01em;
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    letter-spacing: -0.012em;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 }
 
-/* Minimalist container & card styles - no heavy neon, no glow */
-.card-minimal {
-  background-color: #121315;
-  border: 1px solid #232529;
+/* Polished Card Styles */
+.human-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.card-minimal:hover {
-  border-color: #32353b;
+.human-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
 }
 
-.card-subtle {
-  background-color: #17181c;
-  border: 1px solid #26292f;
+.human-subtle {
+  background-color: var(--bg-card-subtle);
+  border: 1px solid var(--border-subtle);
 }
 
-/* Minimal input slider styling */
+/* Custom interactive input range */
 input[type="range"] {
   accent-color: #10b981;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--border-subtle);
 }
 
-/* Minimal custom scrollbar */
+/* Smooth custom scrollbars */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: var(--border-strong);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: var(--text-muted);
 }

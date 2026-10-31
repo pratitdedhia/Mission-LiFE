@@ -125,3 +125,4 @@ export function getAdaptiveRecommendation(user) {
     isAccepted: active.has('light_saver')
   };
 }
+

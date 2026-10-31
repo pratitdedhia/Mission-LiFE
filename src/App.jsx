@@ -53,8 +53,7 @@ export default function App() {
   useEffect(() => {
     const hasBaseline = localStorage.getItem('life_user_has_baseline');
     if (!hasBaseline && !user.hasCompletedOnboarding) {
-      // Delay onboarding prompt slightly for smooth appearance
-      const timer = setTimeout(() => setIsOnboardingOpen(true), 1200);
+      const timer = setTimeout(() => setIsOnboardingOpen(true), 1000);
       return () => clearTimeout(timer);
     }
   }, []);
@@ -175,7 +174,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0c0d0e] text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors selection:bg-emerald-500/20 selection:text-emerald-800 dark:selection:text-emerald-200">
       {/* Top Navbar */}
       <Navbar
         lang={lang}
@@ -292,8 +291,8 @@ export default function App() {
 
       {/* Toast Notification */}
       {toast && (
-        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-[#141519] text-zinc-200 border border-[#2a2c35] shadow-2xl text-xs font-medium animate-fade-in">
-          <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0">
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-800 shadow-xl text-xs font-semibold animate-fade-in">
+          <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
             <Check className="w-3.5 h-3.5" />
           </div>
           <span>{toast}</span>

@@ -43,3 +43,4 @@ export const BRANDING = {
     communityData: "Community aggregate impact includes baseline demonstration metrics for evaluation purposes."
   }
 };
+

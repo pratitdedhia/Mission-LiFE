@@ -101,3 +101,4 @@ export function saveCustomLocality(cityName, newLocality) {
   } catch (e) {}
   return current;
 }
+
