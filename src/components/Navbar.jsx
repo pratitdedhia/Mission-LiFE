@@ -9,9 +9,11 @@ import {
   Sparkles,
   Zap,
   Building2,
-  ChevronDown
+  ChevronDown,
+  Edit3
 } from 'lucide-react';
 import { TRANSLATIONS, GRID_HOURS } from '../data/initialData';
+import { BRANDING } from '../config/branding';
 
 export default function Navbar({ 
   lang, 
@@ -21,6 +23,7 @@ export default function Navbar({
   onOpenAuth,
   onLogout,
   onOpenPledge,
+  onOpenOnboarding,
   activeTab,
   setActiveTab
 }) {
@@ -44,15 +47,15 @@ export default function Navbar({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-zinc-100 tracking-tight">
-                Mission LiFE
+              <span className="text-base font-extrabold text-zinc-100 tracking-tight">
+                {BRANDING.name}
               </span>
               <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800/60">
-                GEDA
+                {BRANDING.orgShort}
               </span>
             </div>
-            <p className="text-[11px] text-zinc-400 hidden sm:block">
-              {t.tagline}
+            <p className="text-[11px] text-zinc-400 hidden sm:block truncate max-w-sm">
+              {BRANDING.shortPromise}
             </p>
           </div>
         </div>
@@ -133,24 +136,32 @@ export default function Navbar({
                   <p className="font-semibold text-zinc-100">{user.name}</p>
                   <p className="text-[10px] text-zinc-400 font-mono truncate">{user.email || 'citizen@missionlife.in'}</p>
                   <span className="inline-block text-[10px] text-emerald-400 font-mono mt-1">
-                    {user.district || 'Ahmedabad'}, Gujarat
+                    {user.locality ? `${user.locality}, ` : ''}{user.city || 'Ahmedabad'}, Gujarat
                   </span>
                 </div>
 
                 <div className="py-1">
                   <button
+                    onClick={() => { setShowProfileMenu(false); onOpenOnboarding(); }}
+                    className="w-full text-left px-3 py-2 hover:bg-zinc-800/50 rounded-lg flex items-center gap-2 text-zinc-300 hover:text-zinc-100 transition-colors cursor-pointer"
+                  >
+                    <Edit3 className="w-4 h-4 text-emerald-400" />
+                    <span>Recalculate Baseline</span>
+                  </button>
+
+                  <button
                     onClick={() => { setShowProfileMenu(false); onOpenPledge(); }}
                     className="w-full text-left px-3 py-2 hover:bg-zinc-800/50 rounded-lg flex items-center gap-2 text-zinc-300 hover:text-zinc-100 transition-colors cursor-pointer"
                   >
-                    <Award className="w-4 h-4 text-emerald-400" />
-                    <span>LiFE Certificate</span>
+                    <Award className="w-4 h-4 text-amber-400" />
+                    <span>Mission LiFE Certificate</span>
                   </button>
 
                   <button
                     onClick={() => { setShowProfileMenu(false); setActiveTab('admin'); }}
                     className="w-full text-left px-3 py-2 hover:bg-zinc-800/50 rounded-lg flex items-center gap-2 text-zinc-300 hover:text-zinc-100 transition-colors cursor-pointer"
                   >
-                    <Building2 className="w-4 h-4 text-amber-400" />
+                    <Building2 className="w-4 h-4 text-cyan-400" />
                     <span>GEDA State Admin View</span>
                   </button>
 
@@ -158,8 +169,8 @@ export default function Navbar({
                     onClick={() => { setShowProfileMenu(false); onOpenAuth(); }}
                     className="w-full text-left px-3 py-2 hover:bg-zinc-800/50 rounded-lg flex items-center gap-2 text-zinc-300 hover:text-zinc-100 transition-colors cursor-pointer"
                   >
-                    <User className="w-4 h-4 text-cyan-400" />
-                    <span>Switch Account / Sign In</span>
+                    <User className="w-4 h-4 text-violet-400" />
+                    <span>Account Profile / Sign In</span>
                   </button>
                 </div>
 
@@ -169,7 +180,7 @@ export default function Navbar({
                     className="w-full text-left px-3 py-1.5 hover:bg-rose-950/30 rounded-lg flex items-center gap-2 text-rose-400 transition-colors cursor-pointer"
                   >
                     <LogOut className="w-3.5 h-3.5" />
-                    <span>Reset / Sign Out</span>
+                    <span>Switch Profile / Sign Out</span>
                   </button>
                 </div>
               </div>

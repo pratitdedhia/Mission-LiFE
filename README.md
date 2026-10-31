@@ -200,3 +200,4 @@ npm run preview
 - **Event**: HackCult '26
 - **Track**: Track 1: Green Energy & Sustainability (HC26-GEDA01)
 - Built with commitment to Mission LiFE principles: Mindful consumption over mindless destruction.
+

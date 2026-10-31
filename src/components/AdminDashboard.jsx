@@ -10,9 +10,11 @@ import {
   Zap, 
   Users,
   Activity,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Info
 } from 'lucide-react';
 import { DISTRICT_ADMIN_STATS } from '../data/initialData';
+import { BRANDING } from '../config/branding';
 
 export default function AdminDashboard({ community }) {
   const [selectedDistrict, setSelectedDistrict] = useState('all');
@@ -31,7 +33,7 @@ export default function AdminDashboard({ community }) {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `GEDA_Mission_LiFE_State_Report_${Date.now()}.csv`);
+    link.setAttribute("download", `LiFE_Plus_Gujarat_State_Conservation_Report_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -46,13 +48,13 @@ export default function AdminDashboard({ community }) {
             <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-semibold bg-amber-950/50 border border-amber-800/50 px-2 py-0.5 rounded">
               State Administrator View
             </span>
-            <span className="text-xs font-mono text-zinc-500">GEDA Conservation Analytics</span>
+            <span className="text-xs font-mono text-zinc-500">Conservation Analytics</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-zinc-100 mt-1">
-            Regional Conservation & Grid Monitoring
+            Regional Conservation & Grid Demand Response
           </h2>
           <p className="text-xs text-zinc-400 mt-0.5">
-            Aggregated policy metrics tracking residential demand-side management and rooftop solar adoption across Gujarat.
+            District-level progress tracking residential Time-of-Day (ToD) shifting and PM Surya Ghar rooftop solar penetration across Gujarat.
           </p>
         </div>
 
@@ -89,7 +91,7 @@ export default function AdminDashboard({ community }) {
             {totalTonnes.toFixed(1)} <span className="text-xs font-normal text-zinc-500">k Tonnes</span>
           </div>
           <span className="text-[11px] text-zinc-400 mt-1 block">
-            Under Mission LiFE campaign
+            Aggregated conservation
           </span>
         </div>
 
@@ -102,7 +104,7 @@ export default function AdminDashboard({ community }) {
             {(totalSolarKw / 1000).toFixed(1)} <span className="text-xs font-normal text-zinc-500">MW</span>
           </div>
           <span className="text-[11px] text-zinc-400 mt-1 block">
-            PM Surya Ghar installations
+            Modeled residential adoption
           </span>
         </div>
 
@@ -115,7 +117,7 @@ export default function AdminDashboard({ community }) {
             {community.citizensCount.toLocaleString('en-IN')}
           </div>
           <span className="text-[11px] text-emerald-400 mt-1 block">
-            33 Districts participating
+            Across 33 Gujarat districts
           </span>
         </div>
       </div>
@@ -179,7 +181,7 @@ export default function AdminDashboard({ community }) {
                   <td className="py-3 px-4 text-right">
                     <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800/60">
                       <ShieldCheck className="w-3 h-3" />
-                      <span>On Track</span>
+                      <span>Tracking</span>
                     </span>
                   </td>
                 </tr>
@@ -189,19 +191,15 @@ export default function AdminDashboard({ community }) {
         </div>
       </div>
 
-      {/* Grid Peak Load Strategy Notice */}
-      <div className="card-minimal p-5 rounded-xl border-amber-900/30 bg-amber-950/10">
-        <div className="flex items-start gap-3">
-          <Activity className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-          <div>
-            <h4 className="text-xs font-bold text-amber-300 uppercase tracking-wide">
-              Automated Grid Nudge System Active
-            </h4>
-            <p className="text-xs text-zinc-300 mt-1 leading-relaxed">
-              Gujarat DISCOM smart grid protocol automatically pushes behavioral alerts to residential app users between 18:00 and 22:00 to curtail residential peak demand by an estimated 180 MW during high thermal load periods.
-            </p>
-          </div>
+      {/* Grid Peak Load Strategy Notice & Disclosure */}
+      <div className="p-4 rounded-xl bg-[#141518] border border-[#24262f] text-xs space-y-2">
+        <div className="flex items-center gap-2 text-zinc-300 font-semibold">
+          <Info className="w-4 h-4 text-amber-400" />
+          <span>Evaluation & Data Integrity Transparency:</span>
         </div>
+        <p className="text-[11px] text-zinc-400 leading-relaxed">
+          {BRANDING.disclaimers.general} State-level metrics represent an aggregation of simulated benchmark district populations with live citizen-reported actions to demonstrate scalable multi-tier monitoring for policymakers.
+        </p>
       </div>
     </div>
   );

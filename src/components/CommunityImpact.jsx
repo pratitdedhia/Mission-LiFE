@@ -12,12 +12,14 @@ import {
   ShieldCheck, 
   Camera, 
   X,
-  Share2
+  Share2,
+  Info
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { INITIAL_LEADERBOARD } from '../data/initialData';
 import { getCommunityFeed, createFeedPost, likeFeedPost } from '../services/firestoreService';
 import { uploadProofImage } from '../services/storageService';
+import { BRANDING } from '../config/branding';
 
 export default function CommunityImpact({ community, user }) {
   const [leaderboardTab, setLeaderboardTab] = useState('districts'); // 'districts' | 'campuses' | 'citizens'
@@ -85,7 +87,7 @@ export default function CommunityImpact({ community, user }) {
 
     const postObj = {
       authorName: user.name,
-      authorCity: user.city || user.district || "Gujarat",
+      authorCity: user.locality ? `${user.locality}, ${user.city || 'Gujarat'}` : (user.city || "Gujarat"),
       avatarColor: "bg-emerald-600",
       theme: newTheme,
       title: newTitle,
@@ -93,7 +95,8 @@ export default function CommunityImpact({ community, user }) {
       co2SavedKg: 2.5,
       points: 50,
       photoUrl: photoUrl,
-      verified: true
+      verified: true,
+      verificationType: "Citizen photo-submitted"
     };
 
     const created = await createFeedPost(postObj);
@@ -129,10 +132,10 @@ export default function CommunityImpact({ community, user }) {
             <span className="text-xs font-mono text-zinc-500">Mission LiFE Gujarat</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-zinc-100 mt-1">
-            Community Impact & Social Wall
+            Community Impact & Peer Social Wall
           </h2>
           <p className="text-xs text-zinc-400 mt-0.5">
-            Aggregated carbon reduction across Gujarat districts, campus leaderboards, and verified citizen action stories.
+            Aggregated carbon reduction across Gujarat districts, campus leaderboards, and citizen-reported action stories.
           </p>
         </div>
 
@@ -141,7 +144,7 @@ export default function CommunityImpact({ community, user }) {
           className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow cursor-pointer transition-colors self-start"
         >
           <Plus className="w-4 h-4" />
-          <span>Share Green Action</span>
+          <span>Share Citizen Action</span>
         </button>
       </div>
 
@@ -160,7 +163,7 @@ export default function CommunityImpact({ community, user }) {
           <span className="text-xl font-bold text-zinc-100 font-mono mt-0.5 block">
             {community.actionsCompleted.toLocaleString('en-IN')}
           </span>
-          <span className="text-[10px] text-zinc-500">Verified micro-tasks</span>
+          <span className="text-[10px] text-zinc-500">Citizen-reported tasks</span>
         </div>
 
         <div className="card-minimal p-3.5 rounded-xl">
@@ -216,8 +219,8 @@ export default function CommunityImpact({ community, user }) {
         <div className="mt-4">
           <div className="w-full h-2.5 bg-zinc-800 rounded-full overflow-hidden">
             <div 
-              className="h-full bg-emerald-500 rounded-full transition-all duration-700"
-              style={{ width: `${progressPercent}%` }}
+              className="h-full bg-emerald-500 rounded-full transition-all duration-700" 
+              style={{ width: `${progressPercent}%` }} 
             />
           </div>
           <div className="flex justify-between text-[11px] font-mono text-zinc-500 mt-2">
@@ -233,7 +236,7 @@ export default function CommunityImpact({ community, user }) {
         <div className="lg:col-span-5 card-minimal p-5 rounded-xl space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-[#1f2125]">
             <h3 className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-bold">
-              Green Leaderboards
+              Regional Leaderboards
             </h3>
             <div className="flex items-center gap-1 p-0.5 bg-[#17181c] rounded-md border border-[#23252a] text-[10px] font-mono">
               <button
@@ -300,7 +303,7 @@ export default function CommunityImpact({ community, user }) {
 
             {leaderboardTab === 'citizens' && (
               INITIAL_LEADERBOARD.citizens.map((item) => {
-                const isMe = item.name.includes("You");
+                const isMe = item.name.includes(user.name) || item.name.includes("You");
                 return (
                   <div 
                     key={item.rank} 
@@ -330,10 +333,13 @@ export default function CommunityImpact({ community, user }) {
         {/* Right Column: Community Social Wall */}
         <div className="lg:col-span-7 space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-[#1f2125]">
-            <h3 className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-bold">
-              Verified Citizen Actions Feed
-            </h3>
-            <span className="text-[11px] font-mono text-zinc-500">Live Peer Validation</span>
+            <div>
+              <h3 className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-bold">
+                Citizen Actions Feed
+              </h3>
+              <p className="text-[10px] text-zinc-500">Citizen-reported sustainable practices & photo uploads</p>
+            </div>
+            <span className="text-[11px] font-mono text-emerald-400">Peer Validation</span>
           </div>
 
           <div className="space-y-4">
@@ -350,8 +356,8 @@ export default function CommunityImpact({ community, user }) {
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md text-[10px] font-mono text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        <span>Verified Proof</span>
+                        <Camera className="w-3.5 h-3.5" />
+                        <span>Citizen Photo Evidence</span>
                       </div>
                     </div>
                   )}
@@ -403,6 +409,12 @@ export default function CommunityImpact({ community, user }) {
         </div>
       </div>
 
+      {/* Disclosures note */}
+      <div className="p-3 bg-[#141518] rounded-xl border border-[#23252a] text-[11px] text-zinc-500 flex items-start gap-2">
+        <Info className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0 mt-0.5" />
+        <span>{BRANDING.disclaimers.verification} {BRANDING.disclaimers.communityData}</span>
+      </div>
+
       {/* Share New Action Modal */}
       {showNewPostModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
@@ -415,13 +427,13 @@ export default function CommunityImpact({ community, user }) {
             </button>
 
             <span className="text-[10px] font-mono uppercase text-emerald-400 font-semibold bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded">
-              Community Feed
+              Citizen Social Feed
             </span>
             <h3 className="text-lg font-bold text-zinc-100 mt-2">
-              Share Your Mission LiFE Action
+              Share Your Sustainability Practice
             </h3>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Inspire fellow citizens in Gujarat by sharing your sustainable daily practice.
+              Inspire fellow citizens in {user.city || 'Gujarat'} by sharing a photo of your sustainable habit.
             </p>
 
             <form onSubmit={handleCreatePost} className="space-y-3.5 mt-4">
@@ -467,7 +479,7 @@ export default function CommunityImpact({ community, user }) {
 
               {/* Photo Upload */}
               <div>
-                <label className="block text-[11px] font-mono uppercase text-zinc-400 mb-1">Photo Proof (Optional)</label>
+                <label className="block text-[11px] font-mono uppercase text-zinc-400 mb-1">Photo Evidence (Firebase Storage)</label>
                 {previewUrl ? (
                   <div className="relative w-full h-32 rounded-lg overflow-hidden border border-zinc-800">
                     <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
@@ -482,7 +494,7 @@ export default function CommunityImpact({ community, user }) {
                 ) : (
                   <label className="flex items-center justify-center gap-2 w-full py-3 border border-dashed border-[#2a2c33] hover:border-emerald-500/50 rounded-lg cursor-pointer bg-[#16171b] text-xs text-zinc-400">
                     <Camera className="w-4 h-4 text-zinc-500" />
-                    <span>Upload photo proof</span>
+                    <span>Upload photo evidence</span>
                     <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
                   </label>
                 )}
@@ -493,7 +505,7 @@ export default function CommunityImpact({ community, user }) {
                 disabled={isPosting}
                 className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer shadow disabled:opacity-50"
               >
-                <span>{isPosting ? 'Publishing to Cloud...' : 'Publish Action to Community'}</span>
+                <span>{isPosting ? 'Publishing to Firebase...' : 'Publish Action to Community'}</span>
               </button>
             </form>
           </div>

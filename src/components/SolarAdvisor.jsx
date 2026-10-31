@@ -11,10 +11,12 @@ import {
   Phone,
   HelpCircle,
   X,
-  ExternalLink
+  ExternalLink,
+  Info
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { submitSolarInquiry } from '../services/firestoreService';
+import { BRANDING } from '../config/branding';
 
 export default function SolarAdvisor({ user, onNavigateToDirectory }) {
   const [billAmount, setBillAmount] = useState(user.monthlyElectricityBill || 2100);
@@ -30,31 +32,31 @@ export default function SolarAdvisor({ user, onNavigateToDirectory }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inquirySuccess, setInquirySuccess] = useState(null);
 
-  // Solar Calculations
+  // Solar Calculations based on published MNRE & GUVNL parameters
   const maxCapacityByRoof = Math.floor((roofArea / 100) * 10) / 10;
   const capacityNeededByUnits = Math.round((monthlyUnits / 120) * 10) / 10;
   const recommendedCapacityKw = Math.max(1, Math.min(capacityNeededByUnits || 3.2, maxCapacityByRoof || 3.2));
   
-  const annualGenerationKwh = Math.round(recommendedCapacityKw * 1400);
-  const annualSavingsRupees = Math.round(annualGenerationKwh * 7.6);
-  const co2ReductionTonnesAnnual = Math.round((annualGenerationKwh * 0.82 / 1000) * 10) / 10;
+  const annualGenerationKwh = Math.round(recommendedCapacityKw * 1400); // 1 kW ~ 1400 kWh/yr in Gujarat solar irradiance
+  const annualSavingsRupees = Math.round(annualGenerationKwh * BRANDING.assumptions.averagePowerTariffInr);
+  const co2ReductionTonnesAnnual = Math.round((annualGenerationKwh * BRANDING.assumptions.gridEmissionFactorKgPerKwh / 1000) * 10) / 10;
   const lifetime25YrCO2Tonnes = (co2ReductionTonnesAnnual * 25).toFixed(1);
   const equivalentTrees = Math.round(co2ReductionTonnesAnnual * 25 * 45);
 
-  const grossCost = Math.round(recommendedCapacityKw * 65000);
-  // PM Surya Ghar Central Financial Assistance
+  const benchmarkCostPerKw = 65000; // MNRE benchmark rate per kW installed
+  const grossCost = Math.round(recommendedCapacityKw * benchmarkCostPerKw);
+  
+  // PM Surya Ghar Central Financial Assistance (CFA)
   let centralSubsidy = 0;
   if (recommendedCapacityKw >= 3) {
-    centralSubsidy = 78000;
+    centralSubsidy = BRANDING.assumptions.pmSuryaGharSubsidies.threeKwPlus;
   } else if (recommendedCapacityKw >= 2) {
-    centralSubsidy = 60000;
+    centralSubsidy = BRANDING.assumptions.pmSuryaGharSubsidies.twoKw;
   } else {
-    centralSubsidy = 30000;
+    centralSubsidy = BRANDING.assumptions.pmSuryaGharSubsidies.oneKw;
   }
 
-  const stateSubsidyEstimate = 12000; // Gujarat state rooftop incentive
-  const totalSubsidies = centralSubsidy + stateSubsidyEstimate;
-  const netCost = Math.max(15000, grossCost - totalSubsidies);
+  const netCost = Math.max(15000, grossCost - centralSubsidy);
   const paybackYears = (netCost / annualSavingsRupees).toFixed(1);
 
   const handleSubmitInquiry = async (e) => {
@@ -65,6 +67,7 @@ export default function SolarAdvisor({ user, onNavigateToDirectory }) {
       userId: user.id,
       userName: user.name,
       userCity: user.city || 'Ahmedabad',
+      locality: user.locality || 'Navrangpura',
       phone,
       pincode,
       recommendedKw: recommendedCapacityKw,
@@ -92,9 +95,9 @@ export default function SolarAdvisor({ user, onNavigateToDirectory }) {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-semibold bg-amber-950/60 border border-amber-800/60 px-2 py-0.5 rounded">
-              PM Surya Ghar + GEDA Scheme
+              Actionable Resource Hub
             </span>
-            <span className="text-xs font-mono text-zinc-500">Official Feasibility Tool</span>
+            <span className="text-xs font-mono text-zinc-500">PM Surya Ghar Feasibility</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-zinc-100 mt-1">
             Rooftop Solar Feasibility & Subsidy Advisor
@@ -138,7 +141,7 @@ export default function SolarAdvisor({ user, onNavigateToDirectory }) {
               onChange={(e) => {
                 const val = Number(e.target.value);
                 setBillAmount(val);
-                setMonthlyUnits(Math.round(val / 7.6));
+                setMonthlyUnits(Math.round(val / BRANDING.assumptions.averagePowerTariffInr));
               }}
               className="w-full cursor-pointer"
             />
@@ -163,7 +166,7 @@ export default function SolarAdvisor({ user, onNavigateToDirectory }) {
               onChange={(e) => {
                 const val = Number(e.target.value);
                 setMonthlyUnits(val);
-                setBillAmount(Math.round(val * 7.6));
+                setBillAmount(Math.round(val * BRANDING.assumptions.averagePowerTariffInr));
               }}
               className="w-full cursor-pointer"
             />
@@ -189,7 +192,7 @@ export default function SolarAdvisor({ user, onNavigateToDirectory }) {
               className="w-full cursor-pointer"
             />
             <div className="flex justify-between text-[10px] text-zinc-500 mt-0.5 font-mono">
-              <span>100 sq.ft</span>
+              <span>100 sq.ft (~1 kW)</span>
               <span>2000 sq.ft</span>
             </div>
           </div>
@@ -197,7 +200,7 @@ export default function SolarAdvisor({ user, onNavigateToDirectory }) {
           {/* DISCOM Selector */}
           <div>
             <label className="block text-[11px] font-mono uppercase text-zinc-400 mb-1">
-              Electricity Provider (DISCOM)
+              Electricity Provider (Gujarat DISCOM)
             </label>
             <select
               value={discom}
@@ -222,8 +225,8 @@ export default function SolarAdvisor({ user, onNavigateToDirectory }) {
               onChange={(e) => setRoofType(e.target.value)}
               className="w-full bg-[#18191d] border border-[#2a2c33] rounded-lg p-2 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 cursor-pointer"
             >
-              <option value="RCC Flat Concrete">RCC Flat Concrete</option>
-              <option value="Tin / Metal Shed">Tin / Metal Shed</option>
+              <option value="RCC Flat Concrete">RCC Flat Concrete (Optimal for south orientation)</option>
+              <option value="Tin / Metal Shed">Tin / Metal Industrial Shed</option>
               <option value="Sloped Tile Roof">Sloped Tile Roof</option>
             </select>
           </div>
@@ -236,7 +239,7 @@ export default function SolarAdvisor({ user, onNavigateToDirectory }) {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <span className="text-[10px] font-mono uppercase text-emerald-400 font-semibold tracking-wider">
-                  Recommended System
+                  Recommended System Capacity
                 </span>
                 <div className="flex items-baseline gap-2 mt-1">
                   <span className="text-3xl font-extrabold text-zinc-100 font-mono">
@@ -247,9 +250,9 @@ export default function SolarAdvisor({ user, onNavigateToDirectory }) {
               </div>
 
               <div className="text-left sm:text-right">
-                <span className="text-[10px] font-mono uppercase text-zinc-400 block">Estimated Annual Generation</span>
+                <span className="text-[10px] font-mono uppercase text-zinc-400 block">Estimated Annual Clean Generation</span>
                 <span className="text-xl font-bold text-amber-400 font-mono">
-                  ~{annualGenerationKwh.toLocaleString('en-IN')} kWh
+                  ~{annualGenerationKwh.toLocaleString('en-IN')} kWh / yr
                 </span>
               </div>
             </div>
@@ -258,27 +261,27 @@ export default function SolarAdvisor({ user, onNavigateToDirectory }) {
           {/* Subsidies & Financial Breakdown */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="card-minimal p-3.5 rounded-xl">
-              <span className="text-[10px] font-mono uppercase text-zinc-500 block">Gross Cost</span>
+              <span className="text-[10px] font-mono uppercase text-zinc-500 block">Gross Benchmark Cost</span>
               <span className="text-base font-bold text-zinc-200 font-mono mt-1 block">
                 ₹{grossCost.toLocaleString('en-IN')}
               </span>
-              <span className="text-[10px] text-zinc-500 mt-0.5 block">Estimated benchmark</span>
+              <span className="text-[10px] text-zinc-500 mt-0.5 block">@ ₹65k/kW installed</span>
             </div>
 
             <div className="card-minimal p-3.5 rounded-xl border-emerald-900/40">
-              <span className="text-[10px] font-mono uppercase text-emerald-400 font-semibold block">Combined Subsidy</span>
+              <span className="text-[10px] font-mono uppercase text-emerald-400 font-semibold block">Central CFA Subsidy</span>
               <span className="text-base font-bold text-emerald-400 font-mono mt-1 block">
-                -₹{totalSubsidies.toLocaleString('en-IN')}
+                -₹{centralSubsidy.toLocaleString('en-IN')}
               </span>
-              <span className="text-[10px] text-emerald-500/80 mt-0.5 block">PM Surya Ghar + GEDA</span>
+              <span className="text-[10px] text-emerald-500/80 mt-0.5 block">PM Surya Ghar Portal</span>
             </div>
 
             <div className="card-minimal p-3.5 rounded-xl">
-              <span className="text-[10px] font-mono uppercase text-zinc-500 block">Net Investment</span>
+              <span className="text-[10px] font-mono uppercase text-zinc-500 block">Net Estimated Investment</span>
               <span className="text-base font-bold text-zinc-100 font-mono mt-1 block">
                 ₹{netCost.toLocaleString('en-IN')}
               </span>
-              <span className="text-[10px] text-zinc-400 mt-0.5 block">Payback: ~{paybackYears} yrs</span>
+              <span className="text-[10px] text-zinc-400 mt-0.5 block">Payback: ~{paybackYears} years</span>
             </div>
           </div>
 
@@ -312,18 +315,24 @@ export default function SolarAdvisor({ user, onNavigateToDirectory }) {
           {/* Action Callout */}
           <div className="card-minimal p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#15161a]">
             <div>
-              <h4 className="text-xs font-bold text-zinc-200">Ready to install with zero hassle?</h4>
+              <h4 className="text-xs font-bold text-zinc-200">Connect with an Empanelled Installer?</h4>
               <p className="text-[11px] text-zinc-400 mt-0.5">
-                GEDA empanelled vendors manage your net-meter application & subsidy claim.
+                Empanelled partners conduct physical shadow audits and assist with National Portal subsidy documentation.
               </p>
             </div>
             <button
               onClick={() => setShowInquiryModal(true)}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap shadow"
             >
-              <span>Connect with Installer</span>
+              <span>Request Callback</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
+          </div>
+
+          {/* Transparent Formula Note */}
+          <div className="p-3 bg-[#141518] border border-[#22242a] rounded-xl text-[10px] font-mono text-zinc-500 leading-normal flex items-start gap-2">
+            <Info className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0 mt-0.5" />
+            <span>Assumptions: Generation estimated at 1,400 kWh/kW/yr based on Western Regional Irradiance (CEA baseline). Central CFA subsidy based on published MNRE PM Surya Ghar rules (Feb 2024). Net-metering approval is administered directly by {discom}.</span>
           </div>
         </div>
       </div>
@@ -361,13 +370,13 @@ export default function SolarAdvisor({ user, onNavigateToDirectory }) {
             ) : (
               <div>
                 <span className="text-[10px] font-mono uppercase text-emerald-400 font-semibold bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded">
-                  GEDA Installer Connect
+                  Installer Connect
                 </span>
                 <h3 className="text-lg font-bold text-zinc-100 mt-2">
                   Request Solar Site Survey & Quote
                 </h3>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Get a free physical roof inspection for {recommendedCapacityKw} kW system in {user.city || 'Gujarat'}.
+                  Get a free physical roof inspection for a {recommendedCapacityKw} kW system in {user.locality ? `${user.locality}, ` : ''}{user.city || 'Gujarat'}.
                 </p>
 
                 <form onSubmit={handleSubmitInquiry} className="space-y-3.5 mt-4">
@@ -407,7 +416,7 @@ export default function SolarAdvisor({ user, onNavigateToDirectory }) {
 
                   <div className="p-3 bg-[#17181c] rounded-lg border border-[#23252a] text-[11px] text-zinc-400 leading-normal">
                     <span className="text-emerald-400 font-semibold block mb-0.5">Includes PM Surya Ghar Subsidy Liaison:</span>
-                    Installers submit CFA documents directly through National Portal.
+                    Installers assist with National Portal document submission and net-meter synchronization.
                   </div>
 
                   <button

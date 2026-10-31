@@ -219,3 +219,4 @@ export default function PledgeModal({ isOpen, onClose, user, onPledgeSigned }) {
     </div>
   );
 }
+

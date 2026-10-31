@@ -11,8 +11,10 @@ import AICoach from './components/AICoach';
 import AdminDashboard from './components/AdminDashboard';
 import AuthModal from './components/AuthModal';
 import PledgeModal from './components/PledgeModal';
+import OnboardingModal from './components/OnboardingModal';
 
 import { INITIAL_USER, INITIAL_COMMUNITY } from './data/initialData';
+import { BRANDING } from './config/branding';
 import { isFirebaseConnected } from './firebase';
 import { 
   syncInitialData, 
@@ -45,6 +47,17 @@ export default function App() {
   // Modals
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isPledgeOpen, setIsPledgeOpen] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+
+  // Check if first-time user
+  useEffect(() => {
+    const hasBaseline = localStorage.getItem('life_user_has_baseline');
+    if (!hasBaseline && !user.hasCompletedOnboarding) {
+      // Delay onboarding prompt slightly for smooth appearance
+      const timer = setTimeout(() => setIsOnboardingOpen(true), 1200);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // Sync to local storage
   useEffect(() => {
@@ -72,13 +85,27 @@ export default function App() {
 
   const showToast = (message) => {
     setToast(message);
-    setTimeout(() => setToast(null), 3500);
+    setTimeout(() => setToast(null), 3800);
   };
 
-  const handleAcceptMission = async (missionId, points, co2Kg, proofData = null) => {
+  // Behavior loop: Accept mission
+  const handleAcceptMission = (missionId, points, co2Kg) => {
+    const currentActive = user.activeMissions || [];
+    if (!currentActive.includes(missionId)) {
+      setUser(prev => ({
+        ...prev,
+        activeMissions: [...currentActive, missionId]
+      }));
+      showToast(`Mission accepted! Complete the task and record verification.`);
+    }
+  };
+
+  // Behavior loop: Record completion
+  const handleCompleteMission = async (missionId, points, co2Kg, proofData = null) => {
     if (user.completedMissions?.includes(missionId)) return;
 
     const newCompleted = [...(user.completedMissions || []), missionId];
+    const newActive = (user.activeMissions || []).filter(id => id !== missionId);
     const newScore = user.lifeScore + points;
     const newStreak = user.streak + 1;
 
@@ -87,6 +114,7 @@ export default function App() {
       lifeScore: newScore,
       scoreTodayDelta: (prev.scoreTodayDelta || 0) + points,
       streak: newStreak,
+      activeMissions: newActive,
       completedMissions: newCompleted
     }));
 
@@ -96,8 +124,8 @@ export default function App() {
       co2SavedKg: prev.co2SavedKg + Math.round(co2Kg)
     }));
 
-    const proofMsg = proofData?.url ? " with verified photo evidence" : "";
-    showToast(`Mission completed${proofMsg}! +${points} LiFE pts, -${co2Kg} kg CO₂.`);
+    const proofMsg = proofData?.url ? " with citizen photo evidence" : "";
+    showToast(`Action recorded${proofMsg}! +${points} LiFE+ pts, -${co2Kg} kg CO₂.`);
     await recordMissionCompleted(user.id, missionId, points, co2Kg, proofData);
   };
 
@@ -109,6 +137,18 @@ export default function App() {
 
     showToast("Carbon footprint recalculated and saved to profile.");
     await saveUserFootprint(user.id, updatedData);
+  };
+
+  const handleBaselineCompleted = async (baselineData) => {
+    localStorage.setItem('life_user_has_baseline', 'true');
+    const updated = {
+      ...user,
+      ...baselineData,
+      lifeScore: Math.max(user.lifeScore, 700)
+    };
+    setUser(updated);
+    showToast(`Welcome to ${BRANDING.name}, ${baselineData.name}! Baseline established.`);
+    await saveUserFootprint(user.id, updated);
   };
 
   const handlePledgeSigned = async (pledgeData) => {
@@ -145,6 +185,7 @@ export default function App() {
         onOpenAuth={() => setIsAuthOpen(true)}
         onLogout={handleLogout}
         onOpenPledge={() => setIsPledgeOpen(true)}
+        onOpenOnboarding={() => setIsOnboardingOpen(true)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
       />
@@ -165,9 +206,11 @@ export default function App() {
               community={community}
               lang={lang}
               onAcceptMission={handleAcceptMission}
+              onCompleteMission={handleCompleteMission}
               onNavigate={setActiveTab}
               onOpenAiRecommendation={() => setActiveTab('coach')}
               onOpenPledge={() => setIsPledgeOpen(true)}
+              onOpenOnboarding={() => setIsOnboardingOpen(true)}
             />
           )}
 
@@ -181,7 +224,8 @@ export default function App() {
           {activeTab === 'missions' && (
             <DailyMissions
               user={user}
-              onCompleteMission={handleAcceptMission}
+              onAcceptMission={handleAcceptMission}
+              onCompleteMission={handleCompleteMission}
               onNavigateToSolar={() => setActiveTab('solar')}
               onOpenPledge={() => setIsPledgeOpen(true)}
             />
@@ -211,7 +255,7 @@ export default function App() {
             <AICoach
               user={user}
               onNavigate={setActiveTab}
-              onCompleteMission={handleAcceptMission}
+              onCompleteMission={handleCompleteMission}
             />
           )}
 
@@ -222,6 +266,14 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {/* First-Time User Onboarding & Baseline Modal */}
+      <OnboardingModal
+        isOpen={isOnboardingOpen}
+        onClose={() => setIsOnboardingOpen(false)}
+        onBaselineComplete={handleBaselineCompleted}
+        initialUser={user}
+      />
 
       {/* Auth Modal */}
       <AuthModal

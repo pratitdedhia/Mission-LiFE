@@ -116,3 +116,4 @@ export interface Vendor {
   services: string[];
   verified: boolean;
 }
+

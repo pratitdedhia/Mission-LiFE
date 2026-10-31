@@ -13,14 +13,18 @@ import {
   Camera,
   ShieldCheck,
   Award,
-  Sparkles
+  Sparkles,
+  ArrowRight,
+  Info
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { INITIAL_MISSIONS, LIFE_THEMES } from '../data/initialData';
+import { BRANDING } from '../config/branding';
 import PhotoProofModal from './PhotoProofModal';
 
 export default function DailyMissions({ 
   user, 
+  onAcceptMission,
   onCompleteMission, 
   onNavigateToSolar,
   onOpenPledge 
@@ -44,8 +48,9 @@ export default function DailyMissions({
   };
 
   const completedSet = new Set(user.completedMissions || []);
+  const activeSet = new Set(user.activeMissions || []);
 
-  const handleActionClick = (mission) => {
+  const handleMissionAction = (mission) => {
     if (completedSet.has(mission.id)) return;
 
     if (mission.id === 'solar_explorer' && onNavigateToSolar) {
@@ -53,15 +58,17 @@ export default function DailyMissions({
       return;
     }
 
-    if (mission.requiresProof) {
+    if (activeSet.has(mission.id)) {
+      // Record completion
       setActiveProofMission(mission);
     } else {
+      // Accept mission
+      onAcceptMission(mission.id, mission.points, mission.co2Kg);
       confetti({
-        particleCount: 50,
-        spread: 50,
+        particleCount: 40,
+        spread: 45,
         origin: { y: 0.65 }
       });
-      onCompleteMission(mission.id, mission.points, mission.co2Kg);
     }
   };
 
@@ -72,6 +79,7 @@ export default function DailyMissions({
       origin: { y: 0.65 }
     });
     onCompleteMission(data.missionId, data.points, data.co2Kg, data.proofData);
+    setActiveProofMission(null);
   };
 
   const filteredMissions = INITIAL_MISSIONS.filter(m => {
@@ -88,25 +96,25 @@ export default function DailyMissions({
             <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-semibold bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded">
               7 Mission LiFE Themes
             </span>
-            <span className="text-xs font-mono text-zinc-500">Verified Citizen Micro-Tasks</span>
+            <span className="text-xs font-mono text-zinc-500">Citizen Daily Challenges</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-zinc-100 mt-1">
-            Daily Sustainability Challenges
+            Daily Action Challenges
           </h2>
           <p className="text-xs text-zinc-400 mt-0.5">
-            Log small daily actions, attach photo proof, earn LiFE points, and accelerate Gujarat's carbon reduction.
+            Accept micro-tasks, record completion with transparent formulas, and validate habits through peer evidence.
           </p>
         </div>
 
         {/* User Status Strip */}
         <div className="flex items-center gap-3">
           <div className="card-minimal px-3.5 py-2 rounded-lg text-xs">
-            <span className="text-[10px] font-mono uppercase text-zinc-500 block">Daily Streak</span>
+            <span className="text-[10px] font-mono uppercase text-zinc-500 block">Current Streak</span>
             <span className="font-bold text-emerald-400 font-mono text-sm">{user.streak} Days 🔥</span>
           </div>
 
           <div className="card-minimal px-3.5 py-2 rounded-lg text-xs">
-            <span className="text-[10px] font-mono uppercase text-zinc-500 block">LiFE Points</span>
+            <span className="text-[10px] font-mono uppercase text-zinc-500 block">Total LiFE+ Pts</span>
             <span className="font-bold text-zinc-100 font-mono text-sm">{user.lifeScore}</span>
           </div>
         </div>
@@ -137,6 +145,7 @@ export default function DailyMissions({
         {filteredMissions.map((mission) => {
           const Icon = getIcon(mission.icon);
           const isDone = completedSet.has(mission.id);
+          const isActive = activeSet.has(mission.id);
 
           return (
             <div
@@ -144,6 +153,8 @@ export default function DailyMissions({
               className={`card-minimal p-5 rounded-xl flex flex-col justify-between transition-all ${
                 isDone 
                   ? 'border-emerald-900/40 bg-emerald-950/10' 
+                  : isActive
+                  ? 'border-amber-700/50 bg-amber-950/10'
                   : 'hover:border-zinc-700'
               }`}
             >
@@ -154,6 +165,8 @@ export default function DailyMissions({
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                       isDone 
                         ? 'bg-emerald-500/20 text-emerald-400' 
+                        : isActive
+                        ? 'bg-amber-500/20 text-amber-400'
                         : 'bg-zinc-800 text-zinc-300'
                     }`}>
                       <Icon className="w-4 h-4" />
@@ -178,10 +191,10 @@ export default function DailyMissions({
                   {mission.description}
                 </p>
 
-                {/* Hint */}
+                {/* Hint / Transparent Basis */}
                 {mission.hint && (
                   <div className="mt-3 text-[11px] text-zinc-500 bg-[#16171b] p-2 rounded border border-[#23252a] flex items-start gap-1.5">
-                    <span className="text-amber-400 font-bold">💡</span>
+                    <Info className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.2" />
                     <span>{mission.hint}</span>
                   </div>
                 )}
@@ -190,7 +203,7 @@ export default function DailyMissions({
               {/* Bottom Impact & Action */}
               <div className="mt-4 pt-3 border-t border-[#1f2125] flex items-center justify-between text-xs">
                 <span className="font-mono text-zinc-400 text-[11px]">
-                  -{mission.co2Kg} kg CO₂
+                  -{mission.co2Kg} kg CO₂ avoided
                 </span>
 
                 {isDone ? (
@@ -198,13 +211,21 @@ export default function DailyMissions({
                     <Check className="w-3.5 h-3.5" />
                     <span>Completed</span>
                   </span>
+                ) : isActive ? (
+                  <button
+                    onClick={() => handleMissionAction(mission)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-semibold transition-colors cursor-pointer shadow"
+                  >
+                    <Camera className="w-3 h-3" />
+                    <span>Record Proof</span>
+                  </button>
                 ) : (
                   <button
-                    onClick={() => handleActionClick(mission)}
+                    onClick={() => handleMissionAction(mission)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-semibold transition-colors cursor-pointer shadow"
                   >
-                    {mission.requiresProof && <Camera className="w-3 h-3" />}
-                    <span>{mission.requiresProof ? 'Upload Proof' : 'Log Action'}</span>
+                    <span>Accept Mission</span>
+                    <ArrowRight className="w-3 h-3" />
                   </button>
                 )}
               </div>

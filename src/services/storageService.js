@@ -41,3 +41,4 @@ export async function uploadProofImage(file, userId = 'guest') {
     reader.readAsDataURL(file);
   });
 }
+
