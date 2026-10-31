@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MissionLiFE_Citizen_Adaptation_Dataset_Schema",
+  "description": "Standardized schema for training and fine-tuning custom sustainability adaptation models with the HackCult '26 $500 credits.",
+  "type": "object",
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "datasetVersion": { "type": "string", "example": "1.0.0-GEDA" },
+        "organization": { "type": "string", "example": "Gujarat Energy Development Agency (GEDA)" },
+        "geographicScope": { "type": "string", "example": "Gujarat, India" },
+        "totalRecords": { "type": "integer", "example": 2500 }
+      },
+      "required": ["datasetVersion", "organization", "geographicScope"]
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "life_train_001" },
+          "prompt": { "type": "string", "example": "How can I reduce my summer electricity bill in Ahmedabad?" },
+          "citizenContext": {
+            "type": "object",
+            "properties": {
+              "city": { "type": "string", "example": "Ahmedabad" },
+              "discom": { "type": "string", "example": "Torrent Power" },
+              "monthlyKwh": { "type": "number", "example": 320 },
+              "monthlyBillInr": { "type": "number", "example": 2450 },
+              "acHoursPerDay": { "type": "number", "example": 8 },
+              "roofAreaSqFt": { "type": "number", "example": 500 }
+            },
+            "required": ["city", "monthlyKwh"]
+          },
+          "expectedResponse": {
+            "type": "string",
+            "example": "Calibrating your AC from 20°C to 26°C saves 36% power (~₹640/month). Your 500 sq ft roof qualifies for a 3.2 kW solar system under PM Surya Ghar with ₹78,000 subsidy."
+          },
+          "recommendedMicroActionId": { "type": "string", "example": "ac_warrior" },
+          "estimatedKwhSavings": { "type": "number", "example": 85.5 },
+          "estimatedRupeeSavings": { "type": "number", "example": 640 },
+          "theme": { "type": "string", "enum": ["energy", "water", "plastic", "food", "waste", "lifestyle", "ewaste"] }
+        },
+        "required": ["id", "prompt", "citizenContext", "expectedResponse", "theme"]
+      }
+    }
+  }
+}

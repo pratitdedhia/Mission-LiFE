@@ -205,6 +205,19 @@ service firebase.storage {
 
 ---
 
+## 🌐 External API Integrations Specification
+
+Complete documentation is available in [`docs/API_INTEGRATIONS.md`](docs/API_INTEGRATIONS.md).
+
+| Integration | Endpoint / Provider | Environment Variables | Feature Powered & Fail-Safe Behavior |
+| :--- | :--- | :--- | :--- |
+| **🌤️ OpenWeather** | OpenWeatherMap API | `VITE_OPENWEATHER_API_KEY` | Real-time ambient heat alerts & rooftop solar irradiance ($5.4\text{ kWh/m}^2/\text{day}$). 30-min cache; transparently falls back to seasonal Gujarat climate baseline on missing key or 429 quota. Never fabricates live readings. |
+| **🗺️ Maps & Places** | Google Maps Platform Places API (New) | `VITE_GOOGLE_MAPS_API_KEY` | Locality search for sustainable energy providers. Strict visual demarcation between **GEDA Empanelled Vendors** and unverified public map search results. Supports manual entry; device GPS is optional. |
+| **⚡ Gamification Engine** | Cloud Firestore + Atomic Verification | `VITE_FIREBASE_*` | Authoritative scoring (30–80 pts base + 25 pts photo proof + up to 25% streak multiplier). Deduplicates daily claims via idempotent date keys and enforces a 300 pts/day cap. |
+| **🤖 Adaptation Platform** | Hackathon Adaptation AI Platform ($500 Credits) | `VITE_ADAPTION_API_KEY`<br>`VITE_ADAPTION_MODEL`<br>`VITE_ADAPTION_ENDPOINT` | Provider interface with standardized dataset schema (`adaptation_dataset_schema.json`). Cleanly delegates to certified `DeterministicGEDAEngine` when cloud endpoint is unconfigured. |
+
+---
+
 ## 💻 Getting Started Locally
 
 ### Prerequisites

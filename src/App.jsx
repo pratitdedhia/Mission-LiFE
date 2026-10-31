@@ -29,6 +29,7 @@ import {
   logoutUser, 
   subscribeAuth 
 } from './services/authService';
+import { recordAuthoritativeMission } from './services/gamificationEngine';
 import { Check } from 'lucide-react';
 
 export default function App() {
@@ -101,19 +102,35 @@ export default function App() {
     }
   };
 
-  // Behavior loop: Record completion
+  // Behavior loop: Authoritative gamification engine completion
   const handleCompleteMission = async (missionId, points, co2Kg, proofData = null) => {
-    if (user.completedMissions?.includes(missionId)) return;
+    // 1. Authoritative validation via gamification engine (anti-duplicate check & streak bonus)
+    const authResult = await recordAuthoritativeMission({
+      userId: user.id || 'usr_guest',
+      missionId,
+      currentStreak: user.streak || 0,
+      hasPhotoProof: Boolean(proofData?.url),
+      photoProofUrl: proofData?.url || null,
+      userCity: user.city || 'Ahmedabad',
+      currentScore: user.lifeScore || 0
+    });
 
+    if (!authResult.success) {
+      showToast(authResult.message || "This mission was already recorded today.");
+      return;
+    }
+
+    const awardedPoints = authResult.awardedPoints;
+    const verifiedCo2 = authResult.co2KgSaved;
     const newCompleted = [...(user.completedMissions || []), missionId];
     const newActive = (user.activeMissions || []).filter(id => id !== missionId);
-    const newScore = user.lifeScore + points;
+    const newScore = user.lifeScore + awardedPoints;
     const newStreak = user.streak + 1;
 
     setUser(prev => ({
       ...prev,
       lifeScore: newScore,
-      scoreTodayDelta: (prev.scoreTodayDelta || 0) + points,
+      scoreTodayDelta: (prev.scoreTodayDelta || 0) + awardedPoints,
       streak: newStreak,
       activeMissions: newActive,
       completedMissions: newCompleted
@@ -122,12 +139,13 @@ export default function App() {
     setCommunity(prev => ({
       ...prev,
       actionsCompleted: prev.actionsCompleted + 1,
-      co2SavedKg: prev.co2SavedKg + Math.round(co2Kg)
+      co2SavedKg: prev.co2SavedKg + Math.round(verifiedCo2)
     }));
 
-    const proofMsg = proofData?.url ? " with citizen photo evidence" : "";
-    showToast(`Action recorded${proofMsg}! +${points} LiFE+ pts, -${co2Kg} kg CO₂.`);
-    await recordMissionCompleted(user.id, missionId, points, co2Kg, proofData);
+    const proofMsg = proofData?.url ? " with photographic evidence" : "";
+    const streakMsg = authResult.streakTier.multiplier > 1.0 ? ` (${authResult.streakTier.label})` : "";
+    showToast(`Action recorded${proofMsg}! +${awardedPoints} pts${streakMsg}, -${verifiedCo2} kg CO₂.`);
+    await recordMissionCompleted(user.id, missionId, awardedPoints, verifiedCo2, proofData);
   };
 
   const handleSaveProfile = async (updatedData) => {

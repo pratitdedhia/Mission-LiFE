@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Zap, 
   Car, 
@@ -15,11 +15,15 @@ import {
   Camera, 
   MapPin, 
   Info, 
-  Edit3 
+  Edit3,
+  CloudSun,
+  Thermometer,
+  RefreshCw
 } from 'lucide-react';
 import { TRANSLATIONS, GRID_HOURS } from '../data/initialData';
 import { BRANDING } from '../config/branding';
 import BehaviorLoopCard from './BehaviorLoopCard';
+import { getCityWeather } from '../services/weatherService';
 
 export default function Dashboard({ 
   user, 
@@ -33,6 +37,20 @@ export default function Dashboard({
   onOpenOnboarding 
 }) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+  const [weatherData, setWeatherData] = useState(null);
+  const [loadingWeather, setLoadingWeather] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoadingWeather(true);
+    getCityWeather(user.city || 'Ahmedabad').then(data => {
+      if (isMounted) {
+        setWeatherData(data);
+        setLoadingWeather(false);
+      }
+    });
+    return () => { isMounted = false; };
+  }, [user.city]);
 
   // Determine current grid hour status (IST)
   const currentHour = new Date().getHours();
@@ -87,6 +105,43 @@ export default function Dashboard({
           View Grid Micro-Tasks →
         </button>
       </div>
+
+      {/* Live OpenWeather & Solar Generation Widget */}
+      {weatherData && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-blue-500/10 border border-slate-200/80 dark:border-slate-800 transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-300 dark:border-amber-700/60 flex items-center justify-center flex-shrink-0 text-lg">
+              <Sun className="w-5 h-5 animate-spin-slow" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1">
+                  <span>{weatherData.city} Climate & Solar Index:</span>
+                  <span className="text-amber-600 dark:text-amber-400 font-mono">{weatherData.temp}°C</span>
+                  <span className="text-slate-400 font-normal">({weatherData.description})</span>
+                </span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  weatherData.isLive 
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800' 
+                    : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300'
+                }`}>
+                  {weatherData.source}
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                {weatherData.acNudge}
+              </p>
+              <p className="text-[11px] text-amber-700 dark:text-amber-300 font-medium mt-0.5">
+                ☀️ <strong>Rooftop Irradiance:</strong> ~{weatherData.solarRadiationKwhM2} kWh/m²/day • {weatherData.solarAdvice}
+              </p>
+            </div>
+          </div>
+
+          <div className="text-right text-[10px] text-slate-400 font-mono whitespace-nowrap self-end md:self-auto">
+            <span>Updated: {weatherData.lastUpdated}</span>
+          </div>
+        </div>
+      )}
 
       {/* Citizen Header Summary & Locality */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">

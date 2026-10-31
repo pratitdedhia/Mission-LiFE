@@ -120,6 +120,22 @@ export default function DailyMissions({
         </div>
       </div>
 
+      {/* Authoritative Gamification Scoring Banner */}
+      <div className="p-3.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+          <span className="text-slate-700 dark:text-slate-300">
+            <strong>Authoritative Scoring Rules:</strong> Base (30–80 pts) • Photo Verification (+25 pts) • Streak Multiplier (up to +25%) • Deduplicated Daily Claims.
+          </span>
+        </div>
+        <button
+          onClick={() => alert("Scoring & Integrity Engine Rules (GEDA HC26-GEDA01):\n\n1. Idempotent Claims: Each mission can only be logged once per calendar date to measure sustained habit change.\n2. Photo Evidence Bonus: Uploading verifiable photographic proof to Firebase Storage grants +25 points.\n3. Streak Multipliers:\n   • 3+ Days: +5% points\n   • 7+ Days: +10% points\n   • 21+ Days: +25% points\n4. Anti-Fraud Cap: Maximum 300 points per day per citizen.\n5. State Sync: Certified points atomically update statewide GWh conservation metrics.")}
+          className="text-emerald-700 dark:text-emerald-400 font-bold hover:underline whitespace-nowrap self-end sm:self-auto cursor-pointer"
+        >
+          View Full Scoring Matrix →
+        </button>
+      </div>
+
       {/* 7 Themes Filter Selector */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1.5 text-xs">
         {LIFE_THEMES.map((theme) => {
