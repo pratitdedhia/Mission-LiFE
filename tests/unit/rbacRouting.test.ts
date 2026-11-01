@@ -54,3 +54,4 @@ describe('Automatic RBAC Routing & Default Assignment', () => {
     expect(resolveTargetPortal(DEMO_USERS.citizen)).toBe('dashboard');
   });
 });
+

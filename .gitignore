@@ -28,6 +28,11 @@ functions/lib/
 !.vscode/extensions.json
 .idea
 .DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
 *.suo
 *.ntvs*
 *.njsproj

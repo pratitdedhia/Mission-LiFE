@@ -75,14 +75,14 @@ void loop() {
       http.begin(TELEMETRY_URL);
       http.addHeader("Content-Type", "application/json");
 
-      // Serialize JSON payload
+      // Serialize JSON payload conforming to FastAPI Pydantic schema
       StaticJsonDocument<256> doc;
-      doc["device_id"]   = DEVICE_ID;
-      doc["voltage"]     = voltage;
-      doc["current"]     = current;
-      doc["power_watts"] = powerWatts;
-      doc["frequency"]   = frequency;
-      doc["timestamp"]   = (unsigned long)(time(nullptr));
+      doc["user_id"]         = "user_12345";
+      doc["device_id"]       = "appliance_ac_01";
+      doc["current_wattage"] = (int)powerWatts;
+      doc["voltage"]         = voltage;
+      doc["current"]         = current;
+      doc["timestamp"]       = (unsigned long)(time(nullptr));
 
       String jsonPayload;
       serializeJson(doc, jsonPayload);
