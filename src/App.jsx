@@ -313,7 +313,6 @@ export default function App() {
         onOpenOnboarding={() => setIsOnboardingOpen(true)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onOpenLanding={() => setCurrentView('landing')}
       />
 
       {/* Main Layout with Sidebar and Content Area */}
@@ -325,7 +324,6 @@ export default function App() {
           onOpenPledge={() => setIsPledgeOpen(true)}
           user={user}
           onOpenAuth={() => { setAuthModalMode('login'); setIsAuthOpen(true); }}
-          onOpenLanding={() => setCurrentView('landing')}
         />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
