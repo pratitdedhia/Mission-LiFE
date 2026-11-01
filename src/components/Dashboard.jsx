@@ -46,23 +46,71 @@ export default function Dashboard({
   const [iotOnline, setIotOnline] = useState(false);
   const [iotWatts, setIotWatts] = useState(0);
   const [iotVoltage, setIotVoltage] = useState(230.1);
+  const [hardwareNudge, setHardwareNudge] = useState(null);
   const [showPointsHistory, setShowPointsHistory] = useState(false);
+
+  // Poll live hardware telemetry from Wokwi ESP32 microservice
+  useEffect(() => {
+    let isMounted = true;
+
+    const pollTelemetry = async () => {
+      try {
+        const res = await fetch('https://mission-life.onrender.com/api/hardware/latest?user_id=user_12345');
+        if (!res.ok) {
+          if (isMounted) setHardwareNudge(null);
+          return;
+        }
+        const data = await res.json();
+        if (!isMounted) return;
+
+        if (data && data.latest && data.latest.nudge_message) {
+          // Check for staleness (consider telemetry stale if older than 60 seconds)
+          const nowSec = Math.floor(Date.now() / 1000);
+          const isStale = data.latest.timestamp && (nowSec - data.latest.timestamp > 60);
+
+          if (isStale) {
+            setHardwareNudge(null);
+          } else {
+            setHardwareNudge(data.latest.nudge_message);
+            if (data.latest.current_wattage !== undefined || data.latest.power_watts !== undefined) {
+              setIotWatts(data.latest.current_wattage ?? data.latest.power_watts);
+              setIotOnline(true);
+            }
+            if (data.latest.voltage) {
+              setIotVoltage(data.latest.voltage);
+            }
+          }
+        } else {
+          setHardwareNudge(null);
+        }
+      } catch (e) {
+        if (isMounted) setHardwareNudge(null);
+      }
+    };
+
+    pollTelemetry();
+    const interval = setInterval(pollTelemetry, 3000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     let interval = null;
-    if (iotOnline) {
+    if (iotOnline && !hardwareNudge) {
       setIotWatts(940);
       interval = setInterval(() => {
         setIotWatts(Math.floor(880 + Math.random() * 260));
         setIotVoltage(Number((229.5 + Math.random() * 2.2).toFixed(1)));
       }, 3000);
-    } else {
+    } else if (!iotOnline && !hardwareNudge) {
       setIotWatts(0);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [iotOnline]);
+  }, [iotOnline, hardwareNudge]);
 
   useEffect(() => {
     let isMounted = true;
@@ -90,63 +138,77 @@ export default function Dashboard({
     <div className="space-y-7 max-w-5xl mx-auto">
       
       {/* IoT Hardware Telemetry Bridge Indicator (ESP32 Wokwi Integration) */}
-      <div className={`p-4 rounded-2xl border transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-3 ${
+      <div className={`p-4 rounded-2xl border transition-all ${
         iotOnline 
           ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-950 dark:text-emerald-100 shadow-sm' 
           : 'bg-slate-100/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
       }`}>
-        <div className="flex items-center gap-3">
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-            iotOnline 
-              ? 'bg-emerald-600 text-white shadow-xs' 
-              : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
-          }`}>
-            <Activity className={`w-4 h-4 ${iotOnline ? 'animate-pulse' : ''}`} />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold flex items-center gap-1.5">
-                <span className={`w-2 h-2 rounded-full ${iotOnline ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`} />
-                <span>Simulated Smart Meter: {iotOnline ? 'Online' : 'Offline'}</span>
-              </span>
-              {iotOnline && (
-                <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700">
-                  ⚡ Live Draw: {iotWatts} W • {iotVoltage} V • {(iotWatts / iotVoltage).toFixed(2)} A
-                </span>
-              )}
-              <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-500">
-                ESP32 / HTTP POST
-              </span>
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+              iotOnline 
+                ? 'bg-emerald-600 text-white shadow-xs' 
+                : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+            }`}>
+              <Activity className={`w-4 h-4 ${iotOnline ? 'animate-pulse' : ''}`} />
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-              {iotOnline 
-                ? 'Receiving dynamic telemetry payload from ESP32 current-sensor microcontroller. Live domestic wattage streams to Mission LiFE cloud.' 
-                : 'Hardware telemetry bridge ready. Launch the Wokwi ESP32 simulator or toggle live stream to stream real-time current sensor packets.'}
-            </p>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${iotOnline ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`} />
+                  <span>Simulated Smart Meter: {iotOnline ? 'Online' : 'Offline'}</span>
+                </span>
+                {iotOnline && (
+                  <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700">
+                    ⚡ Live Draw: {iotWatts} W • {iotVoltage} V • {(iotWatts / iotVoltage).toFixed(2)} A
+                  </span>
+                )}
+                <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-500">
+                  ESP32 / HTTP POST
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                {iotOnline 
+                  ? 'Receiving dynamic telemetry payload from ESP32 current-sensor microcontroller. Live domestic wattage streams to Mission LiFE cloud.' 
+                  : 'Hardware telemetry bridge ready. Launch the Wokwi ESP32 simulator or toggle live stream to stream real-time current sensor packets.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-end md:self-auto flex-shrink-0">
+            <button
+              onClick={() => setIotOnline(prev => !prev)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                iotOnline 
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-600 shadow-xs' 
+                  : 'bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 shadow-xs'
+              }`}
+            >
+              {iotOnline ? 'Disconnect Stream' : 'Simulate Live ESP32 Stream'}
+            </button>
+            <a
+              href="https://wokwi.com/projects/479495732560719873"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
+            >
+              <span>Wokwi Sim</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-end md:self-auto flex-shrink-0">
-          <button
-            onClick={() => setIotOnline(prev => !prev)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
-              iotOnline 
-                ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-600 shadow-xs' 
-                : 'bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 shadow-xs'
-            }`}
-          >
-            {iotOnline ? 'Disconnect Stream' : 'Simulate Live ESP32 Stream'}
-          </button>
-          <a
-            href="https://wokwi.com/projects/479495732560719873"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
-          >
-            <span>Wokwi Sim</span>
-            <ExternalLink className="w-3 h-3" />
-          </a>
-        </div>
+        {/* Live Hardware Telemetry Nudge Message */}
+        {hardwareNudge && (
+          <div className="mt-3 pt-3 border-t border-emerald-500/20 dark:border-emerald-500/30 flex items-start sm:items-center gap-2 text-xs animate-fade-in">
+            <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 uppercase tracking-wider flex-shrink-0">
+              Live Nudge
+            </span>
+            <span className="font-semibold text-slate-800 dark:text-slate-100 leading-snug">
+              {hardwareNudge}
+            </span>
+          </div>
+        )}
       </div>
       
       {/* Real-Time Smart Grid Load Nudge Banner */}
