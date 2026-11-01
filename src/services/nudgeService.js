@@ -75,3 +75,4 @@ export function resolveLiveNudge(rawNudge, watts, timestamp) {
     devText: `Time: ${timeInfo.timeString} | Rule: ${rule}`
   };
 }
+
