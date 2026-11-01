@@ -131,6 +131,11 @@ export default function App() {
       if (!allowedCampusTabs.includes(activeTab)) {
         setActiveTab('campus_leader');
       }
+    } else if (user?.role === 'admin') {
+      const allowedAdminTabs = ['admin', 'admin_impact', 'admin_users', 'admin_solar', 'directory'];
+      if (!allowedAdminTabs.includes(activeTab)) {
+        setActiveTab('admin');
+      }
     }
   }, [user?.role, activeTab]);
 
@@ -418,10 +423,13 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'admin' && (
+          {(activeTab === 'admin' || activeTab === 'admin_impact' || activeTab === 'admin_users' || activeTab === 'admin_solar') && (
             user.role === 'admin' ? (
               <AdminDashboard
                 community={community}
+                user={user}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
               />
             ) : (
               <div className="p-8 human-card text-center max-w-lg mx-auto my-12 border-rose-200 dark:border-rose-900/50">

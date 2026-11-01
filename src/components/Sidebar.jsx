@@ -45,10 +45,9 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
   } else if (userRole === 'admin') {
     navItems = [
       { id: 'admin', label: 'GEDA Command Center', icon: Building2, badge: 'Officer' },
-      { id: 'dashboard', label: 'Citizen Metrics View', icon: LayoutDashboard },
-      { id: 'scan', label: 'Appliance Scanner', icon: Camera, badge: 'YOLOv8' },
-      { id: 'community', label: '33-District Impact', icon: Users },
-      { id: 'solar', label: 'Rooftop Pipeline', icon: SunMedium },
+      { id: 'admin_impact', label: 'Impact Analytics', icon: TrendingUp, badge: 'Planning' },
+      { id: 'admin_users', label: 'User Login Controls', icon: Users, badge: 'RBAC' },
+      { id: 'admin_solar', label: 'Rooftop Pipeline', icon: SunMedium, badge: 'MNRE' },
       { id: 'directory', label: t.navDirectory, icon: BookOpen }
     ];
   } else {
@@ -133,7 +132,17 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
 
       {/* Role-Specific Credential Badge & Footer */}
       <div className="hidden md:block pt-5 border-t border-slate-200 dark:border-slate-800 space-y-3">
-        {userRole === 'solar_vendor' ? (
+        {userRole === 'admin' ? (
+          <div className="w-full p-3 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200/60 dark:from-slate-800 dark:to-slate-900 border border-slate-300/80 dark:border-slate-700/80 text-left shadow-xs">
+            <div className="flex items-center gap-1.5 text-slate-800 dark:text-slate-200 text-xs font-bold">
+              <Building2 className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+              <span>GEDA State Administration</span>
+            </div>
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 leading-snug">
+              Directorate of Energy Conservation
+            </p>
+          </div>
+        ) : userRole === 'solar_vendor' ? (
           <div className="w-full p-3 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950/40 dark:to-slate-900 border border-amber-200/80 dark:border-amber-800/40 text-left shadow-xs">
             <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-300 text-xs font-bold">
               <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400" />

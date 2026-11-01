@@ -245,13 +245,31 @@ export default function Navbar({
                   )}
 
                   {user?.role === 'admin' && (
-                    <button
-                      onClick={() => { setShowProfileMenu(false); setActiveTab('admin'); }}
-                      className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
-                    >
-                      <Building2 className="w-4 h-4 text-cyan-500" />
-                      <span>GEDA State Admin View</span>
-                    </button>
+                    <>
+                      <button
+                        onClick={() => { setShowProfileMenu(false); setActiveTab('admin'); }}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                      >
+                        <Building2 className="w-4 h-4 text-cyan-500" />
+                        <span>GEDA Command Center</span>
+                      </button>
+
+                      <button
+                        onClick={() => { setShowProfileMenu(false); setActiveTab('admin_impact'); }}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                      >
+                        <Zap className="w-4 h-4 text-emerald-500" />
+                        <span>Impact Analytics (Scheme Planning)</span>
+                      </button>
+
+                      <button
+                        onClick={() => { setShowProfileMenu(false); setActiveTab('admin_users'); }}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                      >
+                        <GraduationCap className="w-4 h-4 text-blue-500" />
+                        <span>User Login & RBAC Controls</span>
+                      </button>
+                    </>
                   )}
                 </div>
 
