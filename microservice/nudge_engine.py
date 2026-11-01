@@ -54,7 +54,7 @@ def evaluate_telemetry_nudge(power_watts: float, raw_timestamp: Optional[float] 
         base_message = f"⚠️ HIGH LOAD WARNING: {power_watts:.0f}W running during Peak Grid Hours (6-10 PM). Defer high-wattage cycles to avoid premium ToD tariffs."
     elif power_watts > 1200:
         rule = "OFF_PEAK_HIGH_LOAD"
-        base_message = f"⚡ High Demand detected ({power_watts:.0f}W). Switch off idle appliances to conserve energy."
+        base_message = f"⚡ High electricity usage detected ({power_watts:.0f}W). Switch off idle appliances to conserve energy."
     else:
         rule = "EFFICIENT_GRID_DRAW"
         base_message = f"🟢 Efficient Grid Draw ({power_watts:.0f}W). Optimal consumption profile."
@@ -70,3 +70,4 @@ def evaluate_telemetry_nudge(power_watts: float, raw_timestamp: Optional[float] 
         "current_time_ist": time_str,
         "timestamp_utc": int(ts)
     }
+

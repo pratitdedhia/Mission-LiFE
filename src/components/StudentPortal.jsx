@@ -26,6 +26,7 @@ import {
   getStudentVerificationForUser, 
   submitStudentVerification 
 } from '../services/studentVerificationService';
+import { resolveLiveNudge } from '../services/nudgeService';
 
 export default function StudentPortal({ user, onNavigate }) {
   const [verification, setVerification] = useState(null);
@@ -91,10 +92,14 @@ export default function StudentPortal({ user, onNavigate }) {
           setMeterWatts(watts);
           setMeterVolts(volts);
           setMeterAmps(amps);
-          setMeterNudge(reading.nudge_message || null);
+          
+          // Authoritatively resolve nudge using current Asia/Kolkata local time
+          const evaluated = resolveLiveNudge(reading.nudge_message, watts, reading.timestamp);
+          setMeterNudge(evaluated.message);
           setMeterNudgeMeta({
-            rule: reading.nudge_rule || null,
-            time: reading.current_time_ist || null
+            rule: evaluated.rule,
+            time: evaluated.time,
+            devText: evaluated.devText
           });
         } else {
           setMeterWatts(0);
@@ -290,37 +295,30 @@ export default function StudentPortal({ user, onNavigate }) {
         </div>
 
         {/* Live Hardware Telemetry Nudge Message */}
-        {meterNudge && (() => {
-          const match = meterNudge.match(/^(.*?)\s*\[Time:\s*([^|\]]+)\s*\|\s*Rule:\s*([^\]]+)\]$/);
-          const cleanMsg = match ? match[1].trim() : meterNudge;
-          const devTime = match ? match[2].trim() : meterNudgeMeta?.time;
-          const devRule = match ? match[3].trim() : meterNudgeMeta?.rule;
-
-          return (
-            <div className="mt-3.5 pt-3.5 border-t border-emerald-500/20 dark:border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs animate-fade-in">
-              <div className="flex items-start sm:items-center gap-2">
-                <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 uppercase tracking-wider flex-shrink-0">
-                  Live Nudge
-                </span>
-                <span className="font-semibold text-slate-800 dark:text-slate-100 leading-snug">
-                  {cleanMsg}
-                </span>
-              </div>
-              {(devTime || devRule) && (
-                <div className="flex items-center gap-1.5 font-mono text-[10px] px-2 py-0.5 rounded-md bg-amber-500/10 dark:bg-amber-400/10 text-amber-800 dark:text-amber-300 border border-amber-300/40 dark:border-amber-600/40 flex-shrink-0 self-start sm:self-auto">
-                  <span className="font-bold">DEV:</span>
-                  {devTime && <span>Time: <strong>{devTime}</strong></span>}
-                  {devTime && devRule && <span className="text-amber-400 dark:text-amber-600">|</span>}
-                  {devRule && (
-                    <span>
-                      Rule: <strong className={devRule === 'PEAK_HIGH_LOAD' ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-emerald-700 dark:text-emerald-300 font-bold'}>{devRule}</strong>
-                    </span>
-                  )}
-                </div>
-              )}
+        {meterNudge && (
+          <div className="mt-3.5 pt-3.5 border-t border-emerald-500/20 dark:border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs animate-fade-in">
+            <div className="flex items-start sm:items-center gap-2">
+              <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 uppercase tracking-wider flex-shrink-0">
+                Live Nudge
+              </span>
+              <span className="font-semibold text-slate-800 dark:text-slate-100 leading-snug">
+                {meterNudge}
+              </span>
             </div>
-          );
-        })()}
+            {meterNudgeMeta && (
+              <div className="flex items-center gap-1.5 font-mono text-[10px] px-2 py-0.5 rounded-md bg-amber-500/10 dark:bg-amber-400/10 text-amber-800 dark:text-amber-300 border border-amber-300/40 dark:border-amber-600/40 flex-shrink-0 self-start sm:self-auto">
+                <span className="font-bold">DEV:</span>
+                {meterNudgeMeta.time && <span>Time: <strong>{meterNudgeMeta.time}</strong></span>}
+                {meterNudgeMeta.time && meterNudgeMeta.rule && <span className="text-amber-400 dark:text-amber-600">|</span>}
+                {meterNudgeMeta.rule && (
+                  <span>
+                    Rule: <strong className={meterNudgeMeta.rule === 'PEAK_HIGH_LOAD' ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-emerald-700 dark:text-emerald-300 font-bold'}>{meterNudgeMeta.rule}</strong>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* VIEW STATE 1: VERIFIED STUDENT ECO-BADGE & CAMPUS CONTRIBUTION */}

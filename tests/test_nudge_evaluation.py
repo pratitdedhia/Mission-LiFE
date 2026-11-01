@@ -25,6 +25,7 @@ def test_nudge_evaluation():
     res_17_59 = evaluate_telemetry_nudge(power_watts=1645.0, raw_timestamp=dt_17_59.timestamp())
     assert res_17_59["is_peak"] is False, "17:59:59 should NOT be peak"
     assert res_17_59["nudge_rule"] == "OFF_PEAK_HIGH_LOAD"
+    assert "High electricity usage detected" in res_17_59["base_message"]
     assert "Peak Grid Hours" not in res_17_59["base_message"]
     assert "ToD tariffs" not in res_17_59["base_message"]
     assert "premium" not in res_17_59["base_message"]

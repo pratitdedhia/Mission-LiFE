@@ -34,6 +34,7 @@ import {
   GRID_EMISSION_FACTOR_METADATA, 
   ENERGY_SAVING_REWARD_RULE 
 } from '../services/analyticsService';
+import { resolveLiveNudge } from '../services/nudgeService';
 
 export default function Dashboard({ 
   user = {}, 
@@ -97,12 +98,17 @@ export default function Dashboard({
         setIotOnline(isFresh);
 
         if (isFresh) {
-          setIotWatts(Number(reading.current_wattage) || 0);
+          const watts = Number(reading.current_wattage) || 0;
+          setIotWatts(watts);
           setIotVoltage(Number(reading.voltage) || 230);
-          setHardwareNudge(reading.nudge_message || null);
+          
+          // Authoritatively resolve nudge using current Asia/Kolkata local time
+          const evaluated = resolveLiveNudge(reading.nudge_message, watts, reading.timestamp);
+          setHardwareNudge(evaluated.message);
           setNudgeMeta({
-            rule: reading.nudge_rule || null,
-            time: reading.current_time_ist || null
+            rule: evaluated.rule,
+            time: evaluated.time,
+            devText: evaluated.devText
           });
         } else {
           setIotWatts(0);
@@ -204,37 +210,30 @@ export default function Dashboard({
         </div>
 
         {/* Live Hardware Telemetry Nudge Message */}
-        {hardwareNudge && (() => {
-          const match = hardwareNudge.match(/^(.*?)\s*\[Time:\s*([^|\]]+)\s*\|\s*Rule:\s*([^\]]+)\]$/);
-          const cleanMsg = match ? match[1].trim() : hardwareNudge;
-          const devTime = match ? match[2].trim() : nudgeMeta?.time;
-          const devRule = match ? match[3].trim() : nudgeMeta?.rule;
-
-          return (
-            <div className="mt-3 pt-3 border-t border-emerald-500/20 dark:border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs animate-fade-in">
-              <div className="flex items-start sm:items-center gap-2">
-                <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 uppercase tracking-wider flex-shrink-0">
-                  Live Nudge
-                </span>
-                <span className="font-semibold text-slate-800 dark:text-slate-100 leading-snug">
-                  {cleanMsg}
-                </span>
-              </div>
-              {(devTime || devRule) && (
-                <div className="flex items-center gap-1.5 font-mono text-[10px] px-2 py-0.5 rounded-md bg-amber-500/10 dark:bg-amber-400/10 text-amber-800 dark:text-amber-300 border border-amber-300/40 dark:border-amber-600/40 flex-shrink-0 self-start sm:self-auto">
-                  <span className="font-bold">DEV:</span>
-                  {devTime && <span>Time: <strong>{devTime}</strong></span>}
-                  {devTime && devRule && <span className="text-amber-400 dark:text-amber-600">|</span>}
-                  {devRule && (
-                    <span>
-                      Rule: <strong className={devRule === 'PEAK_HIGH_LOAD' ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-emerald-700 dark:text-emerald-300 font-bold'}>{devRule}</strong>
-                    </span>
-                  )}
-                </div>
-              )}
+        {hardwareNudge && (
+          <div className="mt-3 pt-3 border-t border-emerald-500/20 dark:border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs animate-fade-in">
+            <div className="flex items-start sm:items-center gap-2">
+              <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 uppercase tracking-wider flex-shrink-0">
+                Live Nudge
+              </span>
+              <span className="font-semibold text-slate-800 dark:text-slate-100 leading-snug">
+                {hardwareNudge}
+              </span>
             </div>
-          );
-        })()}
+            {nudgeMeta && (
+              <div className="flex items-center gap-1.5 font-mono text-[10px] px-2 py-0.5 rounded-md bg-amber-500/10 dark:bg-amber-400/10 text-amber-800 dark:text-amber-300 border border-amber-300/40 dark:border-amber-600/40 flex-shrink-0 self-start sm:self-auto">
+                <span className="font-bold">DEV:</span>
+                {nudgeMeta.time && <span>Time: <strong>{nudgeMeta.time}</strong></span>}
+                {nudgeMeta.time && nudgeMeta.rule && <span className="text-amber-400 dark:text-amber-600">|</span>}
+                {nudgeMeta.rule && (
+                  <span>
+                    Rule: <strong className={nudgeMeta.rule === 'PEAK_HIGH_LOAD' ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-emerald-700 dark:text-emerald-300 font-bold'}>{nudgeMeta.rule}</strong>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       
       {/* Real-Time Smart Grid Load Nudge Banner */}
