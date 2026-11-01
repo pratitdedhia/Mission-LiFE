@@ -101,6 +101,7 @@ export default function PhotoProofModal({
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
               Photo Evidence (Stored in Firebase Storage)
+              <span className="text-rose-500 font-bold ml-0.5">*</span>
             </label>
 
             {previewUrl ? (

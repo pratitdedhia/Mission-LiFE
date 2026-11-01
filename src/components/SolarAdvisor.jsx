@@ -119,6 +119,16 @@ export default function SolarAdvisor({ user = {}, onNavigateToDirectory }) {
 
   const handleSubmitInquiry = async (e) => {
     e.preventDefault();
+
+    if (!phone || phone.replace(/\D/g, '').length < 10) {
+      alert("Please enter a valid 10-digit mobile contact number.");
+      return;
+    }
+    if (!pincode || pincode.trim().length !== 6) {
+      alert("Please enter a valid 6-digit Gujarat postal pincode.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     const leadPayload = {
@@ -803,7 +813,9 @@ export default function SolarAdvisor({ user = {}, onNavigateToDirectory }) {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Mobile Contact Number</label>
+                    <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
+                      Mobile Contact Number <span className="text-rose-500 font-bold ml-0.5">*</span>
+                    </label>
                     <input
                       type="tel"
                       required
@@ -815,7 +827,9 @@ export default function SolarAdvisor({ user = {}, onNavigateToDirectory }) {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Pincode</label>
+                    <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
+                      Pincode <span className="text-rose-500 font-bold ml-0.5">*</span>
+                    </label>
                     <input
                       type="text"
                       required

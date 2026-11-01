@@ -116,9 +116,12 @@ export default function OnboardingModal({ isOpen, onClose, onBaselineComplete, i
 
             <div className="space-y-4 pt-1">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Your Name</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Your Name <span className="text-rose-500 font-bold ml-0.5">*</span>
+                </label>
                 <input
                   type="text"
+                  required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Pooja Patel"
@@ -205,7 +208,13 @@ export default function OnboardingModal({ isOpen, onClose, onBaselineComplete, i
             </div>
 
             <button
-              onClick={() => setStep(2)}
+              onClick={() => {
+                if (!name.trim()) {
+                  alert("Please enter your full name to proceed.");
+                  return;
+                }
+                setStep(2);
+              }}
               className="w-full mt-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm hover:shadow active:scale-[0.99]"
             >
               <span>Continue to Energy Baseline</span>

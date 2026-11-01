@@ -163,6 +163,16 @@ export default function SolarVendorDashboard({ user = {}, activeTab = 'solar_ven
   const handleScheduleSurvey = (e) => {
     e.preventDefault();
     if (!activeInquiryModal) return;
+
+    if (!surveyDate) {
+      showToast("Please specify the rooftop survey date.");
+      return;
+    }
+    if (!surveyEngineer.trim()) {
+      showToast("Please assign a qualified field engineer.");
+      return;
+    }
+
     const updated = inquiries.map(inq => 
       inq.id === activeInquiryModal.id 
         ? { 
@@ -274,6 +284,27 @@ export default function SolarVendorDashboard({ user = {}, activeTab = 'solar_ven
   const handleConfirmSendQuote = (e) => {
     e.preventDefault();
     if (!activeInquiryModal) return;
+
+    // Validate genuine required fields
+    if (quoteTab === 'preset') {
+      if (!quoteCapacityKw || Number(quoteCapacityKw) <= 0) {
+        showToast("Please enter a valid system capacity (> 0 kW).");
+        return;
+      }
+      if (!quoteGrossCost || Number(quoteGrossCost) <= 0) {
+        showToast("Please enter a valid gross benchmark cost (> ₹0).");
+        return;
+      }
+      if (Number(quoteSubsidy) < 0) {
+        showToast("Central subsidy cannot be negative.");
+        return;
+      }
+    } else if (quoteTab === 'pdf') {
+      if (!quoteAttachedPdfName) {
+        showToast("Please attach a proposal PDF or click 'Auto-Generate Official GEDA Proposal PDF' before dispatching.");
+        return;
+      }
+    }
 
     setIsSubmittingQuote(true);
 
@@ -1055,7 +1086,9 @@ ${quoteNotes ? `• Notes: "${quoteNotes}"` : ''}`;
 
             <form onSubmit={handleScheduleSurvey} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Survey Date</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Survey Date <span className="text-rose-500 font-bold ml-0.5">*</span>
+                </label>
                 <input
                   type="date"
                   required
@@ -1066,7 +1099,9 @@ ${quoteNotes ? `• Notes: "${quoteNotes}"` : ''}`;
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Preferred Time Window</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Preferred Time Window <span className="text-rose-500 font-bold ml-0.5">*</span>
+                </label>
                 <select
                   value={surveyTime}
                   onChange={(e) => setSurveyTime(e.target.value)}
@@ -1079,9 +1114,13 @@ ${quoteNotes ? `• Notes: "${quoteNotes}"` : ''}`;
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Assigned Field Engineer</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Assigned Field Engineer <span className="text-rose-500 font-bold ml-0.5">*</span>
+                </label>
                 <input
                   type="text"
+                  required
+                  placeholder="e.g. Ketan Joshi (Field Lead)"
                   value={surveyEngineer}
                   onChange={(e) => setSurveyEngineer(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none"
@@ -1184,7 +1223,7 @@ ${quoteNotes ? `• Notes: "${quoteNotes}"` : ''}`;
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        System Capacity (kW)
+                        System Capacity (kW) <span className="text-rose-500 font-bold ml-0.5">*</span>
                       </label>
                       <div className="relative">
                         <Zap className="w-4 h-4 text-amber-500 absolute left-3 top-2.5" />
@@ -1204,7 +1243,7 @@ ${quoteNotes ? `• Notes: "${quoteNotes}"` : ''}`;
 
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Commissioning Timeline
+                        Commissioning Timeline <span className="text-rose-500 font-bold ml-0.5">*</span>
                       </label>
                       <select
                         value={quoteTimeline}
@@ -1223,7 +1262,7 @@ ${quoteNotes ? `• Notes: "${quoteNotes}"` : ''}`;
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Solar PV Module (ALMM Approved)
+                        Solar PV Module (ALMM Approved) <span className="text-rose-500 font-bold ml-0.5">*</span>
                       </label>
                       <select
                         value={quotePanelBrand}
@@ -1239,7 +1278,7 @@ ${quoteNotes ? `• Notes: "${quoteNotes}"` : ''}`;
 
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Smart Grid-Tied Inverter
+                        Smart Grid-Tied Inverter <span className="text-rose-500 font-bold ml-0.5">*</span>
                       </label>
                       <select
                         value={quoteInverterBrand}
@@ -1263,7 +1302,7 @@ ${quoteNotes ? `• Notes: "${quoteNotes}"` : ''}`;
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                          Gross System Cost (₹)
+                          Gross System Cost (₹) <span className="text-rose-500 font-bold ml-0.5">*</span>
                         </label>
                         <input
                           type="number"
@@ -1276,7 +1315,7 @@ ${quoteNotes ? `• Notes: "${quoteNotes}"` : ''}`;
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                          Central CFA Subsidy (₹)
+                          Central CFA Subsidy (₹) <span className="text-rose-500 font-bold ml-0.5">*</span>
                         </label>
                         <input
                           type="number"
@@ -1318,7 +1357,7 @@ ${quoteNotes ? `• Notes: "${quoteNotes}"` : ''}`;
                   {/* Scope of Work Inclusions */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Included Warranties & GEDA Liaisoning
+                      Included Warranties & GEDA Liaisoning <span className="text-slate-400 font-normal ml-1">(Optional)</span>
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                       {[
@@ -1351,7 +1390,7 @@ ${quoteNotes ? `• Notes: "${quoteNotes}"` : ''}`;
                   {/* Custom Notes / Terms */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Installer Notes & Special Terms for Citizen
+                      Installer Notes & Special Terms for Citizen <span className="text-slate-400 font-normal ml-1">(Optional)</span>
                     </label>
                     <textarea
                       rows={2}

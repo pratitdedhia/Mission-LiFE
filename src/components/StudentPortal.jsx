@@ -80,10 +80,15 @@ export default function StudentPortal({ user, onNavigate }) {
       return;
     }
 
+    if (!idCardPreview && !idCardFile) {
+      showNotification("Please upload your institutional student ID card photo proof for verification.");
+      return;
+    }
+
     setSubmitting(true);
     const finalUni = universityName === 'Other' ? (customUniversity || "Gujarat University") : universityName;
 
-    // Default sample image if user didn't pick custom file
+    // Use uploaded preview URL or fallback
     const photoUrl = idCardPreview || "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=400&q=80";
 
     const saved = submitStudentVerification({
@@ -366,6 +371,7 @@ export default function StudentPortal({ user, onNavigate }) {
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 University / Institute
+                <span className="text-rose-500 font-bold ml-0.5">*</span>
               </label>
               <select
                 value={universityName}
@@ -395,6 +401,7 @@ export default function StudentPortal({ user, onNavigate }) {
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                   Student Roll / Enrollment ID
+                  <span className="text-rose-500 font-bold ml-0.5">*</span>
                 </label>
                 <input
                   type="text"
@@ -409,6 +416,7 @@ export default function StudentPortal({ user, onNavigate }) {
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                   Department / Branch
+                  <span className="text-rose-500 font-bold ml-0.5">*</span>
                 </label>
                 <select
                   value={department}
@@ -427,6 +435,7 @@ export default function StudentPortal({ user, onNavigate }) {
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                   Year of Study
+                  <span className="text-rose-500 font-bold ml-0.5">*</span>
                 </label>
                 <select
                   value={yearOfStudy}
@@ -443,7 +452,7 @@ export default function StudentPortal({ user, onNavigate }) {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Hostel / Residence Block
+                  Hostel / Residence Block <span className="text-slate-400 font-normal">(Optional)</span>
                 </label>
                 <input
                   type="text"
@@ -459,6 +468,7 @@ export default function StudentPortal({ user, onNavigate }) {
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Upload Student ID Card Photo (Proof)
+                <span className="text-rose-500 font-bold ml-0.5">*</span>
               </label>
               
               <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 rounded-2xl p-6 text-center bg-slate-50 dark:bg-slate-800/40 transition-colors">

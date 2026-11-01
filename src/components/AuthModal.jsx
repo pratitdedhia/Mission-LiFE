@@ -107,9 +107,45 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
     setGoogleNotice(null);
+
+    // Validate genuine required fields
+    if (mode === 'signup') {
+      if (!displayName.trim()) {
+        setError("Please enter your full name.");
+        return;
+      }
+      if (!email.trim() || !email.includes('@')) {
+        setError("Please enter a valid email address.");
+        return;
+      }
+      if (!password || password.length < 6) {
+        setError("Password must be at least 6 characters long.");
+        return;
+      }
+      if (selectedRole === 'student') {
+        if (!studentCollegeId.trim()) {
+          setError("Please provide your Student Roll / Enrollment ID.");
+          return;
+        }
+        if (!studentIdCardPreview) {
+          setError("Institutional Student ID Card photo proof is required to verify your enrollment.");
+          return;
+        }
+      }
+    } else {
+      if (!email.trim()) {
+        setError("Please enter your registered email address.");
+        return;
+      }
+      if (!password) {
+        setError("Please enter your password.");
+        return;
+      }
+    }
+
+    setLoading(true);
 
     let res;
     if (mode === 'login') {
@@ -121,8 +157,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
         collegeId: studentCollegeId.trim().toUpperCase() || '23BCE094',
         department: studentDepartment,
         yearOfStudy: studentYear,
-        residenceType: studentHostel,
-        idCardPhotoUrl: studentIdCardPreview || "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=400&q=80",
+        residenceType: studentHostel || "Campus Housing",
+        idCardPhotoUrl: studentIdCardPreview,
         verificationStatus: "pending",
         verifiedBy: null,
         campusLeaderName: "Aarav Mehta"
@@ -139,8 +175,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
           collegeId: studentCollegeId.trim().toUpperCase() || '23BCE094',
           department: studentDepartment,
           yearOfStudy: studentYear,
-          residenceType: studentHostel,
-          idCardPhotoUrl: studentIdCardPreview || "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=400&q=80"
+          residenceType: studentHostel || "Campus Housing",
+          idCardPhotoUrl: studentIdCardPreview
         });
       }
     }
@@ -342,6 +378,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   {selectedRole === 'student' ? 'Student Full Name' : 'Full Name / Entity Name'}
+                  <span className="text-rose-500 font-bold ml-0.5">*</span>
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -359,6 +396,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Gujarat District
+                  <span className="text-rose-500 font-bold ml-0.5">*</span>
                 </label>
                 <div className="relative">
                   <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -384,6 +422,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       University / Institute
+                      <span className="text-rose-500 font-bold ml-0.5">*</span>
                     </label>
                     <select
                       value={studentUniversity}
@@ -400,6 +439,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                         Student Roll / ID No.
+                        <span className="text-rose-500 font-bold ml-0.5">*</span>
                       </label>
                       <input
                         type="text"
@@ -414,6 +454,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                         Department / Branch
+                        <span className="text-rose-500 font-bold ml-0.5">*</span>
                       </label>
                       <select
                         value={studentDepartment}
@@ -431,6 +472,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                         Year of Study
+                        <span className="text-rose-500 font-bold ml-0.5">*</span>
                       </label>
                       <select
                         value={studentYear}
@@ -447,7 +489,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
 
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Hostel / Residence Block
+                        Hostel / Residence Block <span className="text-slate-400 font-normal">(Optional)</span>
                       </label>
                       <input
                         type="text"
@@ -462,6 +504,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Upload College Student ID Card (Photo Proof)
+                      <span className="text-rose-500 font-bold ml-0.5">*</span>
                     </label>
                     <div className="relative border-2 border-dashed border-indigo-200 dark:border-indigo-800/80 rounded-xl p-3 text-center bg-white/70 dark:bg-slate-800/60 hover:bg-white transition-colors">
                       <input
@@ -488,7 +531,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                         <div className="flex flex-col items-center justify-center gap-1">
                           <Upload className="w-5 h-5 text-indigo-500" />
                           <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
-                            Click to browse institutional ID card
+                            Click to browse institutional ID card *
                           </span>
                           <span className="text-[10px] text-slate-400">
                             JPG, PNG or WEBP (Max 5MB)
@@ -509,6 +552,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Email Address
+              <span className="text-rose-500 font-bold ml-0.5">*</span>
             </label>
             <div className="relative">
               <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -527,6 +571,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
             <div className="flex items-center justify-between mb-1">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Password
+                <span className="text-rose-500 font-bold ml-0.5">*</span>
               </label>
               {mode === 'login' && (
                 <button

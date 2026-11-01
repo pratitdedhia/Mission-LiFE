@@ -94,7 +94,18 @@ export default function CommunityImpact({ community = {}, user = {} }) {
 
   const handleCreatePost = async (e) => {
     e.preventDefault();
-    if (!newTitle.trim() || !newContent.trim()) return;
+    if (!newTitle.trim()) {
+      alert("Please provide an action title.");
+      return;
+    }
+    if (!newRollNo.trim()) {
+      alert("Please enter your Student Roll / College ID.");
+      return;
+    }
+    if (!newContent.trim()) {
+      alert("Please describe your action details and impact.");
+      return;
+    }
 
     setIsPosting(true);
     let photoUrl = "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80";
@@ -473,7 +484,9 @@ export default function CommunityImpact({ community = {}, user = {} }) {
 
             <form onSubmit={handleCreatePost} className="space-y-3.5 mt-4">
               <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Action Title</label>
+                <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
+                  Action Title <span className="text-rose-500 font-bold ml-0.5">*</span>
+                </label>
                 <input
                   type="text"
                   required
@@ -486,7 +499,9 @@ export default function CommunityImpact({ community = {}, user = {} }) {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Student Roll / College ID</label>
+                  <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
+                    Student Roll / College ID <span className="text-rose-500 font-bold ml-0.5">*</span>
+                  </label>
                   <input
                     type="text"
                     required
@@ -497,7 +512,9 @@ export default function CommunityImpact({ community = {}, user = {} }) {
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Hostel / Campus Housing</label>
+                  <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
+                    Hostel / Campus Housing <span className="text-slate-400 font-normal ml-1">(Optional)</span>
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. Hall 5 (Sabarmati)"
@@ -509,7 +526,9 @@ export default function CommunityImpact({ community = {}, user = {} }) {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">LiFE Theme</label>
+                <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
+                  LiFE Theme <span className="text-rose-500 font-bold ml-0.5">*</span>
+                </label>
                 <select
                   value={newTheme}
                   onChange={(e) => setNewTheme(e.target.value)}
@@ -525,7 +544,9 @@ export default function CommunityImpact({ community = {}, user = {} }) {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Details & Impact</label>
+                <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
+                  Details & Impact <span className="text-rose-500 font-bold ml-0.5">*</span>
+                </label>
                 <textarea
                   rows="3"
                   required
@@ -537,7 +558,9 @@ export default function CommunityImpact({ community = {}, user = {} }) {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Photo Evidence (Optional)</label>
+                <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
+                  Photo Evidence <span className="text-slate-400 font-normal ml-1">(Optional)</span>
+                </label>
                 <div className="border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-3 text-center bg-slate-50 dark:bg-slate-800/40">
                   {previewUrl ? (
                     <div className="flex items-center justify-between gap-3">

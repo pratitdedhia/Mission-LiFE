@@ -153,7 +153,14 @@ export default function AdminDashboard({ community = {}, user = {}, activeTab = 
 
   const handleCreateUser = (e) => {
     e.preventDefault();
-    if (!newUserName.trim() || !newUserEmail.trim()) return;
+    if (!newUserName.trim()) {
+      showToast("Please enter the user's full name.");
+      return;
+    }
+    if (!newUserEmail.trim() || !newUserEmail.includes('@')) {
+      showToast("Please enter a valid email address.");
+      return;
+    }
 
     createManagedUser({
       name: newUserName.trim(),
@@ -1028,7 +1035,9 @@ export default function AdminDashboard({ community = {}, user = {}, activeTab = 
 
             <form onSubmit={handleCreateUser} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Full Name</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Full Name <span className="text-rose-500 font-bold ml-0.5">*</span>
+                </label>
                 <input
                   type="text"
                   required
@@ -1040,7 +1049,9 @@ export default function AdminDashboard({ community = {}, user = {}, activeTab = 
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Email Address <span className="text-rose-500 font-bold ml-0.5">*</span>
+                </label>
                 <input
                   type="email"
                   required
@@ -1053,7 +1064,9 @@ export default function AdminDashboard({ community = {}, user = {}, activeTab = 
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Assigned Role</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Assigned Role <span className="text-rose-500 font-bold ml-0.5">*</span>
+                  </label>
                   <select
                     value={newUserRole}
                     onChange={(e) => setNewUserRole(e.target.value)}
@@ -1067,7 +1080,9 @@ export default function AdminDashboard({ community = {}, user = {}, activeTab = 
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Gujarat District</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Gujarat District <span className="text-rose-500 font-bold ml-0.5">*</span>
+                  </label>
                   <select
                     value={newUserDistrict}
                     onChange={(e) => setNewUserDistrict(e.target.value)}
@@ -1081,7 +1096,9 @@ export default function AdminDashboard({ community = {}, user = {}, activeTab = 
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Contact Phone</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Contact Phone <span className="text-slate-400 font-normal ml-1">(Optional)</span>
+                </label>
                 <input
                   type="tel"
                   placeholder="+91 98000 12345"

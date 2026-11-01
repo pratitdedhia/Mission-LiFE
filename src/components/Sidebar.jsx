@@ -15,7 +15,8 @@ import {
   ChevronRight,
   Camera,
   MessageSquare,
-  Zap
+  Zap,
+  TrendingUp
 } from 'lucide-react';
 import { TRANSLATIONS } from '../data/initialData';
 import { BRANDING } from '../config/branding';
