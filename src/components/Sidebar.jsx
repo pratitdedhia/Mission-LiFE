@@ -32,6 +32,7 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
   if (userRole === 'solar_vendor') {
     navItems = [
       { id: 'solar_vendor', label: 'Installer Leads Queue', icon: SunMedium, badge: 'Partner' },
+      { id: 'insights', label: 'Insights', icon: TrendingUp, badge: 'Analytics' },
       { id: 'vendor_chat', label: 'Citizen Inquiries & Chat', icon: MessageSquare, badge: 'Live' },
       { id: 'vendor_grid', label: 'DISCOM Net-Metering', icon: Zap, badge: 'Grid' },
       { id: 'vendor_hardware', label: 'ALMM Hardware Catalog', icon: ShieldCheck, badge: 'GEDA' }
@@ -39,6 +40,7 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
   } else if (userRole === 'student') {
     navItems = [
       { id: 'student_portal', label: 'My Campus Eco Hub', icon: GraduationCap, badge: 'Student' },
+      { id: 'insights', label: 'Insights', icon: TrendingUp, badge: 'Analytics' },
       { id: 'inventory', label: 'My Appliances', icon: Cpu, badge: 'IoT' },
       { id: 'missions', label: 'Campus Challenges', icon: CheckCircle2 },
       { id: 'community', label: 'University Rankings', icon: Users },
@@ -48,6 +50,7 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
   } else if (userRole === 'campus_leader') {
     navItems = [
       { id: 'campus_leader', label: 'Campus Squad Hub', icon: GraduationCap, badge: 'Leader' },
+      { id: 'insights', label: 'Insights', icon: TrendingUp, badge: 'Analytics' },
       { id: 'missions', label: 'Campus Eco Sprints', icon: CheckCircle2 },
       { id: 'community', label: 'Campus Rankings', icon: Users },
       { id: 'scan', label: 'Appliance Scanner', icon: Camera, badge: 'YOLOv8' },
@@ -56,6 +59,7 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
   } else if (userRole === 'admin') {
     navItems = [
       { id: 'admin', label: 'GEDA Command Center', icon: Building2, badge: 'Officer' },
+      { id: 'insights', label: 'Insights', icon: TrendingUp, badge: 'Analytics' },
       { id: 'admin_impact', label: 'Impact Analytics', icon: TrendingUp, badge: 'Planning' },
       { id: 'admin_users', label: 'User Login Controls', icon: Users, badge: 'RBAC' },
       { id: 'admin_solar', label: 'Rooftop Pipeline', icon: SunMedium, badge: 'MNRE' },
@@ -65,6 +69,7 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
     // Default Citizen role - strict RBAC: no student portal or admin view exposed to citizens
     navItems = [
       { id: 'dashboard', label: t.navDashboard, icon: LayoutDashboard },
+      { id: 'insights', label: 'Insights', icon: TrendingUp, badge: 'Analytics' },
       { id: 'scan', label: 'Appliance Scanner', icon: Camera, badge: 'YOLOv8' },
       { id: 'inventory', label: 'My Appliances', icon: Cpu, badge: 'IoT' },
       { id: 'footprint', label: t.navFootprint, icon: Footprints },

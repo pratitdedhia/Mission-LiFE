@@ -18,6 +18,7 @@ import {
   MessageSquare,
   SunMedium,
   UserPlus,
+  TrendingUp,
   X
 } from 'lucide-react';
 import { GRID_HOURS } from '../data/initialData';
@@ -301,6 +302,15 @@ export default function Navbar({
                       </button>
                     </>
                   )}
+
+                  {/* Accessible Insights tab link for all authenticated profiles */}
+                  <button
+                    onClick={() => { setShowProfileMenu(false); setActiveTab('insights'); }}
+                    className="w-full text-left px-3 py-2 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl flex items-center gap-2.5 text-emerald-800 dark:text-emerald-300 font-medium transition-colors cursor-pointer"
+                  >
+                    <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>Insights & Analytics</span>
+                  </button>
                 </div>
 
                 <div className="pt-1 border-t border-slate-100 dark:border-slate-700 space-y-0.5">

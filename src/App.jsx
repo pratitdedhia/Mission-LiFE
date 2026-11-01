@@ -14,6 +14,7 @@ import AdminDashboard from './components/AdminDashboard';
 import SolarVendorDashboard from './components/SolarVendorDashboard';
 import CampusLeaderDashboard from './components/CampusLeaderDashboard';
 import StudentPortal from './components/StudentPortal';
+import InsightsView from './components/InsightsView';
 import LandingPage from './components/LandingPage';
 import AuthModal from './components/AuthModal';
 import PledgeModal from './components/PledgeModal';
@@ -125,22 +126,22 @@ export default function App() {
   useEffect(() => {
     const role = (user?.role || 'citizen').toLowerCase();
     if (role === 'solar_vendor' || role === 'solar_partner') {
-      const allowedVendorTabs = ['solar_vendor', 'vendor_chat', 'vendor_grid', 'vendor_hardware'];
+      const allowedVendorTabs = ['solar_vendor', 'vendor_chat', 'vendor_grid', 'vendor_hardware', 'insights'];
       if (!allowedVendorTabs.includes(activeTab)) {
         setActiveTab('solar_vendor');
       }
     } else if (role === 'campus_leader') {
-      const allowedCampusTabs = ['campus_leader', 'missions', 'community', 'scan', 'coach'];
+      const allowedCampusTabs = ['campus_leader', 'missions', 'community', 'scan', 'coach', 'insights'];
       if (!allowedCampusTabs.includes(activeTab)) {
         setActiveTab('campus_leader');
       }
     } else if (role === 'student') {
-      const allowedStudentTabs = ['student_portal', 'inventory', 'missions', 'community', 'scan', 'coach'];
+      const allowedStudentTabs = ['student_portal', 'inventory', 'missions', 'community', 'scan', 'coach', 'insights'];
       if (!allowedStudentTabs.includes(activeTab)) {
         setActiveTab('student_portal');
       }
     } else if (role === 'admin') {
-      const allowedAdminTabs = ['admin', 'admin_impact', 'admin_users', 'admin_solar', 'directory'];
+      const allowedAdminTabs = ['admin', 'admin_impact', 'admin_users', 'admin_solar', 'directory', 'insights'];
       if (!allowedAdminTabs.includes(activeTab)) {
         setActiveTab('admin');
       }
@@ -498,6 +499,13 @@ export default function App() {
             <CampusLeaderDashboard
               user={user}
               onCompleteMission={handleCompleteMission}
+            />
+          )}
+
+          {activeTab === 'insights' && (
+            <InsightsView
+              user={user}
+              onNavigate={setActiveTab}
             />
           )}
         </main>
