@@ -5,6 +5,7 @@ FastAPI + OpenCV + YOLOv8 + Smart-Meter Telemetry Bridge + Firestore Persistence
 
 import io
 import os
+import json
 import time
 from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, File, UploadFile, HTTPException, status
@@ -23,11 +24,26 @@ try:
     from firebase_admin import credentials, firestore
     if not firebase_admin._apps:
         project_id = os.environ.get("VITE_FIREBASE_PROJECT_ID", "hackcult-f9a20")
-        try:
-            cred = credentials.ApplicationDefault()
-            firebase_admin.initialize_app(cred, {"projectId": project_id})
-        except Exception:
-            firebase_admin.initialize_app(options={"projectId": project_id})
+        firebase_creds_json = os.environ.get("FIREBASE_CREDENTIALS")
+        
+        if firebase_creds_json:
+            try:
+                # Parse the service account JSON from environment variable
+                cred_dict = json.loads(firebase_creds_json)
+                cred = credentials.Certificate(cred_dict)
+                firebase_admin.initialize_app(cred, {"projectId": project_id})
+                print("Firebase Admin SDK initialized successfully via FIREBASE_CREDENTIALS env var.")
+            except Exception as env_err:
+                print(f"Warning: Failed to parse FIREBASE_CREDENTIALS json: {env_err}")
+                cred = credentials.ApplicationDefault()
+                firebase_admin.initialize_app(cred, {"projectId": project_id})
+        else:
+            try:
+                cred = credentials.ApplicationDefault()
+                firebase_admin.initialize_app(cred, {"projectId": project_id})
+            except Exception:
+                firebase_admin.initialize_app(options={"projectId": project_id})
+                
     firestore_client = firestore.client()
 except Exception as e:
     print(f"Notice: Firebase Admin SDK running in HTTP/local fallback mode: {e}")
@@ -235,7 +251,7 @@ async def save_hardware_telemetry_to_firestore(
     except Exception as rest_err:
         print(f"Firestore REST buffer notice: {rest_err}")
 
-    return True
+    return False
 
 
 # -----------------------------------------------------------------------------
