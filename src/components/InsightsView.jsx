@@ -741,3 +741,4 @@ export default function InsightsView({ user = {}, onNavigate }) {
     </div>
   );
 }
+
