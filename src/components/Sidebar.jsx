@@ -13,7 +13,8 @@ import {
   Sparkles,
   ShieldCheck,
   ChevronRight,
-  Leaf
+  Leaf,
+  Camera
 } from 'lucide-react';
 import { TRANSLATIONS } from '../data/initialData';
 import { BRANDING } from '../config/branding';
@@ -22,7 +23,7 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
   const userRole = user?.role || 'citizen';
 
-  // Base navigation items tailored by role
+  // Base navigation items tailored by role (Strict RBAC: admin only for role === 'admin')
   let navItems = [];
 
   if (userRole === 'solar_vendor') {
@@ -30,13 +31,14 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
       { id: 'solar_vendor', label: 'Installer Leads Queue', icon: SunMedium, badge: 'Partner' },
       { id: 'solar', label: 'Solar Rooftop Engine', icon: SunMedium },
       { id: 'directory', label: t.navDirectory, icon: BookOpen },
-      { id: 'admin', label: 'GEDA State View', icon: Building2 },
+      { id: 'scan', label: 'Appliance Scanner', icon: Camera, badge: 'YOLOv8' },
       { id: 'dashboard', label: 'Citizen View', icon: LayoutDashboard }
     ];
   } else if (userRole === 'campus_leader') {
     navItems = [
       { id: 'campus_leader', label: 'Campus Squad Hub', icon: GraduationCap, badge: 'Leader' },
       { id: 'dashboard', label: t.navDashboard, icon: LayoutDashboard },
+      { id: 'scan', label: 'Appliance Scanner', icon: Camera, badge: 'YOLOv8' },
       { id: 'missions', label: t.navMissions, icon: CheckCircle2 },
       { id: 'community', label: 'Campus Rankings', icon: Users },
       { id: 'coach', label: t.navCoach, icon: Bot }
@@ -45,21 +47,22 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
     navItems = [
       { id: 'admin', label: 'GEDA Command Center', icon: Building2, badge: 'Officer' },
       { id: 'dashboard', label: 'Citizen Metrics View', icon: LayoutDashboard },
+      { id: 'scan', label: 'Appliance Scanner', icon: Camera, badge: 'YOLOv8' },
       { id: 'community', label: '33-District Impact', icon: Users },
       { id: 'solar', label: 'Rooftop Pipeline', icon: SunMedium },
       { id: 'directory', label: t.navDirectory, icon: BookOpen }
     ];
   } else {
-    // Default Citizen role
+    // Default Citizen role - strict RBAC: no admin view exposed to citizens
     navItems = [
       { id: 'dashboard', label: t.navDashboard, icon: LayoutDashboard },
+      { id: 'scan', label: 'Appliance Scanner', icon: Camera, badge: 'YOLOv8' },
       { id: 'footprint', label: t.navFootprint, icon: Footprints },
       { id: 'missions', label: t.navMissions, icon: CheckCircle2 },
       { id: 'community', label: t.navCommunity, icon: Users },
       { id: 'solar', label: t.navSolar, icon: SunMedium },
       { id: 'directory', label: t.navDirectory, icon: BookOpen },
-      { id: 'coach', label: t.navCoach, icon: Bot },
-      { id: 'admin', label: t.navAdmin, icon: Building2 }
+      { id: 'coach', label: t.navCoach, icon: Bot }
     ];
   }
 
@@ -76,11 +79,9 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
     <aside className="w-full md:w-64 flex-shrink-0 flex md:flex-col justify-between p-3 md:p-5 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-colors shadow-xs">
       <div className="w-full">
         
-        {/* Active Role Card & Switcher Button */}
+        {/* Active Role Card */}
         <div 
-          onClick={onOpenAuth}
-          className="hidden md:flex items-center justify-between p-2.5 mb-3 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/50 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 transition-colors cursor-pointer group"
-          title="Click to switch persona / demo login"
+          className="hidden md:flex items-center justify-between p-2.5 mb-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 transition-colors"
         >
           <div className="flex items-center gap-2 overflow-hidden">
             <div className="w-7 h-7 rounded-lg bg-emerald-800 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
@@ -91,7 +92,9 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
               <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{currentRoleMeta.label}</p>
             </div>
           </div>
-          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800/50">
+            Active
+          </span>
         </div>
 
         {/* Navigation list */}

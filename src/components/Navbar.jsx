@@ -206,13 +206,15 @@ export default function Navbar({
                     <span>Mission LiFE Certificate</span>
                   </button>
 
-                  <button
-                    onClick={() => { setShowProfileMenu(false); setActiveTab('admin'); }}
-                    className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
-                  >
-                    <Building2 className="w-4 h-4 text-cyan-500" />
-                    <span>GEDA State Admin View</span>
-                  </button>
+                  {user?.role === 'admin' && (
+                    <button
+                      onClick={() => { setShowProfileMenu(false); setActiveTab('admin'); }}
+                      className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                    >
+                      <Building2 className="w-4 h-4 text-cyan-500" />
+                      <span>GEDA State Admin View</span>
+                    </button>
+                  )}
 
                   {onOpenLanding && (
                     <button

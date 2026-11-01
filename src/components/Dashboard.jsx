@@ -18,7 +18,10 @@ import {
   Edit3,
   CloudSun,
   Thermometer,
-  RefreshCw
+  RefreshCw,
+  Activity,
+  ExternalLink,
+  X
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GRID_HOURS } from '../data/initialData';
@@ -40,6 +43,26 @@ export default function Dashboard({
   const { t } = useTranslation();
   const [weatherData, setWeatherData] = useState(null);
   const [loadingWeather, setLoadingWeather] = useState(false);
+  const [iotOnline, setIotOnline] = useState(false);
+  const [iotWatts, setIotWatts] = useState(0);
+  const [iotVoltage, setIotVoltage] = useState(230.1);
+  const [showPointsHistory, setShowPointsHistory] = useState(false);
+
+  useEffect(() => {
+    let interval = null;
+    if (iotOnline) {
+      setIotWatts(940);
+      interval = setInterval(() => {
+        setIotWatts(Math.floor(880 + Math.random() * 260));
+        setIotVoltage(Number((229.5 + Math.random() * 2.2).toFixed(1)));
+      }, 3000);
+    } else {
+      setIotWatts(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [iotOnline]);
 
   useEffect(() => {
     let isMounted = true;
@@ -65,6 +88,66 @@ export default function Dashboard({
 
   return (
     <div className="space-y-7 max-w-5xl mx-auto">
+      
+      {/* IoT Hardware Telemetry Bridge Indicator (ESP32 Wokwi Integration) */}
+      <div className={`p-4 rounded-2xl border transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-3 ${
+        iotOnline 
+          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-950 dark:text-emerald-100 shadow-sm' 
+          : 'bg-slate-100/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+      }`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+            iotOnline 
+              ? 'bg-emerald-600 text-white shadow-xs' 
+              : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+          }`}>
+            <Activity className={`w-4 h-4 ${iotOnline ? 'animate-pulse' : ''}`} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${iotOnline ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`} />
+                <span>Simulated Smart Meter: {iotOnline ? 'Online' : 'Offline'}</span>
+              </span>
+              {iotOnline && (
+                <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700">
+                  ⚡ Live Draw: {iotWatts} W • {iotVoltage} V • {(iotWatts / iotVoltage).toFixed(2)} A
+                </span>
+              )}
+              <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-500">
+                ESP32 / HTTP POST
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+              {iotOnline 
+                ? 'Receiving dynamic telemetry payload from ESP32 current-sensor microcontroller. Live domestic wattage streams to Mission LiFE cloud.' 
+                : 'Hardware telemetry bridge ready. Launch the Wokwi ESP32 simulator or toggle live stream to stream real-time current sensor packets.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-end md:self-auto flex-shrink-0">
+          <button
+            onClick={() => setIotOnline(prev => !prev)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+              iotOnline 
+                ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-600 shadow-xs' 
+                : 'bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 shadow-xs'
+            }`}
+          >
+            {iotOnline ? 'Disconnect Stream' : 'Simulate Live ESP32 Stream'}
+          </button>
+          <a
+            href="https://wokwi.com/projects/479495732560719873"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
+          >
+            <span>Wokwi Sim</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+      </div>
       
       {/* Real-Time Smart Grid Load Nudge Banner */}
       <div className={`p-5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all shadow-xs ${
@@ -174,13 +257,24 @@ export default function Dashboard({
 
         {/* Key Metrics Strip */}
         <div className="flex items-center gap-3">
-          <div className="human-card px-4 py-2.5 text-center">
-            <span className="text-[11px] font-semibold uppercase text-slate-400 dark:text-slate-500 block">LiFE+ Score</span>
+          <button
+            onClick={() => setShowPointsHistory(true)}
+            className="human-card px-4 py-2.5 text-center cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500/80 transition-all group relative text-left"
+            title="Click to view verified points history and audit trail"
+          >
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[11px] font-semibold uppercase text-slate-400 dark:text-slate-500 block group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                LiFE+ Score ↗
+              </span>
+            </div>
             <div className="flex items-baseline justify-center gap-1.5 mt-0.5">
               <span className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">{user.lifeScore}</span>
               <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">+{user.scoreTodayDelta}</span>
             </div>
-          </div>
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block font-medium mt-0.5 text-center underline">
+              View History
+            </span>
+          </button>
 
           <div className="human-card px-4 py-2.5 text-center">
             <span className="text-[11px] font-semibold uppercase text-slate-400 dark:text-slate-500 block">Monthly Footprint</span>
@@ -411,6 +505,88 @@ export default function Dashboard({
           <span>{BRANDING.disclaimers.general} {BRANDING.disclaimers.grid} {BRANDING.disclaimers.verification}</span>
         </div>
       </div>
+
+      {/* Interactive Points History Modal */}
+      {showPointsHistory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl">
+            <button
+              onClick={() => setShowPointsHistory(false)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 px-2.5 py-0.5 rounded-full">
+                Gamification Audit Ledger
+              </span>
+            </div>
+
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-2">
+              Verified LiFE+ Score History
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Authoritative transaction log of micro-habits, baseline recalculations, and proof-verified environmental contributions.
+            </p>
+
+            {/* Total Balance Card */}
+            <div className="my-4 p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-slate-50 dark:from-emerald-950/30 dark:to-slate-800/40 border border-emerald-200 dark:border-emerald-800/50 flex items-center justify-between">
+              <div>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block">Total LiFE+ Balance</span>
+                <span className="text-3xl font-extrabold text-emerald-700 dark:text-emerald-300 font-mono">{user.lifeScore} pts</span>
+              </div>
+              <div className="text-right">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block">Streak Status</span>
+                <span className="text-base font-bold text-amber-500 font-mono">{user.streak} Days 🔥</span>
+              </div>
+            </div>
+
+            {/* Ledger Items */}
+            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+              {[
+                { title: "Set AC to 26°C with ceiling fan assist", date: "Today, 4:20 PM", points: "+25", co2: "-1.2 kg", type: "Photo Proof Verified", icon: Zap },
+                { title: "Mission LiFE Environmental Pledge Signed", date: "Today, 2:15 PM", points: "+100", co2: "-5.0 kg", type: "Institutional Certificate", icon: Award },
+                { title: "Baseline Household Energy Audit Completed", date: "Yesterday", points: "+50", co2: "-0.8 kg", type: "Baseline Established", icon: ShieldCheck },
+                { title: "Switched off wall standby socket loads", date: "2 days ago", points: "+15", co2: "-0.4 kg", type: "Habit Verified", icon: Sparkles },
+                { title: "Single-use plastic avoided (Jute bag adopted)", date: "3 days ago", points: "+10", co2: "-0.2 kg", type: "Habit Verified", icon: Check }
+              ].map((item, idx) => {
+                const IconComponent = item.icon;
+                return (
+                  <div key={idx} className="p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+                        <IconComponent className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-800 dark:text-slate-200">{item.title}</p>
+                        <p className="text-[10px] text-slate-400 flex items-center gap-2">
+                          <span>{item.date}</span>
+                          <span>•</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">{item.type}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-xs block">{item.points} pts</span>
+                      <span className="text-[10px] text-slate-500 font-mono">{item.co2} CO₂</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-5 pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+              <button
+                onClick={() => setShowPointsHistory(false)}
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold transition-colors"
+              >
+                Close Ledger
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

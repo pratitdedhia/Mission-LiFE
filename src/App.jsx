@@ -8,6 +8,7 @@ import CommunityImpact from './components/CommunityImpact';
 import SolarAdvisor from './components/SolarAdvisor';
 import GreenDirectory from './components/GreenDirectory';
 import AICoach from './components/AICoach';
+import ApplianceScanner from './components/ApplianceScanner';
 import AdminDashboard from './components/AdminDashboard';
 import SolarVendorDashboard from './components/SolarVendorDashboard';
 import CampusLeaderDashboard from './components/CampusLeaderDashboard';
@@ -135,6 +136,12 @@ export default function App() {
 
   // Behavior loop: Authoritative gamification engine completion
   const handleCompleteMission = async (missionId, points, co2Kg, proofData = null) => {
+    // Strict Verification: High-value tasks require photo proof to prevent bypass
+    if (points >= 20 && !proofData?.url) {
+      showToast("Photo verification evidence is required to verify this mission and claim points.");
+      return;
+    }
+
     // 1. Authoritative validation via gamification engine (anti-duplicate check & streak bonus)
     const authResult = await recordAuthoritativeMission({
       userId: user.id || 'usr_guest',
@@ -381,10 +388,35 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'admin' && (
-            <AdminDashboard
-              community={community}
+          {activeTab === 'scan' && (
+            <ApplianceScanner
+              user={user}
+              onNavigate={setActiveTab}
             />
+          )}
+
+          {activeTab === 'admin' && (
+            user.role === 'admin' ? (
+              <AdminDashboard
+                community={community}
+              />
+            ) : (
+              <div className="p-8 human-card text-center max-w-lg mx-auto my-12 border-rose-200 dark:border-rose-900/50">
+                <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto mb-3 font-bold text-xl">
+                  🔒
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">GEDA Officer Access Restricted</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                  The GEDA Command Center is strictly reserved for authorized State Department administrators under Gujarat Energy Development Agency RBAC protocols.
+                </p>
+                <button
+                  onClick={() => setActiveTab('dashboard')}
+                  className="mt-5 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer shadow-xs"
+                >
+                  Return to Citizen Dashboard
+                </button>
+              </div>
+            )
           )}
 
           {activeTab === 'solar_vendor' && (

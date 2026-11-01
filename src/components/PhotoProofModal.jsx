@@ -33,28 +33,29 @@ export default function PhotoProofModal({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!selectedFile) {
+      setError("Photo proof is mandatory to verify habit execution and claim points.");
+      return;
+    }
     setUploading(true);
     setError(null);
 
     try {
-      let uploadResult = null;
-      if (selectedFile) {
-        uploadResult = await uploadProofImage(selectedFile, user.id);
-      }
+      const uploadResult = await uploadProofImage(selectedFile, user.id);
 
       onProofConfirmed({
         missionId: mission.id,
         points: mission.points,
         co2Kg: mission.co2Kg,
-        proofData: uploadResult ? {
-          url: uploadResult.url,
-          isCloudStorage: uploadResult.isCloudStorage,
+        proofData: {
+          url: uploadResult?.url || URL.createObjectURL(selectedFile),
+          isCloudStorage: !!uploadResult?.isCloudStorage,
           notes: notes,
           userName: user.name,
           userCity: user.locality ? `${user.locality}, ${user.city || 'Gujarat'}` : (user.city || 'Gujarat'),
           theme: mission.theme,
           title: mission.title
-        } : null
+        }
       });
 
       setUploading(false);
@@ -62,7 +63,7 @@ export default function PhotoProofModal({
     } catch (err) {
       console.error("Proof confirmation error:", err);
       setUploading(false);
-      setError("Proceeding with local verification.");
+      setError("Failed to upload proof. Please retry.");
     }
   };
 
@@ -163,6 +164,14 @@ export default function PhotoProofModal({
             </div>
           </div>
 
+          {/* Mandatory Photo Proof Guidance */}
+          {!selectedFile && (
+            <div className="flex items-center gap-1.5 p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-700 dark:text-amber-300 text-xs">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>Select or capture photo evidence to enable verification and claim points.</span>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex items-center gap-3 pt-2">
             <button
@@ -174,8 +183,8 @@ export default function PhotoProofModal({
             </button>
             <button
               type="submit"
-              disabled={uploading}
-              className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 shadow-xs hover:shadow active:scale-[0.99] disabled:opacity-50"
+              disabled={uploading || !selectedFile}
+              className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 shadow-xs hover:shadow active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {uploading ? (
                 <span>Syncing Evidence...</span>

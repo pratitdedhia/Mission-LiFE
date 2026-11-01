@@ -77,14 +77,15 @@ export default function DailyMissions({
       return;
     }
 
-    if (activeSet.has(mission.id)) {
+    // High-value tasks or tasks requiring proof directly open the photo verification modal
+    if (activeSet.has(mission.id) || mission.basePoints >= 20 || mission.requiresPhotoProof) {
       setActiveProofMission({
         id: mission.id,
         title: t(mission.titleKey, mission.id),
         description: t(mission.descriptionKey, mission.impactSummary),
         points: mission.basePoints,
         co2Kg: mission.co2SavingsKg,
-        requiresPhoto: mission.requiresPhotoProof
+        requiresPhoto: true
       });
     } else {
       onAcceptMission(mission.id, mission.basePoints, mission.co2SavingsKg);

@@ -27,12 +27,17 @@ export default function BehaviorLoopCard({
   const isCompleted = user.completedMissions?.includes(rec.missionId);
 
   const handleAccept = () => {
-    onAcceptMission(rec.missionId, rec.points, rec.impactCo2Kg);
-    confetti({
-      particleCount: 40,
-      spread: 45,
-      origin: { y: 0.7 }
-    });
+    // For high-value tasks, open photo verification modal immediately to prevent points bypass
+    if (rec.points >= 20) {
+      setActiveProofModal(true);
+    } else {
+      onAcceptMission(rec.missionId, rec.points, rec.impactCo2Kg);
+      confetti({
+        particleCount: 40,
+        spread: 45,
+        origin: { y: 0.7 }
+      });
+    }
   };
 
   const handleOpenRecord = () => {
