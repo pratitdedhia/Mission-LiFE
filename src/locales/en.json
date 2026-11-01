@@ -77,6 +77,18 @@
     "uploadProof": "Upload Photo Proof (+25 pts bonus)",
     "recordAction": "Record Action",
     "completedToday": "Completed Today",
+    "cleanAcFilter": {
+      "title": "Clean AC Mesh Filters (Hardware Targeted)",
+      "desc": "Remove and rinse AC nylon filters to eliminate 15% compressor drag."
+    },
+    "fridgeCoil": {
+      "title": "Refrigerator Coil Clearance Check (Hardware Targeted)",
+      "desc": "Ensure a 2-inch gap behind refrigerator cooling coils for unimpeded heat dissipation."
+    },
+    "coldWaterWash": {
+      "title": "Cold-Water Eco Wash Cycle (Hardware Targeted)",
+      "desc": "Run washing machine on 30°C setting to bypass high-emission water heating coils."
+    },
     "ac24": {
       "title": "Set Domestic AC to 24°C",
       "desc": "Run air conditioner at Bureau of Energy Efficiency (BEE) recommended 24°C."

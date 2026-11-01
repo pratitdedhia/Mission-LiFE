@@ -243,7 +243,17 @@ export default function Dashboard({
               className="text-xs text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 font-medium underline flex items-center gap-1 ml-1 cursor-pointer"
             >
               <Edit3 className="w-3 h-3" />
-              <span>Edit Home Baseline</span>
+              <span>Edit Baseline</span>
+            </button>
+            <span className="text-slate-300 dark:text-slate-700">•</span>
+            <button
+              onClick={() => onNavigate && onNavigate('inventory')}
+              className="text-xs text-emerald-700 dark:text-emerald-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+            >
+              <span>My Appliances</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                {user.inventoryCount || 2}
+              </span>
             </button>
           </div>
 
@@ -276,13 +286,24 @@ export default function Dashboard({
             </span>
           </button>
 
-          <div className="human-card px-4 py-2.5 text-center">
-            <span className="text-[11px] font-semibold uppercase text-slate-400 dark:text-slate-500 block">Monthly Footprint</span>
+          <button
+            onClick={() => onNavigate && onNavigate('inventory')}
+            className="human-card px-4 py-2.5 text-center cursor-pointer hover:border-emerald-500 transition-all text-left group"
+            title="Click to view My Appliances and dynamic baseline"
+          >
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[11px] font-semibold uppercase text-slate-400 dark:text-slate-500 block group-hover:text-emerald-600 transition-colors">
+                Monthly Footprint ↗
+              </span>
+            </div>
             <div className="flex items-baseline justify-center gap-1 mt-0.5">
               <span className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">{user.monthlyFootprintKg}</span>
               <span className="text-xs text-slate-500 font-medium">kg CO₂</span>
             </div>
-          </div>
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block font-medium mt-0.5 text-center underline">
+              {user.hasDynamicInventoryBaseline ? '⚡ Dynamic Baseline' : 'Manage Appliances'}
+            </span>
+          </button>
 
           <div className="human-card px-4 py-2.5 text-center hidden sm:block">
             <span className="text-[11px] font-semibold uppercase text-slate-400 dark:text-slate-500 block">Active Streak</span>

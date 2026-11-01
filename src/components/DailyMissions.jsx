@@ -24,6 +24,7 @@ import PhotoProofModal from './PhotoProofModal';
 
 const THEME_FILTERS = [
   { id: 'all', labelKey: 'all', defaultLabel: 'All Themes' },
+  { id: 'inventory_targeted', labelKey: 'inventory_targeted', defaultLabel: '⚡ Targeted to My Appliances' },
   { id: 'save_energy', labelKey: 'save_energy', defaultLabel: 'Save Energy' },
   { id: 'save_water', labelKey: 'save_water', defaultLabel: 'Save Water' },
   { id: 'say_no_to_plastic', labelKey: 'say_no_to_plastic', defaultLabel: 'Say No to Single-Use Plastic' },
@@ -107,7 +108,29 @@ export default function DailyMissions({
     setActiveProofMission(null);
   };
 
+  // Check user inventory appliances
+  let userAppliances = user.appliances || [];
+  if ((!userAppliances || userAppliances.length === 0) && typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(`life_user_appliances_${user.id || 'usr_citizen'}`);
+      if (raw) userAppliances = JSON.parse(raw);
+    } catch (e) {
+      userAppliances = [];
+    }
+  }
+  const appTypes = new Set((userAppliances || []).map(a => a.appliance_type));
+
+  const isApplianceTargeted = (taskId) => {
+    if (taskId.includes('ac') && (appTypes.has('air_conditioner') || appTypes.size === 0)) return true;
+    if (taskId.includes('fridge') && (appTypes.has('refrigerator') || appTypes.size === 0)) return true;
+    if (taskId.includes('wash') && (appTypes.has('washing_machine') || appTypes.size === 0)) return true;
+    return false;
+  };
+
   const filteredTasks = tasks.filter(task => {
+    if (filterTheme === 'inventory_targeted') {
+      return isApplianceTargeted(task.id);
+    }
     if (filterTheme === 'all') return true;
     return task.themeId === filterTheme;
   });
@@ -213,9 +236,16 @@ export default function DailyMissions({
                       <Icon className="w-4 h-4" />
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                        {task.themeId.replace(/_/g, ' ')}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                          {task.themeId.replace(/_/g, ' ')}
+                        </span>
+                        {isApplianceTargeted(task.id) && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 font-mono">
+                            ⚡ In Your Inventory
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs font-bold text-slate-900 dark:text-white">
                         {t(task.titleKey, task.id)}
                       </span>

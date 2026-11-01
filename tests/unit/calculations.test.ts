@@ -3,6 +3,7 @@ import { calculateFootprint } from '../../shared/src/calculations/footprint';
 import { calculateSolarFeasibility } from '../../shared/src/calculations/solar';
 import { simulatePeakShift } from '../../shared/src/calculations/tariffs';
 import { calculateAuthoritativePoints, getLevelFromPoints } from '../../shared/src/calculations/points';
+import { calculateInventoryBaseline } from '../../src/services/applianceService';
 import type { EmissionFactors, SubsidyRules, DiscomTariff } from '../../shared/src/schemas/config';
 
 const mockEmissionFactors: EmissionFactors = {
@@ -152,6 +153,48 @@ describe('Server-Authoritative Gamification Logic', () => {
     const levelInfo = getLevelFromPoints(780);
     expect(levelInfo.level).toBe(2);
     expect(levelInfo.progressPercent).toBeGreaterThan(0);
+  });
+});
+
+describe('Appliance Inventory Dynamic Baseline Engine', () => {
+  it('sums monthly_co2e and overrides domestic baseline footprint', () => {
+    const mockAppliances = [
+      {
+        id: 'app_1',
+        appliance_type: 'air_conditioner',
+        wattage: 1450,
+        monthly_co2e: 172.5
+      },
+      {
+        id: 'app_2',
+        appliance_type: 'refrigerator',
+        wattage: 220,
+        monthly_co2e: 45.4
+      }
+    ];
+
+    const user = {
+      monthlyFootprintKg: 428,
+      breakdown: {
+        energy: 228,
+        transport: 114,
+        cooking: 38,
+        water: 24,
+        waste: 24
+      }
+    };
+
+    const res = calculateInventoryBaseline(mockAppliances, user);
+
+    // Sum of appliances = 172.5 + 45.4 = 217.9 kg
+    expect(res.totalApplianceCo2e).toBe(217.9);
+    expect(res.totalWattage).toBe(1670);
+    expect(res.applianceCount).toBe(2);
+    expect(res.hasDynamicInventoryBaseline).toBe(true);
+    // New energy = 218 + 32 = 250
+    expect(res.breakdown.energy).toBe(250);
+    // Total footprint = 250 + 114 + 38 + 24 + 24 = 450
+    expect(res.monthlyFootprintKg).toBe(450);
   });
 });
 

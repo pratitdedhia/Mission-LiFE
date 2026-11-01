@@ -11,9 +11,11 @@ import {
   Sparkles,
   ArrowRight,
   ShieldCheck,
-  Cpu
+  Cpu,
+  Home
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { addAppliance } from '../services/applianceService';
 
 const APPLIANCE_DATABASE = {
   refrigerator: {
@@ -50,12 +52,14 @@ const APPLIANCE_DATABASE = {
   }
 };
 
-export default function ApplianceScanner() {
+export default function ApplianceScanner({ user = {}, onNavigate, onApplianceAdded }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [error, setError] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -67,6 +71,7 @@ export default function ApplianceScanner() {
       setSelectedFile(file);
       setError(null);
       setScanResult(null);
+      setIsSaved(false);
       setPreviewUrl(URL.createObjectURL(file));
     }
   };
@@ -148,6 +153,41 @@ export default function ApplianceScanner() {
       confetti({ particleCount: 40, spread: 50, origin: { y: 0.7 } });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveToHome = async () => {
+    if (!scanResult || !scanResult.detected_appliances?.length) return;
+    setIsSaving(true);
+    const primaryApp = scanResult.detected_appliances[0];
+    
+    // Map label to standard appliance_type
+    const labelLower = (primaryApp.label || '').toLowerCase();
+    let appType = 'other';
+    if (labelLower.includes('conditioner') || labelLower.includes('ac')) appType = 'air_conditioner';
+    else if (labelLower.includes('refrigerator') || labelLower.includes('fridge')) appType = 'refrigerator';
+    else if (labelLower.includes('washing')) appType = 'washing_machine';
+    else if (labelLower.includes('microwave') || labelLower.includes('oven')) appType = 'microwave';
+
+    const payload = {
+      appliance_type: appType,
+      appliance_name: primaryApp.label,
+      wattage: primaryApp.estimated_wattage || scanResult.total_estimated_instant_wattage,
+      monthly_co2e: primaryApp.monthly_co2e_kg || scanResult.estimated_monthly_carbon_kg_co2e,
+      daily_hours: appType === 'refrigerator' ? 24 : appType === 'air_conditioner' ? 8 : 1,
+      source: 'yolov8_scan',
+      confidence: primaryApp.confidence || 0.94,
+      energy_saving_nudge: primaryApp.energy_saving_nudge
+    };
+
+    const res = await addAppliance(user?.id || 'usr_citizen', payload);
+    setIsSaving(false);
+    if (res.success) {
+      setIsSaved(true);
+      confetti({ particleCount: 65, spread: 65, origin: { y: 0.65 } });
+      if (onApplianceAdded) {
+        onApplianceAdded(res.appliance, res.allAppliances);
+      }
     }
   };
 
@@ -276,6 +316,46 @@ export default function ApplianceScanner() {
           <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200/80 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
             <span>Mission LiFE Action: {scanResult.mission_life_action}</span>
             <span className="font-semibold text-emerald-600 dark:text-emerald-400">+15 LiFE Pts Potential</span>
+          </div>
+
+          {/* Scanner Handoff: Save to My Home */}
+          <div className="pt-2 flex flex-col sm:flex-row items-center gap-2.5">
+            <button
+              onClick={handleSaveToHome}
+              disabled={isSaving || isSaved}
+              className={`flex-1 py-3 px-4 rounded-2xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer ${
+                isSaved
+                  ? 'bg-emerald-600 text-white cursor-default'
+                  : 'bg-emerald-800 hover:bg-emerald-700 text-white active:scale-[0.99]'
+              }`}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving to users/{user?.id || 'uid'}/appliances...</span>
+                </>
+              ) : isSaved ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                  <span>Saved to My Home Inventory!</span>
+                </>
+              ) : (
+                <>
+                  <Home className="w-4 h-4" />
+                  <span>Save to My Home</span>
+                </>
+              )}
+            </button>
+
+            {onNavigate && (
+              <button
+                onClick={() => onNavigate('inventory')}
+                className="w-full sm:w-auto py-3 px-4 rounded-2xl border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap"
+              >
+                <span>View in My Appliances</span>
+                <ArrowRight className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              </button>
+            )}
           </div>
         </div>
       )}

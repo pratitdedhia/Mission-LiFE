@@ -16,7 +16,8 @@ import {
   Camera,
   MessageSquare,
   Zap,
-  TrendingUp
+  TrendingUp,
+  Cpu
 } from 'lucide-react';
 import { TRANSLATIONS } from '../data/initialData';
 import { BRANDING } from '../config/branding';
@@ -38,6 +39,7 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
   } else if (userRole === 'student') {
     navItems = [
       { id: 'student_portal', label: 'My Campus Eco Hub', icon: GraduationCap, badge: 'Student' },
+      { id: 'inventory', label: 'My Appliances', icon: Cpu, badge: 'IoT' },
       { id: 'missions', label: 'Campus Challenges', icon: CheckCircle2 },
       { id: 'community', label: 'University Rankings', icon: Users },
       { id: 'scan', label: 'Appliance Scanner', icon: Camera, badge: 'YOLOv8' },
@@ -64,6 +66,7 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
     navItems = [
       { id: 'dashboard', label: t.navDashboard, icon: LayoutDashboard },
       { id: 'scan', label: 'Appliance Scanner', icon: Camera, badge: 'YOLOv8' },
+      { id: 'inventory', label: 'My Appliances', icon: Cpu, badge: 'IoT' },
       { id: 'footprint', label: t.navFootprint, icon: Footprints },
       { id: 'missions', label: t.navMissions, icon: CheckCircle2 },
       { id: 'community', label: t.navCommunity, icon: Users },

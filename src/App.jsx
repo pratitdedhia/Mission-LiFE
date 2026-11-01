@@ -9,6 +9,7 @@ import SolarAdvisor from './components/SolarAdvisor';
 import GreenDirectory from './components/GreenDirectory';
 import AICoach from './components/AICoach';
 import ApplianceScanner from './components/ApplianceScanner';
+import ApplianceInventoryPage from './app/inventory/page';
 import AdminDashboard from './components/AdminDashboard';
 import SolarVendorDashboard from './components/SolarVendorDashboard';
 import CampusLeaderDashboard from './components/CampusLeaderDashboard';
@@ -132,7 +133,7 @@ export default function App() {
         setActiveTab('campus_leader');
       }
     } else if (user?.role === 'student') {
-      const allowedStudentTabs = ['student_portal', 'missions', 'community', 'scan', 'coach'];
+      const allowedStudentTabs = ['student_portal', 'inventory', 'missions', 'community', 'scan', 'coach'];
       if (!allowedStudentTabs.includes(activeTab)) {
         setActiveTab('student_portal');
       }
@@ -426,6 +427,25 @@ export default function App() {
             <ApplianceScanner
               user={user}
               onNavigate={setActiveTab}
+              onApplianceAdded={(newApp, allApps) => {
+                setUser(prev => ({
+                  ...prev,
+                  appliances: allApps,
+                  inventoryCount: allApps.length
+                }));
+                showToast(`Saved ${newApp.appliance_name} to your home inventory!`);
+              }}
+            />
+          )}
+
+          {activeTab === 'inventory' && (
+            <ApplianceInventoryPage
+              user={user}
+              onNavigate={setActiveTab}
+              onUserUpdate={(updatedUser) => {
+                setUser(prev => ({ ...prev, ...updatedUser }));
+                showToast("Dynamic baseline updated across your profile!");
+              }}
             />
           )}
 

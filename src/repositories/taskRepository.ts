@@ -25,6 +25,42 @@ export async function getActiveTasks(): Promise<Task[]> {
   // Fallback catalog compliant with 7 LiFE themes
   return [
     {
+      id: 'task_clean_ac_filter',
+      themeId: 'save_energy',
+      titleKey: 'tasks.cleanAcFilter.title',
+      descriptionKey: 'tasks.cleanAcFilter.desc',
+      impactSummary: 'Rinse nylon mesh filters to cut 15% AC compressor drag',
+      basePoints: 40,
+      co2SavingsKg: 0.65,
+      requiresPhotoProof: true,
+      active: true,
+      order: 1
+    },
+    {
+      id: 'task_fridge_coil_clearance',
+      themeId: 'save_energy',
+      titleKey: 'tasks.fridgeCoil.title',
+      descriptionKey: 'tasks.fridgeCoil.desc',
+      impactSummary: 'Ensure 2-inch rear gap to save 12% refrigerator compressor power',
+      basePoints: 35,
+      co2SavingsKg: 0.55,
+      requiresPhotoProof: true,
+      active: true,
+      order: 2
+    },
+    {
+      id: 'task_cold_water_wash',
+      themeId: 'save_energy',
+      titleKey: 'tasks.coldWaterWash.title',
+      descriptionKey: 'tasks.coldWaterWash.desc',
+      impactSummary: '30°C cold water eco wash saves 85% water heating element draw',
+      basePoints: 35,
+      co2SavingsKg: 0.90,
+      requiresPhotoProof: false,
+      active: true,
+      order: 3
+    },
+    {
       id: 'task_energy_ac24',
       themeId: 'save_energy',
       titleKey: 'tasks.ac24.title',
@@ -34,7 +70,7 @@ export async function getActiveTasks(): Promise<Task[]> {
       co2SavingsKg: 2.0,
       requiresPhotoProof: true,
       active: true,
-      order: 1
+      order: 4
     },
     {
       id: 'task_energy_peak_shift',
