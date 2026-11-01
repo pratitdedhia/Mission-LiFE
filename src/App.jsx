@@ -122,22 +122,23 @@ export default function App() {
 
   // Strict RBAC: Ensure role-isolated views
   useEffect(() => {
-    if (user?.role === 'solar_vendor') {
+    const role = (user?.role || 'citizen').toLowerCase();
+    if (role === 'solar_vendor' || role === 'solar_partner') {
       const allowedVendorTabs = ['solar_vendor', 'vendor_chat', 'vendor_grid', 'vendor_hardware'];
       if (!allowedVendorTabs.includes(activeTab)) {
         setActiveTab('solar_vendor');
       }
-    } else if (user?.role === 'campus_leader') {
+    } else if (role === 'campus_leader') {
       const allowedCampusTabs = ['campus_leader', 'missions', 'community', 'scan', 'coach'];
       if (!allowedCampusTabs.includes(activeTab)) {
         setActiveTab('campus_leader');
       }
-    } else if (user?.role === 'student') {
+    } else if (role === 'student') {
       const allowedStudentTabs = ['student_portal', 'inventory', 'missions', 'community', 'scan', 'coach'];
       if (!allowedStudentTabs.includes(activeTab)) {
         setActiveTab('student_portal');
       }
-    } else if (user?.role === 'admin') {
+    } else if (role === 'admin') {
       const allowedAdminTabs = ['admin', 'admin_impact', 'admin_users', 'admin_solar', 'directory'];
       if (!allowedAdminTabs.includes(activeTab)) {
         setActiveTab('admin');
@@ -260,14 +261,15 @@ export default function App() {
     setCurrentView('app');
     showToast(`Signed in as ${authenticatedUser.name} (${authenticatedUser.roleTitle || authenticatedUser.role})`);
     
-    // Automatically route to their designated primary dashboard
-    if (authenticatedUser.role === 'solar_vendor') {
+    // Automatically route to their designated primary dashboard based on authoritative role
+    const role = (authenticatedUser?.role || 'citizen').toLowerCase();
+    if (role === 'solar_vendor' || role === 'solar_partner') {
       setActiveTab('solar_vendor');
-    } else if (authenticatedUser.role === 'campus_leader') {
+    } else if (role === 'campus_leader') {
       setActiveTab('campus_leader');
-    } else if (authenticatedUser.role === 'admin') {
+    } else if (role === 'admin') {
       setActiveTab('admin');
-    } else if (authenticatedUser.role === 'student') {
+    } else if (role === 'student') {
       setActiveTab('student_portal');
     } else {
       setActiveTab('dashboard');

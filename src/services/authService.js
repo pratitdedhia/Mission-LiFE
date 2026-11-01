@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { INITIAL_USER, DEMO_USERS } from '../data/initialData';
+import { getAllManagedUsers } from './userManagementService';
 
 const LOCAL_AUTH_KEY = 'mission_life_auth_user';
 const SESSION_ACTIVE_KEY = 'life_session_active';
@@ -55,10 +56,12 @@ export function saveStoredUser(userData) {
   }
 }
 
-export async function loginWithEmail(email, password, roleHint = 'citizen') {
-  // First check if this email matches one of our demo users
+export async function loginWithEmail(email, password, roleHint = null) {
+  const cleanEmail = (email || '').trim().toLowerCase();
+
+  // 1. Authoritative check: match demo users instantly by email
   const demoRole = Object.keys(DEMO_USERS).find(
-    k => DEMO_USERS[k].email.toLowerCase() === email.trim().toLowerCase()
+    k => DEMO_USERS[k].email.toLowerCase() === cleanEmail
   );
   if (demoRole) {
     const demoProfile = { ...DEMO_USERS[demoRole] };
@@ -68,14 +71,29 @@ export async function loginWithEmail(email, password, roleHint = 'citizen') {
     return { success: true, user: demoProfile, isDemoPreset: true };
   }
 
+  // 2. Query statewide managed users registry
+  let managedUser = null;
+  try {
+    const managedUsers = getAllManagedUsers();
+    managedUser = managedUsers.find(
+      u => u.email?.toLowerCase() === cleanEmail
+    );
+  } catch (e) {
+    console.warn("Managed users lookup fallback:", e);
+  }
+
+  const assignedRole = managedUser?.role || roleHint || 'citizen';
+
   try {
     if (auth) {
       const userCred = await signInWithEmailAndPassword(auth, email, password);
       const user = userCred.user;
+      // Immediately query their users/{uid} document in Firestore to retrieve assigned role
       const profile = await fetchOrCreateUserProfile(user.uid, {
         email: user.email,
-        name: user.displayName || email.split('@')[0],
-        role: roleHint
+        name: user.displayName || managedUser?.name || email.split('@')[0],
+        role: assignedRole,
+        roleTitle: managedUser?.roleTitle || 'Residential Citizen'
       });
       saveStoredUser(profile);
       setSessionActive(true);
@@ -83,14 +101,20 @@ export async function loginWithEmail(email, password, roleHint = 'citizen') {
     }
   } catch (error) {
     console.warn("Firebase Auth login error:", error.code, error.message);
-    // If auth API is pending enablement in Firebase console, provide resilient login
+    if (managedUser) {
+      saveStoredUser(managedUser);
+      setSessionActive(true);
+      return { success: true, user: managedUser };
+    }
+    // If auth API is pending enablement in Firebase console, provide resilient fallback
     if (error.code === 'auth/configuration-not-found' || error.code === 'auth/network-request-failed' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
       const fallbackUser = {
         ...INITIAL_USER,
-        id: `usr_${email.replace(/[^a-zA-Z0-9]/g, '')}`,
+        id: `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '')}`,
         email: email,
         name: email.split('@')[0],
-        role: roleHint
+        role: assignedRole,
+        roleTitle: assignedRole === 'student' ? 'Student Volunteer' : 'Residential Citizen'
       };
       saveStoredUser(fallbackUser);
       setSessionActive(true);
@@ -100,15 +124,22 @@ export async function loginWithEmail(email, password, roleHint = 'citizen') {
   }
 }
 
-export async function loginWithGoogle(roleHint = 'citizen') {
+export async function loginWithGoogle(roleHint = null) {
+  let matchedManaged = null;
+  try {
+    const managedUsers = getAllManagedUsers();
+    matchedManaged = managedUsers.find(u => u.provider === 'google.com');
+  } catch (e) {}
+
   if (!auth) {
-    const basePreset = DEMO_USERS[roleHint] || DEMO_USERS.citizen;
+    const assignedRole = matchedManaged?.role || roleHint || 'citizen';
+    const basePreset = DEMO_USERS[assignedRole] || DEMO_USERS.citizen;
     const fallbackUser = {
       ...basePreset,
       id: `usr_google_${Date.now()}`,
       name: `${basePreset.name} (Google)`,
       email: basePreset.email,
-      role: roleHint,
+      role: assignedRole,
       provider: 'google.com'
     };
     saveStoredUser(fallbackUser);
@@ -120,17 +151,16 @@ export async function loginWithGoogle(roleHint = 'citizen') {
     const result = await signInWithPopup(auth, googleProvider);
     const googleUser = result.user;
 
-    const basePreset = DEMO_USERS[roleHint] || DEMO_USERS.citizen;
-    const profile = {
-      ...basePreset,
-      id: googleUser.uid,
+    // Immediately query users/{uid} document in Firestore to retrieve assigned role
+    const profile = await fetchOrCreateUserProfile(googleUser.uid, {
       name: googleUser.displayName || googleUser.email.split('@')[0],
       email: googleUser.email,
       photoURL: googleUser.photoURL,
-      role: roleHint,
+      role: roleHint || 'citizen', // Default assignment: brand new user created with role: 'citizen'
+      roleTitle: 'Residential Citizen',
       provider: 'google.com',
       lastLogin: new Date().toISOString()
-    };
+    });
 
     saveStoredUser(profile);
     setSessionActive(true);
@@ -187,8 +217,9 @@ export async function loginWithDemoPreset(roleKey = 'citizen') {
 }
 
 export async function registerWithEmail(email, password, displayName, district = 'Ahmedabad', role = 'citizen', extraMetadata = {}) {
+  const safeRole = role || 'citizen';
   try {
-    const basePreset = DEMO_USERS[role] || DEMO_USERS.citizen;
+    const basePreset = DEMO_USERS[safeRole] || DEMO_USERS.citizen;
     if (auth) {
       const userCred = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCred.user;
@@ -196,8 +227,8 @@ export async function registerWithEmail(email, password, displayName, district =
       const newProfile = {
         ...basePreset,
         id: user.uid,
-        role: role,
-        roleTitle: role === 'student' ? 'Student Volunteer' : (basePreset.roleTitle || 'Residential Citizen'),
+        role: safeRole,
+        roleTitle: safeRole === 'student' ? 'Student Volunteer' : (basePreset.roleTitle || 'Residential Citizen'),
         name: displayName || email.split('@')[0],
         email: user.email,
         district: district,
@@ -212,13 +243,13 @@ export async function registerWithEmail(email, password, displayName, district =
     }
   } catch (error) {
     console.warn("Firebase Auth signup error:", error.code, error.message);
-    const basePreset = DEMO_USERS[role] || DEMO_USERS.citizen;
+    const basePreset = DEMO_USERS[safeRole] || DEMO_USERS.citizen;
     if (error.code === 'auth/configuration-not-found' || error.code === 'auth/network-request-failed' || error.code === 'auth/email-already-in-use') {
       const fallbackUser = {
         ...basePreset,
         id: `usr_${Date.now()}`,
-        role: role,
-        roleTitle: role === 'student' ? 'Student Volunteer' : (basePreset.roleTitle || 'Residential Citizen'),
+        role: safeRole,
+        roleTitle: safeRole === 'student' ? 'Student Volunteer' : (basePreset.roleTitle || 'Residential Citizen'),
         name: displayName || email.split('@')[0],
         email: email,
         district: district,
@@ -285,11 +316,22 @@ async function fetchOrCreateUserProfile(uid, defaults = {}) {
       const userRef = doc(db, 'users', uid);
       const snap = await getDoc(userRef);
       if (snap.exists()) {
-        return { ...INITIAL_USER, ...snap.data(), id: uid };
+        const firestoreData = snap.data();
+        return { 
+          ...INITIAL_USER, 
+          ...firestoreData, 
+          id: uid,
+          // Directly retrieve authoritative assigned role field from Firestore
+          role: firestoreData.role || defaults.role || 'citizen',
+          roleTitle: firestoreData.roleTitle || defaults.roleTitle || 'Residential Citizen'
+        };
       } else {
+        // Default Assignment: brand new user is created with default role: 'citizen'
         const newProfile = {
           ...INITIAL_USER,
           ...defaults,
+          role: defaults.role || 'citizen',
+          roleTitle: defaults.roleTitle || 'Residential Citizen',
           id: uid
         };
         await setDoc(userRef, newProfile);
@@ -299,7 +341,7 @@ async function fetchOrCreateUserProfile(uid, defaults = {}) {
   } catch (e) {
     console.warn("Firestore fetch profile fallback:", e.message);
   }
-  return { ...INITIAL_USER, ...defaults, id: uid };
+  return { ...INITIAL_USER, ...defaults, role: defaults.role || 'citizen', id: uid };
 }
 
 async function syncUserProfile(profile) {

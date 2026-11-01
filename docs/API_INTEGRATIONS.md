@@ -45,7 +45,7 @@ This document specifies the architecture, environment variables, setup instructi
 ### Setup Instructions
 1. Open the [Google Cloud Console](https://console.cloud.google.com/).
 2. Enable the **Places API (New)** on your project.
-3. Generate an API Key under **Credentials** and apply HTTP Referrer restrictions (e.g. `https://pratitdedhia.github.io/*`, `http://localhost:5173/*`).
+3. Generate an API Key under **Credentials** and apply HTTP Referrer restrictions (e.g. `https://pratitdedhia.github.io/*`).
 4. Add the key to `.env`:
    ```env
    VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here

@@ -31,7 +31,8 @@ export default function ApplianceScanPage() {
 
     try {
       // Connect to FastAPI microservice endpoint
-      const res = await fetch("http://localhost:8000/api/scan", {
+      const scanApiUrl = process.env.NEXT_PUBLIC_SCAN_API_URL || '/api/scan';
+      const res = await fetch(scanApiUrl, {
         method: "POST",
         body: formData,
       });
