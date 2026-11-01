@@ -12,6 +12,7 @@ import ApplianceScanner from './components/ApplianceScanner';
 import AdminDashboard from './components/AdminDashboard';
 import SolarVendorDashboard from './components/SolarVendorDashboard';
 import CampusLeaderDashboard from './components/CampusLeaderDashboard';
+import StudentPortal from './components/StudentPortal';
 import LandingPage from './components/LandingPage';
 import AuthModal from './components/AuthModal';
 import PledgeModal from './components/PledgeModal';
@@ -35,6 +36,7 @@ import {
   loginAsGuest
 } from './services/authService';
 import { recordAuthoritativeMission } from './services/gamificationEngine';
+import { recordStudentAction } from './services/studentVerificationService';
 import { Check } from 'lucide-react';
 
 export default function App() {
@@ -184,6 +186,7 @@ export default function App() {
     const streakMsg = authResult.streakTier.multiplier > 1.0 ? ` (${authResult.streakTier.label})` : "";
     showToast(`Action recorded${proofMsg}! +${awardedPoints} pts${streakMsg}, -${verifiedCo2} kg CO₂.`);
     await recordMissionCompleted(user.id, missionId, awardedPoints, verifiedCo2, proofData);
+    recordStudentAction(user.id, proofData?.title || "Completed Mission LiFE Action", awardedPoints, verifiedCo2);
   };
 
   const handleSaveProfile = async (updatedData) => {
@@ -388,6 +391,13 @@ export default function App() {
 
           {activeTab === 'scan' && (
             <ApplianceScanner
+              user={user}
+              onNavigate={setActiveTab}
+            />
+          )}
+
+          {activeTab === 'student_portal' && (
+            <StudentPortal
               user={user}
               onNavigate={setActiveTab}
             />

@@ -56,6 +56,7 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
     navItems = [
       { id: 'dashboard', label: t.navDashboard, icon: LayoutDashboard },
       { id: 'scan', label: 'Appliance Scanner', icon: Camera, badge: 'YOLOv8' },
+      { id: 'student_portal', label: 'Student Portal', icon: GraduationCap, badge: 'Campus' },
       { id: 'footprint', label: t.navFootprint, icon: Footprints },
       { id: 'missions', label: t.navMissions, icon: CheckCircle2 },
       { id: 'community', label: t.navCommunity, icon: Users },
