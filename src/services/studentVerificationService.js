@@ -365,3 +365,4 @@ export function getCampusStudentSummary(targetUniversity = "IIT Gandhinagar") {
     recentActionFeed: recentActionFeed.slice(0, 15)
   };
 }
+

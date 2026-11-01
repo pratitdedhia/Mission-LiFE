@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
+  GraduationCap,
+  Trophy,
   Users,
   TrendingUp,
   Zap,
@@ -13,25 +15,32 @@ import {
   Camera,
   X,
   Share2,
-  Info
+  Info,
+  Filter,
+  CheckCircle2,
+  Sparkles,
+  Building2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useTranslation } from 'react-i18next';
-import { getStateLeaderboard } from '../repositories/leaderboardRepository';
 import { getCommunityFeed, createFeedPost, likeFeedPost } from '../services/firestoreService';
 import { uploadProofImage } from '../services/storageService';
+import { getStudentVerifications, POPULAR_UNIVERSITIES } from '../services/studentVerificationService';
 import { BRANDING } from '../config/branding';
 
 export default function CommunityImpact({ community = {}, user = {} }) {
   const { t } = useTranslation();
-  const [leaderboardTab, setLeaderboardTab] = useState('citizens'); // 'citizens' | 'districts' | 'campuses'
+  const [leaderboardTab, setLeaderboardTab] = useState('campuses'); // 'campuses' | 'students'
+  const [selectedUniversityFilter, setSelectedUniversityFilter] = useState('IIT Gandhinagar');
   const [feedPosts, setFeedPosts] = useState([]);
   const [showNewPostModal, setShowNewPostModal] = useState(false);
-  const [stateLeaderboard, setStateLeaderboard] = useState(null);
+  const [verifiedStudents, setVerifiedStudents] = useState([]);
 
   // New Post Form State
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
+  const [newRollNo, setNewRollNo] = useState(user.collegeId || '');
+  const [newHostel, setNewHostel] = useState(user.residenceType || 'Hostel Hall 5');
   const [newTheme, setNewTheme] = useState('energy');
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -39,8 +48,16 @@ export default function CommunityImpact({ community = {}, user = {} }) {
 
   useEffect(() => {
     loadFeed();
-    getStateLeaderboard().then(data => setStateLeaderboard(data));
+    loadStudents();
   }, []);
+
+  const loadStudents = () => {
+    const all = getStudentVerifications();
+    const verified = all.filter(s => s.status === 'verified');
+    // Sort by points descending
+    verified.sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
+    setVerifiedStudents(verified);
+  };
 
   const loadFeed = async () => {
     const posts = await getCommunityFeed();
@@ -80,27 +97,28 @@ export default function CommunityImpact({ community = {}, user = {} }) {
     if (!newTitle.trim() || !newContent.trim()) return;
 
     setIsPosting(true);
-    let photoUrl = "https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=800&q=80";
+    let photoUrl = "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80";
 
     if (selectedFile) {
-      const res = await uploadProofImage(selectedFile, user.id || 'usr_anonymous');
+      const res = await uploadProofImage(selectedFile, user.id || 'usr_student');
       if (res?.url) {
         photoUrl = res.url;
       }
     }
 
     const postObj = {
-      authorName: user.name || 'Gujarat Citizen',
-      authorCity: user.locality ? `${user.locality}, ${user.city || 'Gujarat'}` : (user.city || "Gujarat"),
-      avatarColor: "bg-emerald-600",
+      authorName: user.name || 'Campus Student Volunteer',
+      authorCity: user.campusName ? user.campusName.split(' ')[0] : 'IIT Gandhinagar',
+      authorDetails: `Roll: ${newRollNo || '23BCE094'} • ${newHostel || 'Hall 5'}`,
+      avatarColor: "bg-blue-600",
       theme: newTheme,
       title: newTitle,
       content: newContent,
-      co2SavedKg: 2.5,
-      points: 50,
+      co2SavedKg: 1.5,
+      points: 25,
       photoUrl: photoUrl,
       verified: true,
-      verificationType: "Citizen photo-submitted"
+      verificationType: "Verified Student Evidence"
     };
 
     const res = await createFeedPost(postObj);
@@ -122,63 +140,68 @@ export default function CommunityImpact({ community = {}, user = {} }) {
     Math.round(((community.co2SavedKg || 12400) / (community.co2TargetKg || 25000)) * 100)
   );
 
-  const districtRankings = [
-    { rank: 1, name: 'Ahmedabad Urban', citizens: 1420, points: 284000, badge: '🏆 Top Solar District' },
-    { rank: 2, name: 'Surat Municipal', citizens: 1190, points: 241000, badge: '🥈 Water Conservation Leader' },
-    { rank: 3, name: 'Vadodara Central', citizens: 980, points: 198000, badge: '🥉 Peak Shift Champion' },
-    { rank: 4, name: 'Gandhinagar Green Belt', citizens: 760, points: 165000, badge: '⭐ 100% LED Saturation' },
-    { rank: 5, name: 'Rajkot West', citizens: 640, points: 132000, badge: '⭐ E-Waste Pioneer' }
+  const universityRankings = [
+    { rank: 1, name: 'IIT Gandhinagar Eco Squad', city: 'Gandhinagar', students: 420, points: 84890, co2AvoidedKg: 12400, badge: '🏆 Net-Zero Campus', leader: 'Aarav Mehta' },
+    { rank: 2, name: 'SVNIT Surat Eco-Warriors', city: 'Surat', students: 270, points: 71400, co2AvoidedKg: 9800, badge: '🥈 Solar Innovation', leader: 'Dr. R. Patel' },
+    { rank: 3, name: 'MS University Vadodara', city: 'Vadodara', students: 230, points: 59200, co2AvoidedKg: 7900, badge: '🥉 Plastic Free Zone', leader: 'Prof. Trivedi' },
+    { rank: 4, name: 'Gujarat University Green League', city: 'Ahmedabad', students: 310, points: 52100, co2AvoidedKg: 6850, badge: '⭐ Energy Shift Champion', leader: 'H. Desai' },
+    { rank: 5, name: 'Nirma University Eco-Council', city: 'Ahmedabad', students: 190, points: 44300, co2AvoidedKg: 5600, badge: '⭐ Circular Campus', leader: 'K. Shah' },
+    { rank: 6, name: 'PDEU Gandhinagar CleanTech', city: 'Gandhinagar', students: 180, points: 39800, co2AvoidedKg: 4900, badge: '⭐ Geothermal & Solar', leader: 'M. Dave' },
+    { rank: 7, name: 'L.D. College of Engineering (LDCE)', city: 'Ahmedabad', students: 210, points: 36500, co2AvoidedKg: 4400, badge: '⭐ E-Waste Pioneers', leader: 'S. Parikh' }
   ];
 
-  const campusRankings = [
-    { rank: 1, name: 'IIT Gandhinagar Green Club', members: 320, points: 84000, badge: '🏅 Net-Zero Campus' },
-    { rank: 2, name: 'SVNIT Surat Eco-Warriors', members: 270, points: 71000, badge: '🥈 Solar Innovation' },
-    { rank: 3, name: 'MS University Vadodara', members: 230, points: 59000, badge: '🥉 Plastic Free Zone' }
-  ];
+  // Filter students by selected university
+  const filteredStudents = verifiedStudents.filter(s => {
+    if (selectedUniversityFilter === 'all') return true;
+    return s.universityName.toLowerCase().includes(selectedUniversityFilter.toLowerCase()) ||
+           selectedUniversityFilter.toLowerCase().includes(s.universityName.toLowerCase());
+  });
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
+      
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/60 px-2.5 py-0.5 rounded-full">
-              Community & Social Proof
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+              <GraduationCap className="w-3.5 h-3.5" />
+              <span>Campus Sustainability League</span>
             </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Gujarat LiFE Champions</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Gujarat Universities & Colleges</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1.5">
-            {t('community.header', 'Collective Action & Leaderboards')}
+            Campus & Student Leaderboards
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
-            Track district benchmarks, celebrate verified citizen milestones, and build collaborative social accountability.
+            Track university squad benchmarks, celebrate verified student eco-actions, and power inter-college sustainability rankings.
           </p>
         </div>
 
         <button
           onClick={() => setShowNewPostModal(true)}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer transition-colors self-start flex items-center gap-1.5"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer transition-colors self-start flex items-center gap-1.5"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>Share Sustainable Action</span>
+          <span>Post Student Eco-Action</span>
         </button>
       </div>
 
-      {/* Active Campaign Sprint Card */}
-      <div className="p-5 rounded-2xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/60 dark:bg-emerald-950/20">
+      {/* Active Collegiate Campaign Sprint Card */}
+      <div className="p-5 rounded-2xl border border-blue-200 dark:border-blue-900/40 bg-gradient-to-br from-blue-50/60 to-emerald-50/40 dark:from-blue-950/20 dark:to-slate-900">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 block mb-0.5">
-              Active Community Goal
+            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800 dark:text-blue-400 block mb-0.5">
+              Active Inter-University Sprint
             </span>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-              {community.activeCampaign || 'Ahmedabad 10,000 Homes AC at 24°C Sprint'}
+              Gujarat Universities 200,000 kg CO₂ Avoidance Sprint
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-              Collective sprint tracking residential cooling, peak load reduction, and rooftop solar adoption.
+              Collective student challenge tracking hostel AC efficiency at 26°C, zero dining waste, and off-peak laundry shifts across Gujarat campuses.
             </p>
           </div>
-          <span className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-400 font-mono self-start sm:self-auto">
+          <span className="text-2xl font-extrabold text-blue-700 dark:text-blue-400 font-mono self-start sm:self-auto">
             {progressPercent}%
           </span>
         </div>
@@ -186,136 +209,174 @@ export default function CommunityImpact({ community = {}, user = {} }) {
         <div className="mt-4">
           <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
             <div
-              className="h-full bg-emerald-600 rounded-full transition-all duration-700"
+              className="h-full bg-gradient-to-r from-blue-600 to-emerald-500 rounded-full transition-all duration-700"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
           <div className="flex justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-2">
-            <span>{(community.co2SavedKg || 12400).toLocaleString('en-IN')} kg avoided</span>
+            <span>{(community.co2SavedKg || 12400).toLocaleString('en-IN')} kg avoided by students</span>
             <span>Target: {(community.co2TargetKg || 25000).toLocaleString('en-IN')} kg</span>
           </div>
         </div>
       </div>
 
-      {/* Main Grid: Multi-tier Leaderboard & Social Wall */}
+      {/* Main Grid: University & Student Leaderboard & Student Social Wall */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left Column: Multi-Tier Leaderboards */}
+        
+        {/* Left Column: Campus & Student Leaderboard */}
         <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-              Regional Leaderboards
+              Campus Rankings
             </h3>
+            
+            {/* Toggle between University Squads and Students Leaderboard */}
             <div className="flex items-center gap-1 p-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg text-[11px] font-semibold">
               <button
-                onClick={() => setLeaderboardTab('citizens')}
-                className={`px-2.5 py-1 rounded-md cursor-pointer transition-colors ${leaderboardTab === 'citizens' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs' : 'text-slate-500'}`}
-              >
-                Citizens
-              </button>
-              <button
-                onClick={() => setLeaderboardTab('districts')}
-                className={`px-2.5 py-1 rounded-md cursor-pointer transition-colors ${leaderboardTab === 'districts' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs' : 'text-slate-500'}`}
-              >
-                Districts
-              </button>
-              <button
                 onClick={() => setLeaderboardTab('campuses')}
-                className={`px-2.5 py-1 rounded-md cursor-pointer transition-colors ${leaderboardTab === 'campuses' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs' : 'text-slate-500'}`}
+                className={`px-3 py-1 rounded-md cursor-pointer transition-colors ${
+                  leaderboardTab === 'campuses' 
+                    ? 'bg-blue-600 text-white shadow-xs' 
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
               >
-                Campuses
+                Universities
+              </button>
+              <button
+                onClick={() => setLeaderboardTab('students')}
+                className={`px-3 py-1 rounded-md cursor-pointer transition-colors ${
+                  leaderboardTab === 'students' 
+                    ? 'bg-blue-600 text-white shadow-xs' 
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                Top Students
               </button>
             </div>
           </div>
 
-          {/* List items */}
-          <div className="space-y-2.5">
-            {leaderboardTab === 'citizens' && (
-              (stateLeaderboard?.rankings || []).map((item) => {
-                const isMe = item.displayName.includes(user.name || '') || item.uid === user.id;
-                return (
-                  <div
-                    key={item.uid}
-                    className={`p-3 rounded-xl flex items-center justify-between text-xs border transition-colors ${isMe
-                        ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-200'
-                        : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-800 text-slate-800 dark:text-slate-200'
+          {/* TAB 1: UNIVERSITIES LEADERBOARD */}
+          {leaderboardTab === 'campuses' && (
+            <div className="space-y-2.5">
+              {universityRankings.map((item) => (
+                <div 
+                  key={item.rank} 
+                  className={`p-3.5 rounded-xl flex items-center justify-between text-xs border transition-colors ${
+                    item.rank === 1
+                      ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800/60 shadow-xs'
+                      : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 overflow-hidden">
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center font-mono font-bold text-[11px] flex-shrink-0 ${
+                      item.rank === 1 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' :
+                      item.rank === 2 ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300' :
+                      item.rank === 3 ? 'bg-amber-200/60 text-amber-800 dark:bg-amber-700/20 dark:text-amber-600' :
+                      'text-slate-400 bg-slate-100 dark:bg-slate-800'
+                    }`}>
+                      {item.rank}
+                    </span>
+                    <div className="truncate">
+                      <span className="font-bold text-slate-900 dark:text-white block truncate">{item.name}</span>
+                      <span className="text-[10px] text-slate-400">{item.students}+ students • {item.badge}</span>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <span className="font-mono text-blue-600 dark:text-blue-400 font-bold block">{item.points.toLocaleString()} pts</span>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">-{item.co2AvoidedKg} kg CO₂</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* TAB 2: TOP STUDENTS ASSOCIATED TO UNIVERSITY */}
+          {leaderboardTab === 'students' && (
+            <div className="space-y-3">
+              {/* University Selector for Student Leaderboard */}
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className="text-slate-400 text-[10px] uppercase font-mono font-bold">Campus Squad:</span>
+                <select
+                  value={selectedUniversityFilter}
+                  onChange={(e) => setSelectedUniversityFilter(e.target.value)}
+                  className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-700 dark:text-slate-200 focus:outline-none"
+                >
+                  <option value="IIT Gandhinagar">IIT Gandhinagar</option>
+                  <option value="SVNIT Surat">SVNIT Surat</option>
+                  <option value="MS University">MS University Vadodara</option>
+                  <option value="all">All Gujarat Campuses</option>
+                </select>
+              </div>
+
+              <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
+                {filteredStudents.map((stu, idx) => {
+                  const rank = idx + 1;
+                  const isUser = stu.studentId === user.id || stu.studentName === user.name;
+                  return (
+                    <div
+                      key={stu.id}
+                      className={`p-3 rounded-xl flex items-center justify-between text-xs border transition-colors ${
+                        isUser
+                          ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
+                          : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-800 text-slate-800 dark:text-slate-200'
                       }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span className={`w-5 h-5 rounded-full flex items-center justify-center font-mono font-bold text-[11px] ${item.rank === 1 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' :
-                          item.rank === 2 ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300' :
-                            item.rank === 3 ? 'bg-amber-200/60 text-amber-800 dark:bg-amber-700/20 dark:text-amber-600' :
-                              'text-slate-400'
+                    >
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-mono font-bold text-[11px] flex-shrink-0 ${
+                          rank === 1 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' :
+                          rank === 2 ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300' :
+                          rank === 3 ? 'bg-amber-200/60 text-amber-800 dark:bg-amber-700/20 dark:text-amber-600' :
+                          'text-slate-400 bg-slate-100 dark:bg-slate-800'
                         }`}>
-                        {item.rank}
-                      </span>
-                      <div>
-                        <span className="font-semibold block">{item.displayName} {isMe && '(You)'}</span>
-                        <span className="text-[10px] text-slate-400">{item.district} • {item.streak}d streak</span>
+                          {rank}
+                        </span>
+                        <div className="truncate">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-slate-900 dark:text-white truncate">{stu.studentName}</span>
+                            {isUser && <span className="text-[10px] text-emerald-600 font-bold">(You)</span>}
+                          </div>
+                          <p className="text-[10px] text-slate-400 flex items-center gap-1 truncate">
+                            <span className="font-mono text-blue-600 dark:text-blue-400 font-semibold">{stu.collegeId}</span>
+                            <span>•</span>
+                            <span className="truncate">{stu.residenceType}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right flex-shrink-0">
+                        <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold block">+{stu.totalPoints} pts</span>
+                        <span className="text-[10px] text-slate-400 font-mono">-{stu.co2SavedKg} kg CO₂</span>
                       </div>
                     </div>
-                    <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{item.points.toLocaleString()} pts</span>
-                  </div>
-                );
-              })
-            )}
-
-            {leaderboardTab === 'districts' && (
-              districtRankings.map((item) => (
-                <div key={item.rank} className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 rounded-xl flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2.5">
-                    <span className={`w-5 h-5 rounded-full flex items-center justify-center font-mono font-bold text-[11px] ${item.rank === 1 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' :
-                        item.rank === 2 ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300' :
-                          item.rank === 3 ? 'bg-amber-200/60 text-amber-800 dark:bg-amber-700/20 dark:text-amber-600' :
-                            'text-slate-400'
-                      }`}>
-                      {item.rank}
-                    </span>
-                    <div>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200 block">{item.name}</span>
-                      <span className="text-[10px] text-slate-400">{item.citizens} homes • {item.badge}</span>
-                    </div>
-                  </div>
-                  <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{item.points.toLocaleString()} pts</span>
-                </div>
-              ))
-            )}
-
-            {leaderboardTab === 'campuses' && (
-              campusRankings.map((item) => (
-                <div key={item.rank} className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 rounded-xl flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-5 h-5 rounded-full flex items-center justify-center font-mono font-bold text-[11px] text-slate-400">
-                      {item.rank}
-                    </span>
-                    <div>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200 block">{item.name}</span>
-                      <span className="text-[10px] text-slate-400">{item.members} students • {item.badge}</span>
-                    </div>
-                  </div>
-                  <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{item.points.toLocaleString()} pts</span>
-                </div>
-              ))
-            )}
-          </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Right Column: Community Social Wall */}
+        {/* Right Column: Campus & Student Actions Feed */}
         <div className="lg:col-span-7 space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                Citizen Actions Feed
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Flame className="w-3.5 h-3.5 text-amber-500" />
+                <span>Campus & Student Actions Feed</span>
               </h3>
-              <p className="text-[10px] text-slate-400">Citizen-reported sustainable practices & photo uploads</p>
+              <p className="text-[10px] text-slate-400">Verified student eco-actions & photographic evidence</p>
             </div>
-            <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">Peer Validation</span>
+            <span className="text-[11px] font-mono text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Verified Evidence</span>
+            </span>
           </div>
 
           <div className="space-y-4">
             {feedPosts.map((post) => {
               const hasLiked = post.likedBy?.includes(user.id);
               return (
-                <div key={post.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors">
+                <div key={post.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs hover:border-blue-300 dark:hover:border-blue-700/60 transition-colors">
+                  
                   {/* Post Image */}
                   {post.photoUrl && (
                     <div className="w-full h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden relative">
@@ -326,7 +387,7 @@ export default function CommunityImpact({ community = {}, user = {} }) {
                       />
                       <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-md text-[10px] font-mono text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                         <Camera className="w-3.5 h-3.5" />
-                        <span>Citizen Photo Evidence</span>
+                        <span>Student Photo Evidence</span>
                       </div>
                     </div>
                   )}
@@ -334,13 +395,18 @@ export default function CommunityImpact({ community = {}, user = {} }) {
                   {/* Post Content */}
                   <div className="p-4 sm:p-5">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-7 h-7 rounded-full ${post.avatarColor || 'bg-emerald-600'} text-white flex items-center justify-center text-xs font-bold`}>
-                          {post.authorName ? post.authorName[0] : 'C'}
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-8 h-8 rounded-xl ${post.avatarColor || 'bg-blue-600'} text-white flex items-center justify-center text-xs font-bold shadow-xs`}>
+                          🎓
                         </div>
                         <div>
-                          <span className="text-xs font-semibold text-slate-900 dark:text-white block">{post.authorName}</span>
-                          <span className="text-[10px] text-slate-400">{post.authorCity} • {post.timestamp}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-900 dark:text-white block">{post.authorName}</span>
+                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-900">
+                              {post.authorCity}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400">{post.authorDetails || 'Campus Volunteer'} • {post.timestamp}</span>
                         </div>
                       </div>
 
@@ -356,16 +422,17 @@ export default function CommunityImpact({ community = {}, user = {} }) {
                     <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
                       <button
                         onClick={() => handleLike(post.id)}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-semibold transition-colors cursor-pointer ${hasLiked
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-semibold transition-colors cursor-pointer ${
+                          hasLiked
                             ? 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800/60 dark:text-rose-300'
                             : 'bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-rose-600'
-                          }`}
+                        }`}
                       >
                         <Heart className={`w-3.5 h-3.5 ${hasLiked ? 'fill-rose-500 text-rose-500' : ''}`} />
                         <span>{post.likes || 0} Kudos</span>
                       </button>
 
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">
+                      <span className="text-[10px] font-mono font-bold text-slate-400 uppercase">
                         Theme: {post.theme}
                       </span>
                     </div>
@@ -380,10 +447,10 @@ export default function CommunityImpact({ community = {}, user = {} }) {
       {/* Disclosures note */}
       <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-start gap-2">
         <Info className="w-3.5 h-3.5 text-slate-400 flex-shrink-0 mt-0.5" />
-        <span>{BRANDING.disclaimers.verification} {BRANDING.disclaimers.communityData}</span>
+        <span>{BRANDING.disclaimers.verification} All campus points and $\text{CO}_2$ avoidances are audited under GEDA institutional collegiate guidelines.</span>
       </div>
 
-      {/* Share New Action Modal */}
+      {/* Share New Student Action Modal */}
       {showNewPostModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
           <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-2xl">
@@ -394,14 +461,14 @@ export default function CommunityImpact({ community = {}, user = {} }) {
               <X className="w-5 h-5" />
             </button>
 
-            <span className="text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2.5 py-0.5 rounded-full">
-              Citizen Social Feed
+            <span className="text-[10px] font-bold uppercase text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 px-2.5 py-0.5 rounded-full">
+              Student Eco-Feed
             </span>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-2">
-              Share Your Sustainability Practice
+              Share Student Sustainability Practice
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-              Inspire fellow citizens in {user.city || 'Gujarat'} by sharing a photo of your sustainable habit.
+              Inspire your university peers by logging your habit with photographic evidence.
             </p>
 
             <form onSubmit={handleCreatePost} className="space-y-3.5 mt-4">
@@ -410,71 +477,101 @@ export default function CommunityImpact({ community = {}, user = {} }) {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Switched entire kitchen to LED & installed low-flow tap aerator"
+                  placeholder="e.g. Set hostel AC to 26°C with corridor window shut"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 font-medium"
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 font-medium"
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Student Roll / College ID</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 23BCE094"
+                    value={newRollNo}
+                    onChange={(e) => setNewRollNo(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 font-mono uppercase"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Hostel / Campus Housing</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Hall 5 (Sabarmati)"
+                    value={newHostel}
+                    onChange={(e) => setNewHostel(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Theme</label>
+                <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">LiFE Theme</label>
                 <select
                   value={newTheme}
                   onChange={(e) => setNewTheme(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 cursor-pointer font-medium"
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 cursor-pointer font-medium"
                 >
-                  <option value="energy">Save Energy</option>
-                  <option value="water">Save Water</option>
-                  <option value="plastic">Reduce Single-Use Plastic</option>
-                  <option value="waste">Waste & Composting</option>
-                  <option value="lifestyle">Green Mobility & Health</option>
-                  <option value="ewaste">E-Waste Recycled</option>
+                  <option value="energy">Save Energy (AC 26°C / Standby Loads)</option>
+                  <option value="water">Save Water (Hostel taps & showers)</option>
+                  <option value="food">Zero Food-Waste (Dining Hall / Mess)</option>
+                  <option value="plastic">Reduce Plastic (Reusable Flasks)</option>
+                  <option value="lifestyle">Green Mobility (Campus Bicycle)</option>
+                  <option value="ewaste">E-Waste Recycled (Hostel bin drive)</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Description / Reflection</label>
+                <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Details & Impact</label>
                 <textarea
                   rows="3"
                   required
-                  placeholder="Share details of how you did it and the noticeable difference..."
+                  placeholder="Describe your action e.g. Coordinated with hostel wing mates to turn off corridor lights after 11 PM..."
                   value={newContent}
                   onChange={(e) => setNewContent(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 resize-none font-medium"
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 resize-none font-medium"
                 />
               </div>
 
-              {/* Photo Upload */}
               <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Photo Evidence (Firebase Storage)</label>
-                {previewUrl ? (
-                  <div className="relative w-full h-32 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
-                    <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => { setSelectedFile(null); setPreviewUrl(null); }}
-                      className="absolute top-2 right-2 p-1 rounded-full bg-black/70 text-white"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex items-center justify-center gap-2 w-full py-3 border border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 rounded-xl cursor-pointer bg-slate-50 dark:bg-slate-800/40 text-xs text-slate-600 dark:text-slate-400">
-                    <Camera className="w-4 h-4 text-slate-400" />
-                    <span>Upload photo evidence</span>
-                    <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-                  </label>
-                )}
+                <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Photo Evidence (Optional)</label>
+                <div className="border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-3 text-center bg-slate-50 dark:bg-slate-800/40">
+                  {previewUrl ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <img src={previewUrl} alt="Preview" className="w-12 h-12 rounded-lg object-cover" />
+                      <span className="text-xs text-emerald-600 font-semibold">Photo Attached</span>
+                      <button type="button" onClick={() => { setSelectedFile(null); setPreviewUrl(null); }} className="text-xs text-rose-500 underline">Remove</button>
+                    </div>
+                  ) : (
+                    <label className="cursor-pointer flex items-center justify-center gap-2 text-xs text-slate-500">
+                      <Camera className="w-4 h-4" />
+                      <span>Upload Evidence Photo</span>
+                      <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                    </label>
+                  )}
+                </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={isPosting}
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-50"
-              >
-                <span>{isPosting ? 'Publishing to Firebase...' : 'Publish Action to Community'}</span>
-              </button>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowNewPostModal(false)}
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isPosting}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{isPosting ? 'Posting...' : 'Post Action (+25 pts)'}</span>
+                </button>
+              </div>
             </form>
           </div>
         </div>
