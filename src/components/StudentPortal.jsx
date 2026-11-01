@@ -258,13 +258,13 @@ export default function StudentPortal({ user, onNavigate }) {
                   </span>
                 )}
                 <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                  Campus IoT Telemetry
+                  Campus IoT Telemetry (Simulated)
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                 {meterOnline 
-                  ? 'Receiving real-time wattage readings from the Wokwi ESP32 smart meter simulator for appliance tracking.' 
-                  : 'Waiting for Wokwi telemetry. Start the ESP32 simulator to stream live hostel / campus lab power telemetry.'}
+                  ? 'Receiving real-time wattage readings from Wokwi ESP32 simulator. Personal dorm telemetry is isolated and kept distinct from campus-wide institutional totals.' 
+                  : 'Waiting for Wokwi telemetry. Start the ESP32 simulator to stream live hostel / campus lab power telemetry. Personal readings remain separate from campus totals.'}
               </p>
             </div>
           </div>

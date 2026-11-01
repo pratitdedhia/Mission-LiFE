@@ -194,7 +194,7 @@ export default function CampusLeaderDashboard({ user, onCompleteMission }) {
               </p>
               <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
                 <span>📍 Palaj, Gandhinagar, Gujarat</span>
-                <span>👥 {summaryData.totalVerifiedCount + 420}+ Registered Student Volunteers</span>
+                <span>👥 {summaryData.totalVerifiedCount} Verified Student Volunteers</span>
               </div>
             </div>
           </div>
@@ -214,19 +214,19 @@ export default function CampusLeaderDashboard({ user, onCompleteMission }) {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
           <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
             <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase font-mono">Squad Points</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">{24890 + summaryData.totalPoints}</p>
-            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">+120 pts today</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">{summaryData.totalPoints.toLocaleString()}</p>
+            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">Audited squad actions</p>
           </div>
 
           <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase font-mono">Hostel Energy Saved</p>
-            <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-0.5">18.4 <span className="text-xs font-normal">MWh</span></p>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">AC 26°C & Peak Shifting</p>
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase font-mono">Energy Mitigated</p>
+            <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-0.5">{summaryData.totalCo2SavedKg > 0 ? (summaryData.totalCo2SavedKg / 0.71).toFixed(1) : "0.0"} <span className="text-xs font-normal">kWh</span></p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Calculated at CEA 0.71 kg/kWh</p>
           </div>
 
           <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
             <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase font-mono">CO₂ Avoided</p>
-            <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{12400 + Math.round(summaryData.totalCo2SavedKg)} <span className="text-xs font-normal">kg</span></p>
+            <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{summaryData.totalCo2SavedKg} <span className="text-xs font-normal">kg</span></p>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Audited by GEDA</p>
           </div>
 

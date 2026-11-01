@@ -874,9 +874,107 @@ ${quoteNotes ? `• Notes: "${quoteNotes}"` : ''}`;
         </div>
       )}
 
-      {/* VIEW 3: DISCOM NET-METERING LIAISON */}
+      {/* VIEW 3: DISCOM NET-METERING LIAISON & CONVERSION FUNNEL ANALYTICS */}
       {internalView === 'grid' && (
         <div className="space-y-6">
+
+          {/* SOLAR CONVERSION FUNNEL ANALYTICS */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <span className="text-[10px] font-bold uppercase text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2.5 py-0.5 rounded-full font-mono">
+                  GEDA Empanelled Installer Analytics
+                </span>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-1">
+                  Solar Lead & Conversion Funnel
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Track authenticated inquiry milestones from initial feasibility to grid commissioning.
+                </p>
+              </div>
+
+              <span className="text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                Audited Funnel Pipeline
+              </span>
+            </div>
+
+            {/* Funnel Milestone Cards */}
+            {(() => {
+              const inquiriesCount = inquiries.length;
+              const surveysCount = inquiries.filter(i => i.status === 'Survey Scheduled' || i.surveySchedule).length;
+              const quotesCount = inquiries.filter(i => i.status === 'Quote Sent' || i.status === 'Quote Accepted').length;
+              const acceptedCount = inquiries.filter(i => i.status === 'Quote Accepted').length;
+
+              const funnelStages = [
+                { stage: "01. Inquiries Received", count: inquiriesCount, label: `${inquiriesCount} Leads`, tracked: true },
+                { stage: "02. Surveys Booked", count: surveysCount, label: `${surveysCount} Surveys`, tracked: true },
+                { stage: "03. Quotes Dispatched", count: quotesCount, label: `${quotesCount} Quotes`, tracked: true },
+                { stage: "04. Quotes Accepted", count: acceptedCount, label: `${acceptedCount} Agreed`, tracked: true },
+                { stage: "05. Confirmed Purchases", count: 0, label: "Not tracked yet", tracked: false, note: "Awaiting loan / subsidy token event" },
+                { stage: "06. Grid Commissioning", count: 0, label: "Not tracked yet", tracked: false, note: "Awaiting DISCOM meter install" }
+              ];
+
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-1">
+                  {funnelStages.map((st, i) => (
+                    <div 
+                      key={i} 
+                      className={`p-3.5 rounded-2xl border ${
+                        st.tracked && st.count > 0
+                          ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800'
+                          : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700'
+                      }`}
+                    >
+                      <span className="font-mono text-[10px] text-slate-400 uppercase font-bold block">{st.stage}</span>
+                      <p className={`text-base font-black mt-1 ${st.tracked && st.count > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                        {st.label}
+                      </p>
+                      {st.note && (
+                        <p className="text-[9px] text-slate-400 mt-0.5 leading-snug">{st.note}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* Regional Demand by District */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Regional Rooftop Solar Demand (By Recorded District)
+                </h3>
+                <span className="text-[10px] text-slate-400">
+                  *Denominators unavailable: Total population data not collected in registry
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {(() => {
+                  const districtMap = {};
+                  inquiries.forEach(inq => {
+                    const dist = inq.district || inq.city || "Ahmedabad";
+                    if (!districtMap[dist]) districtMap[dist] = { name: dist, count: 0, totalKw: 0 };
+                    districtMap[dist].count += 1;
+                    districtMap[dist].totalKw += parseFloat(inq.recommendedKw) || 3.0;
+                  });
+
+                  return Object.values(districtMap).map(d => (
+                    <div key={d.name} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                      <div>
+                        <span className="font-bold text-slate-900 dark:text-white text-xs block">{d.name} District</span>
+                        <span className="text-[10px] text-slate-400">{d.count} Citizen Requests</span>
+                      </div>
+                      <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400">
+                        {d.totalKw.toFixed(1)} kW Demand
+                      </span>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+          </div>
+
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>

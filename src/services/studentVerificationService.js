@@ -1,7 +1,11 @@
 /**
  * Student Verification & Campus Leader Action Content Service
  * Mission LiFE Citizen Engagement Platform
+ * Dual-persisted via Cloud Firestore with local storage cache fallback.
  */
+
+import { db } from '../firebase';
+import { collection, doc, getDocs, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 const STORAGE_KEY = 'life_student_verifications';
 
@@ -204,6 +208,49 @@ export function saveStudentVerifications(items) {
   }
 }
 
+/**
+ * Asynchronously synchronizes student verifications between Firestore and local cache.
+ * Populates Firestore with baseline university cohort if remote collection is empty.
+ */
+export async function syncStudentVerificationsFromFirestore() {
+  if (!db) return getStudentVerifications();
+  try {
+    const colRef = collection(db, 'studentVerifications');
+    const snap = await getDocs(colRef);
+    if (!snap.empty) {
+      const remoteItems = [];
+      snap.forEach(d => remoteItems.push({ id: d.id, ...d.data() }));
+      saveStudentVerifications(remoteItems);
+      return remoteItems;
+    } else {
+      // Seed Firestore with authoritative cohort
+      const initial = getStudentVerifications();
+      for (const item of initial) {
+        await setDoc(doc(db, 'studentVerifications', item.id), {
+          ...item,
+          serverTimestamp: serverTimestamp()
+        }).catch(() => {});
+      }
+      return initial;
+    }
+  } catch (err) {
+    console.warn("Firestore student verification sync fallback:", err.message);
+    return getStudentVerifications();
+  }
+}
+
+async function persistVerificationDoc(entry) {
+  if (!db || !entry?.id) return;
+  try {
+    await setDoc(doc(db, 'studentVerifications', entry.id), {
+      ...entry,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+  } catch (err) {
+    console.warn("Firestore student doc write fallback:", err.message);
+  }
+}
+
 export function getStudentVerificationForUser(userId, userEmail = '') {
   const all = getStudentVerifications();
   return all.find(item => item.studentId === userId || (userEmail && item.studentEmail === userEmail)) || null;
@@ -250,6 +297,7 @@ export function submitStudentVerification({
   }
 
   saveStudentVerifications(all);
+  persistVerificationDoc(newEntry);
   return newEntry;
 }
 
@@ -264,6 +312,7 @@ export function verifyStudent(verificationId, verifiedBy = "Aarav Mehta") {
   target.rejectionReason = null;
 
   saveStudentVerifications(all);
+  persistVerificationDoc(target);
   return { success: true, student: target };
 }
 
@@ -276,6 +325,7 @@ export function rejectStudent(verificationId, reason = "Unclear ID or mismatched
   target.rejectionReason = reason;
 
   saveStudentVerifications(all);
+  persistVerificationDoc(target);
   return { success: true, student: target };
 }
 
@@ -301,6 +351,7 @@ export function recordStudentAction(userId, actionTitle, points, co2Kg) {
   }
 
   saveStudentVerifications(all);
+  persistVerificationDoc(student);
   return true;
 }
 

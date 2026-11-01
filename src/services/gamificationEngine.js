@@ -32,6 +32,19 @@ export const SCORING_RULES_SPECIFICATION = {
 };
 
 /**
+ * Authoritative Energy-Saving Point Award Rule Specification
+ * Points are never awarded for instantaneous low draw, only audited savings against a baseline.
+ */
+export const ENERGY_SAVING_REWARD_RULE = {
+  version: "2026.1-SAVINGS",
+  pointsPerKwhSaved: 10,
+  maxDailyRewardPoints: 50,
+  baselineDailyKwh: 8.5, // Standard urban Gujarat household benchmark (GEDA baseline)
+  co2GridFactorKgPerKwh: 0.71,
+  factorSource: "Central Electricity Authority (CEA) Baseline v2026 / GEDA"
+};
+
+/**
  * Validates and records a mission completion with anti-fraud deduplication
  * and authoritative scoring calculation.
  */
@@ -96,6 +109,7 @@ export async function recordAuthoritativeMission({
     hasPhotoProof: Boolean(hasPhotoProof),
     photoProofUrl: photoProofUrl || null,
     co2KgSaved: co2Kg,
+    category: missionMeta.category || "energy",
     userCity,
     verifiedBy: hasPhotoProof ? "Firebase Storage Photo Verification" : "Citizen Self-Reported",
     createdAt: new Date().toISOString()

@@ -18,6 +18,40 @@ import requests
 # In-memory circular buffer for fast telemetry auditing and dashboard stream
 TELEMETRY_LEDGER: List[Dict[str, Any]] = []
 
+# Persistent disk ledger path to survive service restarts
+TELEMETRY_STORE_PATH = os.path.join(os.path.dirname(__file__), "telemetry_store.jsonl")
+
+def append_to_persistent_ledger(record: Dict[str, Any]) -> None:
+    """Appends telemetry record to durable disk store so history survives restarts."""
+    try:
+        with open(TELEMETRY_STORE_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(record) + "\n")
+    except Exception as e:
+        print(f"Persistent disk write warning: {e}")
+
+def load_persistent_ledger(user_id: Optional[str] = None, limit: int = 200) -> List[Dict[str, Any]]:
+    """Loads historical records from disk store."""
+    records = []
+    if not os.path.exists(TELEMETRY_STORE_PATH):
+        return [t for t in TELEMETRY_LEDGER if not user_id or t.get("user_id") == user_id][-limit:]
+    try:
+        with open(TELEMETRY_STORE_PATH, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        rec = json.loads(line)
+                        if not user_id or rec.get("user_id") == user_id:
+                            records.append(rec)
+                    except Exception:
+                        pass
+        if not records and TELEMETRY_LEDGER:
+            return [t for t in TELEMETRY_LEDGER if not user_id or t.get("user_id") == user_id][-limit:]
+        return records[-limit:]
+    except Exception as e:
+        print(f"Persistent disk read warning: {e}")
+        return [t for t in TELEMETRY_LEDGER if not user_id or t.get("user_id") == user_id][-limit:]
+
 # Optional Firebase Admin SDK initialization for server-side Firestore operations
 try:
     import firebase_admin
@@ -153,6 +187,8 @@ class HardwareTelemetry(BaseModel):
     current: Optional[float] = Field(None, ge=0, le=100, description="Current Draw (A)", example=7.15)
     frequency: Optional[float] = Field(50.0, description="Grid Frequency (Hz)", example=50.0)
     timestamp: Optional[int] = Field(default_factory=lambda: int(time.time()), description="Epoch Timestamp")
+    source_type: Optional[str] = Field("wokwi_simulated", description="Source classification: wokwi_simulated or meter_measured")
+    location: Optional[Dict[str, Any]] = Field(None, description="Optional location fields when authorized")
 
 
 class TelemetryResponse(BaseModel):
@@ -166,6 +202,8 @@ class TelemetryResponse(BaseModel):
     is_peak_hours: bool
     nudge_message: str
     saved_to_firestore: bool
+    source_type: str = "wokwi_simulated"
+    is_simulated: bool = True
 
 
 # -----------------------------------------------------------------------------
@@ -182,14 +220,17 @@ async def save_hardware_telemetry_to_firestore(
     hourly_cost_inr: float,
     is_peak: bool,
     nudge: str,
-    timestamp: int
+    timestamp: int,
+    source_type: str = "wokwi_simulated",
+    location: Optional[Dict[str, Any]] = None
 ) -> bool:
     """
-    Persists incoming Wokwi smart meter telemetry to Firestore under:
+    Persists incoming smart meter telemetry to Firestore and durable disk store under:
       - `users/{user_id}/telemetry/{doc_id}` (Telemetry log)
       - `users/{user_id}/appliances/{device_id}` (Active appliance live wattage)
-    Uses Firebase Admin SDK when available, with a resilient Firestore REST fallback.
+    Explicitly tags source_type and is_simulated to isolate simulated potentiometer readings.
     """
+    is_simulated = (user_id == "user_12345" or source_type == "wokwi_simulated")
     record = {
         "user_id": user_id,
         "device_id": device_id,
@@ -202,14 +243,19 @@ async def save_hardware_telemetry_to_firestore(
         "is_peak_hours": is_peak,
         "nudge_message": nudge,
         "timestamp": timestamp,
-        "source": "Wokwi ESP32 Telemetry Bridge",
+        "source": "Wokwi ESP32 Telemetry Bridge" if is_simulated else "Smart Meter Hardware Bridge",
+        "source_type": source_type,
+        "is_simulated": is_simulated,
         "iso_timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(timestamp))
     }
+    if location:
+        record["location"] = location
 
-    # Buffer locally for immediate audit access
+    # Buffer locally in circular buffer and durable disk store
     TELEMETRY_LEDGER.append(record)
     if len(TELEMETRY_LEDGER) > 100:
         TELEMETRY_LEDGER.pop(0)
+    append_to_persistent_ledger(record)
 
     # 1. Native Firebase Admin SDK
     if firestore_client is not None:
@@ -394,6 +440,7 @@ async def receive_hardware_telemetry(payload: HardwareTelemetry):
         nudge = f"🟢 Efficient Grid Draw ({power_watts:.0f}W). Optimal consumption profile."
 
     # 4. Save to Firestore (users/{uid}/telemetry and users/{uid}/appliances/{device_id})
+    is_sim = (payload.user_id == "user_12345" or payload.source_type == "wokwi_simulated")
     saved = await save_hardware_telemetry_to_firestore(
         user_id=payload.user_id,
         device_id=payload.device_id,
@@ -405,7 +452,9 @@ async def receive_hardware_telemetry(payload: HardwareTelemetry):
         hourly_cost_inr=hourly_cost_inr,
         is_peak=is_peak,
         nudge=nudge,
-        timestamp=payload.timestamp or int(time.time())
+        timestamp=payload.timestamp or int(time.time()),
+        source_type=payload.source_type or "wokwi_simulated",
+        location=payload.location
     )
 
     return TelemetryResponse(
@@ -418,7 +467,9 @@ async def receive_hardware_telemetry(payload: HardwareTelemetry):
         current_hourly_cost_inr=hourly_cost_inr,
         is_peak_hours=is_peak,
         nudge_message=nudge,
-        saved_to_firestore=saved
+        saved_to_firestore=saved,
+        source_type=payload.source_type or "wokwi_simulated",
+        is_simulated=is_sim
     )
 
 
@@ -427,10 +478,134 @@ def get_latest_telemetry(user_id: Optional[str] = None):
     """
     Retrieves the latest buffered telemetry for inspection and frontend synchronization.
     """
-    if user_id:
-        filtered = [t for t in TELEMETRY_LEDGER if t.get("user_id") == user_id]
-        return {"count": len(filtered), "latest": filtered[-1] if filtered else None}
-    return {"count": len(TELEMETRY_LEDGER), "latest": TELEMETRY_LEDGER[-1] if TELEMETRY_LEDGER else None}
+    history = load_persistent_ledger(user_id=user_id, limit=1)
+    latest = history[-1] if history else (TELEMETRY_LEDGER[-1] if TELEMETRY_LEDGER else None)
+    return {"count": len(history), "latest": latest}
+
+
+@app.get("/api/hardware/history")
+def get_hardware_history(
+    user_id: Optional[str] = "user_12345",
+    limit: int = 100,
+    exclude_simulated: bool = False
+):
+    """
+    Retrieves persisted time-series hardware readings from durable ledger.
+    Allows filtering out simulated Wokwi data for official energy audits.
+    """
+    records = load_persistent_ledger(user_id=user_id, limit=limit)
+    if exclude_simulated:
+        records = [r for r in records if not r.get("is_simulated", False)]
+    return {
+        "user_id": user_id,
+        "count": len(records),
+        "records": records,
+        "source_disclaimer": "Wokwi simulated readings are tagged with is_simulated=True and excluded when exclude_simulated=True"
+    }
+
+
+@app.get("/api/hardware/analytics")
+def get_hardware_analytics(
+    user_id: Optional[str] = "user_12345",
+    baseline_daily_kwh: float = 8.5
+):
+    """
+    Data-backed electricity and carbon analytics:
+    - Numerical trapezoidal power integration over elapsed time into kWh
+    - Explicit detection and rejection of missing-data gaps (> 60s)
+    - Data coverage sample quality percentage
+    - Carbon emissions calculation using official CEA 0.71 kg CO2/kWh factor
+    - Energy-saving reward rule (version 2026.1-SAVINGS)
+    """
+    records = load_persistent_ledger(user_id=user_id, limit=500)
+    if not records:
+        return {
+            "user_id": user_id,
+            "status": "insufficient_data",
+            "message": "Insufficient telemetry coverage to compute energy metrics.",
+            "data_coverage_percent": 0.0,
+            "total_kwh": 0.0,
+            "co2_kg_estimate": 0.0,
+            "is_simulated": user_id == "user_12345"
+        }
+
+    # Sort readings chronologically
+    sorted_records = sorted(records, key=lambda x: x.get("timestamp", 0))
+    is_simulated = any(r.get("is_simulated", True) for r in sorted_records)
+
+    total_kwh = 0.0
+    monitored_seconds = 0
+    gap_count = 0
+
+    for i in range(len(sorted_records) - 1):
+        t1 = sorted_records[i].get("timestamp", 0)
+        t2 = sorted_records[i + 1].get("timestamp", 0)
+        dt = t2 - t1
+
+        if dt <= 0:
+            continue
+        elif dt > 60:
+            # Missing data gap: do not assume last reading persisted indefinitely
+            gap_count += 1
+            continue
+        else:
+            w1 = float(sorted_records[i].get("current_wattage", 0))
+            w2 = float(sorted_records[i + 1].get("current_wattage", 0))
+            avg_w = (w1 + w2) / 2.0
+            interval_kwh = (avg_w * dt) / (3600.0 * 1000.0)
+            total_kwh += interval_kwh
+            monitored_seconds += dt
+
+    first_t = sorted_records[0].get("timestamp", 0)
+    last_t = sorted_records[-1].get("timestamp", 0)
+    span_seconds = max(1, last_t - first_t)
+    coverage_pct = min(100.0, round((monitored_seconds / span_seconds) * 100.0, 1)) if span_seconds > 0 else 0.0
+
+    co2_kg = round(total_kwh * CO2_GRID_FACTOR_KG_PER_KWH, 3)
+    latest_rec = sorted_records[-1]
+
+    # Baseline comparison and audited energy-saving reward calculation
+    savings_info = {}
+    if monitored_seconds >= 60 and coverage_pct >= 50.0:
+        expected_baseline_kwh = (baseline_daily_kwh / 86400.0) * monitored_seconds
+        kwh_saved = max(0.0, round(expected_baseline_kwh - total_kwh, 3))
+        est_points = min(50, int(kwh_saved * 10))
+        savings_info = {
+            "status": "valid",
+            "baseline_daily_kwh": baseline_daily_kwh,
+            "expected_baseline_kwh": round(expected_baseline_kwh, 3),
+            "kwh_saved": kwh_saved,
+            "estimated_points_reward": est_points,
+            "reward_rule_version": "2026.1-SAVINGS",
+            "reward_status": "estimated_until_audited"
+        }
+    else:
+        savings_info = {
+            "status": "insufficient_coverage",
+            "message": "Telemetry coverage < 50% or duration < 1 min. Baseline comparison unavailable.",
+            "estimated_points_reward": 0
+        }
+
+    return {
+        "user_id": user_id,
+        "status": "success",
+        "is_simulated": is_simulated,
+        "source_label": "Simulated (Wokwi ESP32 Bridge)" if is_simulated else "Meter Measured Telemetry",
+        "grid_emission_factor": CO2_GRID_FACTOR_KG_PER_KWH,
+        "grid_emission_factor_unit": "kg CO2e / kWh",
+        "grid_emission_factor_source": "Central Electricity Authority (CEA) Baseline v2026 / GEDA",
+        "instantaneous_watts": latest_rec.get("current_wattage", 0),
+        "voltage": latest_rec.get("voltage", 230.0),
+        "current_amps": latest_rec.get("current", 0.0),
+        "total_kwh": round(total_kwh, 4),
+        "co2_kg_estimate": co2_kg,
+        "monitored_seconds": monitored_seconds,
+        "data_coverage_percent": coverage_pct,
+        "gaps_detected_count": gap_count,
+        "samples_count": len(sorted_records),
+        "baseline_savings": savings_info,
+        "latest_nudge": latest_rec.get("nudge_message")
+    }
 
 
 @app.get("/health")
