@@ -658,12 +658,28 @@ export default function SolarAdvisor({ user = {}, onNavigateToDirectory }) {
                           <span className="text-[10px] text-slate-400 mb-0.5 px-1 font-mono">
                             {isCitizen ? `${user.name || 'You'} (Citizen)` : msg.authorName} • {msg.timestamp}
                           </span>
-                          <div className={`p-3 rounded-2xl max-w-sm sm:max-w-md text-xs leading-relaxed shadow-2xs ${
+                          <div className={`p-3 rounded-2xl max-w-sm sm:max-w-md text-xs leading-relaxed shadow-2xs whitespace-pre-line ${
                             isCitizen 
                               ? 'bg-blue-600 text-white rounded-tr-xs' 
                               : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200/80 dark:border-slate-700 rounded-tl-xs'
                           }`}>
-                            {msg.text}
+                            <div>{msg.text}</div>
+                            {(msg.text?.includes('.pdf') || msg.text?.includes('Attached Document:')) && (
+                              <div className="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 bg-emerald-50/80 dark:bg-emerald-950/40 p-2 rounded-xl text-emerald-800 dark:text-emerald-200">
+                                <div className="flex items-center gap-1.5 overflow-hidden">
+                                  <FileText className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                                  <span className="text-[11px] font-bold truncate">Official Quotation PDF</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => alert("Downloading verified GEDA solar quotation document...")}
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-bold flex items-center gap-1 cursor-pointer flex-shrink-0"
+                                >
+                                  <Download className="w-3 h-3" />
+                                  <span>Download</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );

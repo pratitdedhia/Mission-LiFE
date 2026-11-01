@@ -25,8 +25,13 @@ import {
   Info,
   Layers,
   Cpu,
-  CheckCircle
+  CheckCircle,
+  Upload,
+  Paperclip,
+  FileCheck,
+  X
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { INITIAL_SOLAR_INQUIRIES } from '../data/initialData';
 import { 
   getStoredLeads, 
@@ -101,6 +106,31 @@ export default function SolarVendorDashboard({ user = {}, activeTab = 'solar_ven
   const [surveyEngineer, setSurveyEngineer] = useState('Ketan Joshi (Certified Field Engineer)');
   const [toastMessage, setToastMessage] = useState(null);
 
+  // Quotation Window & Presets State
+  const [quoteTab, setQuoteTab] = useState('preset'); // 'preset' | 'pdf'
+  const [quoteCapacityKw, setQuoteCapacityKw] = useState(3.2);
+  const [quoteGrossCost, setQuoteGrossCost] = useState(198400);
+  const [quoteSubsidy, setQuoteSubsidy] = useState(78000);
+  const [quoteNetPayable, setQuoteNetPayable] = useState(120400);
+  const [quoteAnnualKwh, setQuoteAnnualKwh] = useState(4960);
+  const [quoteAnnualSavings, setQuoteAnnualSavings] = useState(32240);
+  const [quotePaybackYears, setQuotePaybackYears] = useState('3.7');
+  const [quotePanelBrand, setQuotePanelBrand] = useState('Waaree Bi-Facial TOPCon 550W Mono Perc (ALMM Listed)');
+  const [quoteInverterBrand, setQuoteInverterBrand] = useState('Growatt 3.3 kW Smart Grid-Tied Inverter with Mobile App');
+  const [quoteTimeline, setQuoteTimeline] = useState('10–14 Working Days');
+  const [quoteNotes, setQuoteNotes] = useState('Includes full GEDA rooftop CFA subsidy liaisoning, DISCOM net-meter grid synchronization, and 5-year free comprehensive O&M.');
+  const [quoteInclusions, setQuoteInclusions] = useState([
+    '25-Year Linear Performance Warranty on Solar PV Modules',
+    'GEDA & DISCOM Net-Metering Liaisoning & Bi-Directional Smart Meter',
+    '5-Year Free Comprehensive Maintenance & Bi-Annual Panel Cleansing',
+    'Galvanized Iron (GI) Elevated Structure with South-Facing Tilt',
+    'Surge Protection Device (SPD), Dual Chemical Earthing & ACDB/DCDB'
+  ]);
+  const [quoteAttachedPdfName, setQuoteAttachedPdfName] = useState(null);
+  const [quoteAttachedPdfSize, setQuoteAttachedPdfSize] = useState(null);
+  const [quoteAttachedPdfData, setQuoteAttachedPdfData] = useState(null);
+  const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
+
   // Chat State
   const [leadsList, setLeadsList] = useState(() => getStoredLeads());
   const [selectedLeadId, setSelectedLeadId] = useState(() => {
@@ -149,23 +179,182 @@ export default function SolarVendorDashboard({ user = {}, activeTab = 'solar_ven
     setActionType(null);
   };
 
-  const handleDispatchQuote = (inq) => {
-    const totalCost = Math.round(inq.recommendedKw * 62000);
-    const subsidy = inq.cfaSubsidyEstimated || (inq.recommendedKw <= 2 ? inq.recommendedKw * 30000 : 78000);
-    const netPayable = totalCost - subsidy;
+  // Open the customized quotation modal with intelligent lead presets
+  const handleOpenQuoteModal = (inq) => {
+    setActiveInquiryModal(inq);
+    setActionType('quote');
+    const cap = parseFloat(inq.recommendedKw) || 3.2;
+    setQuoteCapacityKw(cap);
+    const gross = inq.grossBenchmarkCost || Math.round(cap * 62000);
+    setQuoteGrossCost(gross);
+    const sub = inq.cfaSubsidyEstimated || (cap <= 2 ? Math.round(cap * 30000) : 78000);
+    setQuoteSubsidy(sub);
+    const net = Math.max(0, gross - sub);
+    setQuoteNetPayable(net);
+    const kwh = Math.round(cap * 1550);
+    setQuoteAnnualKwh(kwh);
+    const savings = Math.round(kwh * 6.5);
+    setQuoteAnnualSavings(savings);
+    setQuotePaybackYears(savings > 0 ? (net / savings).toFixed(1) : '2.5');
+    setQuotePanelBrand("Waaree Bi-Facial TOPCon 550W Mono Perc (ALMM Listed)");
+    setQuoteInverterBrand(cap <= 3.5 ? "Growatt 3.3 kW Smart Grid-Tied Inverter with Mobile App" : "Sungrow 5 kW String Inverter with Dual MPPT");
+    setQuoteTimeline("10–14 Working Days");
+    setQuoteNotes(`Includes official PM Surya Ghar subsidy liaisoning for ${inq.discom || 'Gujarat DISCOM'}, dual chemical earthing, and 10-day commissioning guarantee.`);
+    setQuoteAttachedPdfName(null);
+    setQuoteAttachedPdfSize(null);
+    setQuoteAttachedPdfData(null);
+    setQuoteTab('preset');
+  };
 
+  const handleCapacityChange = (val) => {
+    const kw = parseFloat(val) || 0;
+    setQuoteCapacityKw(kw);
+    const gross = Math.round(kw * 62000);
+    setQuoteGrossCost(gross);
+    const sub = kw <= 2 ? Math.round(kw * 30000) : 78000;
+    setQuoteSubsidy(sub);
+    const net = Math.max(0, gross - sub);
+    setQuoteNetPayable(net);
+    const kwh = Math.round(kw * 1550);
+    setQuoteAnnualKwh(kwh);
+    const savings = Math.round(kwh * 6.5);
+    setQuoteAnnualSavings(savings);
+    setQuotePaybackYears(savings > 0 ? (net / savings).toFixed(1) : '2.5');
+  };
+
+  const handleGrossCostChange = (val) => {
+    const gross = parseInt(val) || 0;
+    setQuoteGrossCost(gross);
+    const net = Math.max(0, gross - quoteSubsidy);
+    setQuoteNetPayable(net);
+    if (quoteAnnualSavings > 0) {
+      setQuotePaybackYears((net / quoteAnnualSavings).toFixed(1));
+    }
+  };
+
+  const handleSubsidyChange = (val) => {
+    const sub = parseInt(val) || 0;
+    setQuoteSubsidy(sub);
+    const net = Math.max(0, quoteGrossCost - sub);
+    setQuoteNetPayable(net);
+    if (quoteAnnualSavings > 0) {
+      setQuotePaybackYears((net / quoteAnnualSavings).toFixed(1));
+    }
+  };
+
+  const toggleInclusion = (item) => {
+    setQuoteInclusions(prev => 
+      prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]
+    );
+  };
+
+  const handleQuotePdfUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setQuoteAttachedPdfName(file.name);
+      setQuoteAttachedPdfSize(`${(file.size / 1024).toFixed(1)} KB`);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setQuoteAttachedPdfData(reader.result);
+      };
+      reader.readAsDataURL(file);
+      showToast(`Quotation PDF "${file.name}" attached successfully!`);
+    }
+  };
+
+  const handleGenerateOfficialPdf = () => {
+    const citizenName = activeInquiryModal?.userName || activeInquiryModal?.citizenName || "Citizen";
+    const cleanName = citizenName.replace(/[^a-zA-Z0-9]/g, '_');
+    setQuoteAttachedPdfName(`GEDA_Official_Quote_${cleanName}_${quoteCapacityKw}kW.pdf`);
+    setQuoteAttachedPdfSize("482 KB (Signed & Verified)");
+    setQuoteAttachedPdfData("data:application/pdf;base64,GEDA_OFFICIAL_STAMP_VERIFIED");
+    showToast("Official GEDA Empanelled Quotation PDF generated and attached!");
+  };
+
+  const handleConfirmSendQuote = (e) => {
+    e.preventDefault();
+    if (!activeInquiryModal) return;
+
+    setIsSubmittingQuote(true);
+
+    const quoteRecord = {
+      capacityKw: quoteCapacityKw,
+      panelBrand: quotePanelBrand,
+      inverterBrand: quoteInverterBrand,
+      grossCost: quoteGrossCost,
+      subsidy: quoteSubsidy,
+      netPayable: quoteNetPayable,
+      annualKwh: quoteAnnualKwh,
+      annualSavings: quoteAnnualSavings,
+      paybackYears: quotePaybackYears,
+      timeline: quoteTimeline,
+      inclusions: quoteInclusions,
+      notes: quoteNotes,
+      attachedPdfName: quoteAttachedPdfName || null,
+      attachedPdfSize: quoteAttachedPdfSize || null,
+      dispatchedDate: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+      dispatchedAt: new Date().toISOString()
+    };
+
+    // 1. Update inquiries list in state and localStorage
     const updated = inquiries.map(item => 
-      item.id === inq.id 
+      item.id === activeInquiryModal.id 
         ? { 
             ...item, 
             status: "Quote Dispatched", 
-            quoteDetails: { totalCost, subsidy, netPayable, date: new Date().toLocaleDateString() },
+            quoteDetails: quoteRecord,
             lastUpdated: new Date().toISOString() 
           } 
         : item
     );
     saveInquiries(updated);
-    showToast(`GEDA CFA subsidy quotation dispatched to ${inq.userName} via SMS/Email!`);
+
+    // 2. Cross-sync with solar leads and post message into citizen chat thread
+    const storedLeads = getStoredLeads();
+    const targetLead = storedLeads.find(l => 
+      l.id === activeInquiryModal.id || 
+      l.userName?.toLowerCase() === (activeInquiryModal.userName || '').toLowerCase()
+    ) || storedLeads[0];
+
+    if (targetLead && targetLead.quotes?.length > 0) {
+      const activeQuoteId = targetLead.quotes[0].id;
+      const quoteSummaryMsg = `📄 GEDA EMPANELLED SOLAR QUOTATION (${quoteCapacityKw} kW System)
+• Capacity: ${quoteCapacityKw} kWp On-Grid Array
+• Solar PV Modules: ${quotePanelBrand}
+• Smart Inverter: ${quoteInverterBrand}
+• Gross Benchmark Installed Cost: ₹${quoteGrossCost.toLocaleString('en-IN')}
+• Central PM Surya Ghar CFA Subsidy: -₹${quoteSubsidy.toLocaleString('en-IN')}
+• Net Payable Investment: ₹${quoteNetPayable.toLocaleString('en-IN')}
+• Est. Annual Generation: ~${quoteAnnualKwh.toLocaleString('en-IN')} kWh/yr
+• Est. Annual Bill Savings: ₹${quoteAnnualSavings.toLocaleString('en-IN')}/yr (Payback: ~${quotePaybackYears} Years)
+• Scope: Complete GEDA net-metering liaison, bi-directional smart meter & 25-yr performance warranty
+• Commissioning Timeline: ${quoteTimeline}
+${quoteAttachedPdfName ? `📎 Attached Document: ${quoteAttachedPdfName} (${quoteAttachedPdfSize})` : ''}
+${quoteNotes ? `• Notes: "${quoteNotes}"` : ''}`;
+
+      sendVendorChatMessage(
+        targetLead.id,
+        activeQuoteId,
+        quoteSummaryMsg,
+        "vendor",
+        user.name || "Ketan Joshi (Certified Field Solar Auditor)"
+      );
+
+      // Refresh leads list in vendor dashboard state
+      setLeadsList(getStoredLeads());
+    }
+
+    setIsSubmittingQuote(false);
+
+    confetti({
+      particleCount: 70,
+      spread: 60,
+      origin: { y: 0.6 }
+    });
+
+    showToast(`Official quotation of ₹${quoteNetPayable.toLocaleString('en-IN')} dispatched to ${activeInquiryModal.userName || 'Citizen'}!`);
+    setActiveInquiryModal(null);
+    setActionType(null);
   };
 
   const handleSendVendorMessage = (customText = null) => {
@@ -440,7 +629,7 @@ export default function SolarVendorDashboard({ user = {}, activeTab = 'solar_ven
                       </button>
 
                       <button
-                        onClick={() => handleDispatchQuote(inq)}
+                        onClick={() => handleOpenQuoteModal(inq)}
                         className="py-2 px-3 rounded-xl bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer shadow-xs"
                       >
                         <FileText className="w-3.5 h-3.5" />
@@ -540,13 +729,33 @@ export default function SolarVendorDashboard({ user = {}, activeTab = 'solar_ven
                 </p>
               </div>
 
-              <button
-                onClick={() => handleTabChange('leads')}
-                className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>Book Survey</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const matchedInq = inquiries.find(i => i.userName?.toLowerCase() === activeLead?.userName?.toLowerCase()) || {
+                      id: activeLead?.id || "inq_custom",
+                      userName: activeLead?.userName || "Citizen",
+                      userCity: activeLead?.city || "Ahmedabad",
+                      recommendedKw: activeLead?.recommendedCapacityKw || 2.5,
+                      monthlyBillInr: activeLead?.monthlyBillInr || 2120,
+                      discom: activeLead?.discom || "UGVCL"
+                    };
+                    handleOpenQuoteModal(matchedInq);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Send Quote</span>
+                </button>
+
+                <button
+                  onClick={() => handleTabChange('leads')}
+                  className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>Book Survey</span>
+                </button>
+              </div>
             </div>
 
             {/* Chat Messages Thread */}
@@ -568,12 +777,23 @@ export default function SolarVendorDashboard({ user = {}, activeTab = 'solar_ven
                     <span className="text-[10px] font-bold text-slate-400 mb-0.5">
                       {msg.authorName} ({isVendor ? 'You' : 'Homeowner'}) • {msg.timestamp}
                     </span>
-                    <div className={`p-3 rounded-2xl max-w-md text-xs leading-relaxed ${
+                    <div className={`p-3 rounded-2xl max-w-md text-xs leading-relaxed whitespace-pre-line ${
                       isVendor 
                         ? 'bg-blue-600 text-white rounded-tr-xs shadow-xs' 
                         : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-xs border border-slate-200 dark:border-slate-700 shadow-xs'
                     }`}>
-                      {msg.text}
+                      <div>{msg.text}</div>
+                      {(msg.text?.includes('.pdf') || msg.text?.includes('Attached Document:')) && (
+                        <div className="mt-2.5 pt-2 border-t border-white/20 dark:border-slate-700 flex items-center justify-between gap-2 bg-emerald-950/30 p-2 rounded-xl text-emerald-200">
+                          <div className="flex items-center gap-1.5 overflow-hidden">
+                            <FileText className="w-4 h-4 text-emerald-300 flex-shrink-0" />
+                            <span className="text-[11px] font-bold truncate">Verified Quotation PDF</span>
+                          </div>
+                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-200 font-mono">
+                            Delivered
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -883,6 +1103,407 @@ export default function SolarVendorDashboard({ user = {}, activeTab = 'solar_ven
                   Confirm & Notify Citizen
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Send Official Solar Quotation Window / Modal */}
+      {activeInquiryModal && actionType === 'quote' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl my-auto max-h-[92vh] overflow-y-auto transition-all">
+            
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                    <FileText className="w-4 h-4" />
+                  </span>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                    Send Official Solar Quotation
+                  </h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-mono">
+                    GEDA Empanelled
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Recipient: <span className="font-semibold text-slate-800 dark:text-slate-200">{activeInquiryModal.userName || activeInquiryModal.citizenName}</span> • {activeInquiryModal.userCity || activeInquiryModal.city || 'Gujarat'} • {activeInquiryModal.discom || 'DISCOM'} • Bill: ₹{activeInquiryModal.monthlyBillInr || 2120}/mo
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => { setActiveInquiryModal(null); setActionType(null); }}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                title="Close modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Mode Switcher: Preset Fields vs PDF Attachment */}
+            <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl my-4 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setQuoteTab('preset')}
+                className={`flex-1 py-2 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  quoteTab === 'preset'
+                    ? 'bg-emerald-800 text-white font-bold shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Fill Preset Numbers & Specs</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setQuoteTab('pdf')}
+                className={`flex-1 py-2 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  quoteTab === 'pdf'
+                    ? 'bg-emerald-800 text-white font-bold shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Paperclip className="w-3.5 h-3.5" />
+                <span>Attach / Generate PDF Document</span>
+                {quoteAttachedPdfName && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                )}
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmSendQuote} className="space-y-4">
+              
+              {/* TAB 1: PRESET FIELDS & SPECS */}
+              {quoteTab === 'preset' && (
+                <div className="space-y-4 animate-fade-in">
+                  
+                  {/* System Capacity & Timeline */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        System Capacity (kW)
+                      </label>
+                      <div className="relative">
+                        <Zap className="w-4 h-4 text-amber-500 absolute left-3 top-2.5" />
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="1"
+                          max="50"
+                          required
+                          value={quoteCapacityKw}
+                          onChange={(e) => handleCapacityChange(e.target.value)}
+                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        />
+                      </div>
+                      <span className="text-[10px] text-slate-400 mt-0.5 block">Recommended based on shadow-free rooftop area</span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Commissioning Timeline
+                      </label>
+                      <select
+                        value={quoteTimeline}
+                        onChange={(e) => setQuoteTimeline(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none cursor-pointer"
+                      >
+                        <option value="7–10 Working Days">7–10 Working Days (Express)</option>
+                        <option value="10–14 Working Days">10–14 Working Days (Standard GEDA Track)</option>
+                        <option value="15–20 Working Days">15–20 Working Days</option>
+                      </select>
+                      <span className="text-[10px] text-slate-400 mt-0.5 block">Includes DISCOM net-meter inspection</span>
+                    </div>
+                  </div>
+
+                  {/* Hardware Specification: Panel Brand & Inverter */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Solar PV Module (ALMM Approved)
+                      </label>
+                      <select
+                        value={quotePanelBrand}
+                        onChange={(e) => setQuotePanelBrand(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none cursor-pointer"
+                      >
+                        <option value="Waaree Bi-Facial TOPCon 550W Mono Perc (ALMM Listed)">Waaree Bi-Facial TOPCon 550W Mono Perc (ALMM Listed)</option>
+                        <option value="Adani Solar Shine Series DCR Mono Perc 545W">Adani Solar Shine Series DCR Mono Perc 545W</option>
+                        <option value="Tata Power Solar 540W Mono Perc Modules">Tata Power Solar 540W Mono Perc Modules</option>
+                        <option value="Goldi Solar 550W Heloc Plus Mono Perc">Goldi Solar 550W Heloc Plus Mono Perc</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Smart Grid-Tied Inverter
+                      </label>
+                      <select
+                        value={quoteInverterBrand}
+                        onChange={(e) => setQuoteInverterBrand(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none cursor-pointer"
+                      >
+                        <option value="Growatt 3.3 kW Smart Grid-Tied Inverter with Mobile App">Growatt 3.3 kW Smart Grid-Tied Inverter with Mobile App</option>
+                        <option value="Sungrow 5 kW String Inverter with Dual MPPT">Sungrow 5 kW String Inverter with Dual MPPT</option>
+                        <option value="Polycab Solar 3 kW Grid-Tie with Dual MPPT">Polycab Solar 3 kW Grid-Tie with Dual MPPT</option>
+                        <option value="Delta 3 kW High Efficiency Solar Inverter">Delta 3 kW High Efficiency Solar Inverter</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Financials: Gross Cost, Subsidy, Net Payable */}
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-emerald-50/40 dark:from-slate-800/60 dark:to-emerald-950/20 border border-slate-200 dark:border-slate-700 space-y-3">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 font-mono block">
+                      Financial Calculation & Government CFA Subsidy
+                    </span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                          Gross System Cost (₹)
+                        </label>
+                        <input
+                          type="number"
+                          required
+                          value={quoteGrossCost}
+                          onChange={(e) => handleGrossCostChange(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                          Central CFA Subsidy (₹)
+                        </label>
+                        <input
+                          type="number"
+                          required
+                          value={quoteSubsidy}
+                          onChange={(e) => handleSubsidyChange(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-xl px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 focus:outline-none"
+                        />
+                        <span className="text-[9px] text-emerald-600 dark:text-emerald-400 mt-0.5 block">PM Surya Ghar Portal</span>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                          Net Customer Payable (₹)
+                        </label>
+                        <div className="w-full bg-emerald-100/70 dark:bg-emerald-900/40 border border-emerald-300 dark:border-emerald-700 rounded-xl px-3 py-2 text-xs font-extrabold text-emerald-900 dark:text-emerald-200 font-mono">
+                          ₹{quoteNetPayable.toLocaleString('en-IN')}
+                        </div>
+                        <span className="text-[9px] text-slate-400 mt-0.5 block">After subsidy deduction</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-200 dark:border-slate-700/80 text-[11px]">
+                      <div>
+                        <span className="text-slate-400 block">Est. Clean Gen:</span>
+                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200">~{quoteAnnualKwh.toLocaleString()} kWh/yr</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block">Est. Bill Savings:</span>
+                        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">₹{quoteAnnualSavings.toLocaleString()}/yr</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block">Est. Payback:</span>
+                        <span className="font-mono font-bold text-blue-600 dark:text-blue-400">~{quotePaybackYears} Years</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Scope of Work Inclusions */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Included Warranties & GEDA Liaisoning
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      {[
+                        "25-Year Linear Performance Warranty on Solar PV Modules",
+                        "GEDA & DISCOM Net-Metering Liaisoning & Bi-Directional Smart Meter",
+                        "5-Year Free Comprehensive Maintenance & Bi-Annual Panel Cleansing",
+                        "Galvanized Iron (GI) Elevated Structure with South-Facing Tilt",
+                        "Surge Protection Device (SPD), Dual Chemical Earthing & ACDB/DCDB"
+                      ].map((item, idx) => {
+                        const isIncluded = quoteInclusions.includes(item);
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => toggleInclusion(item)}
+                            className={`p-2 rounded-xl text-left border text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-2 ${
+                              isIncluded
+                                ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-semibold'
+                                : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-400'
+                            }`}
+                          >
+                            <Check className={`w-3.5 h-3.5 flex-shrink-0 ${isIncluded ? 'text-emerald-600' : 'text-slate-300'}`} />
+                            <span className="truncate">{item}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Custom Notes / Terms */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Installer Notes & Special Terms for Citizen
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={quoteNotes}
+                      onChange={(e) => setQuoteNotes(e.target.value)}
+                      placeholder="e.g. Includes CEI safety inspection, net-metering dispatch, and zero hidden charges guarantee."
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none"
+                    />
+                  </div>
+
+                </div>
+              )}
+
+              {/* TAB 2: ATTACH PDF DOCUMENT */}
+              {quoteTab === 'pdf' && (
+                <div className="space-y-4 animate-fade-in">
+                  
+                  {/* Upload Custom File Section */}
+                  <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-6 text-center bg-slate-50/50 dark:bg-slate-800/40 relative hover:border-emerald-500 transition-colors">
+                    <input
+                      type="file"
+                      accept=".pdf,application/pdf,image/*"
+                      onChange={handleQuotePdfUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    
+                    {quoteAttachedPdfName ? (
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                          <FileCheck className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-900 dark:text-white">
+                            {quoteAttachedPdfName}
+                          </p>
+                          <p className="text-[11px] text-emerald-600 font-medium">
+                            {quoteAttachedPdfSize} • Ready to Deliver
+                          </p>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Click to select a different PDF quotation file
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 flex items-center justify-center">
+                          <Upload className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            Upload Custom Solar Quotation PDF
+                          </p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            Drop official detailed quote document or engineering CAD layout
+                          </p>
+                        </div>
+                        <span className="text-[10px] px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 font-mono mt-1">
+                          PDF, PNG, JPG (Max 15MB)
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 1-Click Generate Official PDF Quote Button */}
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-emerald-50 dark:from-amber-950/30 dark:to-emerald-950/30 border border-amber-200/80 dark:border-amber-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300 flex items-center justify-center flex-shrink-0">
+                        <Award className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                          Generate Official GEDA Empanelled PDF Quote
+                        </h4>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Prepares a verified branded PDF with GEDA license GEDA-EMP-2026-088 seal & itemized breakdown.
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleGenerateOfficialPdf}
+                      className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5 flex-shrink-0"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Generate & Attach PDF</span>
+                    </button>
+                  </div>
+
+                  {quoteAttachedPdfName && (
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <FileText className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                        <span className="font-mono font-medium truncate">{quoteAttachedPdfName}</span>
+                        <span className="text-[10px] text-slate-400">({quoteAttachedPdfSize})</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuoteAttachedPdfName(null);
+                          setQuoteAttachedPdfSize(null);
+                          setQuoteAttachedPdfData(null);
+                        }}
+                        className="text-rose-500 hover:text-rose-700 text-xs font-semibold cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800/60 text-[11px] text-blue-800 dark:text-blue-300 leading-snug">
+                    <span className="font-bold">Citizen Delivery:</span> The attached quotation PDF will appear directly in the citizen's Solar Advisor "Quotes & Chat" inbox with an instant download link.
+                  </div>
+
+                </div>
+              )}
+
+              {/* Modal Footer Controls */}
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-xs text-slate-500 dark:text-slate-400 text-center sm:text-left">
+                  <span>Net Payable: </span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                    ₹{quoteNetPayable.toLocaleString('en-IN')}
+                  </span>
+                  <span className="text-[11px]"> ({quoteCapacityKw} kW System)</span>
+                  {quoteAttachedPdfName && (
+                    <span className="ml-2 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded-full">
+                      📎 PDF Attached
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => { setActiveInquiryModal(null); setActionType(null); }}
+                    className="flex-1 sm:flex-none py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmittingQuote}
+                    className="flex-1 sm:flex-none py-2.5 px-5 rounded-xl bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>{isSubmittingQuote ? 'Dispatching...' : 'Send Quotation to Citizen'}</span>
+                  </button>
+                </div>
+              </div>
+
             </form>
           </div>
         </div>
