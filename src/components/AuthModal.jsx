@@ -162,6 +162,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
       setEmail('');
       setPassword('');
       setDisplayName('');
+      setStudentCollegeId('');
+      setStudentHostel('');
     }
     setError(null);
     setGoogleNotice(null);
@@ -288,7 +290,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
         collegeId: studentCollegeId.trim().toUpperCase(),
         department: studentDepartment,
         yearOfStudy: studentYear,
-        residenceType: studentHostel || "Campus Housing",
+        residenceType: studentHostel.trim() || "Day Scholar",
         idCardPhotoUrl: studentIdCardPreview,
         verificationStatus: "pending",
         verifiedBy: null,
@@ -334,7 +336,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
           collegeId: studentCollegeId.trim().toUpperCase(),
           department: studentDepartment,
           yearOfStudy: studentYear,
-          residenceType: studentHostel,
+          residenceType: studentHostel.trim() || "Day Scholar",
           idCardPhotoUrl: studentIdCardPreview
         });
       }
@@ -799,10 +801,11 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1 text-[11px]">Hostel / Residence Block *</label>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1 text-[11px]">
+                      Hostel / Residence Block <span className="text-slate-400 font-normal">(Optional)</span>
+                    </label>
                     <input
                       type="text"
-                      required
                       placeholder="e.g. Hostel Hall 5 (Sabarmati) or Day Scholar"
                       value={studentHostel}
                       onChange={(e) => setStudentHostel(e.target.value)}
