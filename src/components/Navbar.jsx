@@ -15,6 +15,8 @@ import {
   Moon,
   Menu,
   GraduationCap,
+  MessageSquare,
+  SunMedium,
   X
 } from 'lucide-react';
 import { GRID_HOURS } from '../data/initialData';
@@ -49,13 +51,20 @@ export default function Navbar({
   const currentHour = new Date().getHours();
   const isPeakHour = GRID_HOURS.peakHours.includes(currentHour);
 
+  const navigateToHome = () => {
+    if (user?.role === 'solar_vendor') setActiveTab('solar_vendor');
+    else if (user?.role === 'campus_leader') setActiveTab('campus_leader');
+    else if (user?.role === 'admin') setActiveTab('admin');
+    else setActiveTab('dashboard');
+  };
+
   return (
     <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
 
         {/* Brand & Identity */}
         <div
-          onClick={() => setActiveTab('dashboard')}
+          onClick={navigateToHome}
           className="flex items-center gap-3 cursor-pointer group"
         >
           <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-sm shadow-emerald-600/30 group-hover:scale-105 transition-transform">
@@ -81,7 +90,7 @@ export default function Navbar({
 
           {/* Smart Grid Indicator Pill */}
           <div
-            onClick={() => setActiveTab('dashboard')}
+            onClick={navigateToHome}
             className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-colors border ${isPeakHour
                 ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/50'
                 : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/50'
@@ -170,13 +179,39 @@ export default function Navbar({
 
                 <div className="py-1">
                   {user.role === 'solar_vendor' && (
-                    <button
-                      onClick={() => { setShowProfileMenu(false); setActiveTab('solar_vendor'); }}
-                      className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
-                    >
-                      <Sun className="w-4 h-4 text-amber-500" />
-                      <span>Empanelled Solar Leads</span>
-                    </button>
+                    <>
+                      <button
+                        onClick={() => { setShowProfileMenu(false); setActiveTab('solar_vendor'); }}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                      >
+                        <SunMedium className="w-4 h-4 text-amber-500" />
+                        <span>Installer Leads Queue</span>
+                      </button>
+
+                      <button
+                        onClick={() => { setShowProfileMenu(false); setActiveTab('vendor_chat'); }}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                      >
+                        <MessageSquare className="w-4 h-4 text-blue-500" />
+                        <span>Citizen Inquiries & Chat</span>
+                      </button>
+
+                      <button
+                        onClick={() => { setShowProfileMenu(false); setActiveTab('vendor_grid'); }}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                      >
+                        <Zap className="w-4 h-4 text-emerald-500" />
+                        <span>DISCOM Net-Metering</span>
+                      </button>
+
+                      <button
+                        onClick={() => { setShowProfileMenu(false); setActiveTab('vendor_hardware'); }}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                      >
+                        <ShieldCheck className="w-4 h-4 text-cyan-500" />
+                        <span>ALMM Hardware Catalog</span>
+                      </button>
+                    </>
                   )}
 
                   {user.role === 'campus_leader' && (
@@ -189,21 +224,25 @@ export default function Navbar({
                     </button>
                   )}
 
-                  <button
-                    onClick={() => { setShowProfileMenu(false); onOpenOnboarding(); }}
-                    className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
-                  >
-                    <Edit3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>Recalculate Energy Baseline</span>
-                  </button>
+                  {user.role === 'citizen' && (
+                    <>
+                      <button
+                        onClick={() => { setShowProfileMenu(false); onOpenOnboarding(); }}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                      >
+                        <Edit3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        <span>Recalculate Energy Baseline</span>
+                      </button>
 
-                  <button
-                    onClick={() => { setShowProfileMenu(false); onOpenPledge(); }}
-                    className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
-                  >
-                    <Award className="w-4 h-4 text-amber-500" />
-                    <span>Mission LiFE Certificate</span>
-                  </button>
+                      <button
+                        onClick={() => { setShowProfileMenu(false); onOpenPledge(); }}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                      >
+                        <Award className="w-4 h-4 text-amber-500" />
+                        <span>Mission LiFE Certificate</span>
+                      </button>
+                    </>
+                  )}
 
                   {user?.role === 'admin' && (
                     <button

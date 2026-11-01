@@ -119,6 +119,21 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // Strict RBAC: Ensure role-isolated views
+  useEffect(() => {
+    if (user?.role === 'solar_vendor') {
+      const allowedVendorTabs = ['solar_vendor', 'vendor_chat', 'vendor_grid', 'vendor_hardware'];
+      if (!allowedVendorTabs.includes(activeTab)) {
+        setActiveTab('solar_vendor');
+      }
+    } else if (user?.role === 'campus_leader') {
+      const allowedCampusTabs = ['campus_leader', 'missions', 'community', 'scan', 'coach'];
+      if (!allowedCampusTabs.includes(activeTab)) {
+        setActiveTab('campus_leader');
+      }
+    }
+  }, [user?.role, activeTab]);
+
   const showToast = (message) => {
     setToast(message);
     setTimeout(() => setToast(null), 3800);
@@ -427,9 +442,11 @@ export default function App() {
             )
           )}
 
-          {activeTab === 'solar_vendor' && (
+          {(activeTab === 'solar_vendor' || activeTab === 'vendor_chat' || activeTab === 'vendor_grid' || activeTab === 'vendor_hardware') && (
             <SolarVendorDashboard
               user={user}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
             />
           )}
 
