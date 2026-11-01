@@ -13,7 +13,9 @@ import {
   GraduationCap,
   SunMedium,
   Building2,
-  Check
+  Check,
+  Upload,
+  FileCheck
 } from 'lucide-react';
 import { 
   loginWithEmail, 
@@ -24,9 +26,11 @@ import {
 } from '../services/authService';
 import { DEMO_USERS } from '../data/initialData';
 import { BRANDING } from '../config/branding';
+import { POPULAR_UNIVERSITIES, DEPARTMENTS, submitStudentVerification } from '../services/studentVerificationService';
 
 const ROLES = [
   { id: 'citizen', label: 'Citizen', icon: '🌱' },
+  { id: 'student', label: 'Student', icon: '🎒' },
   { id: 'campus_leader', label: 'Campus Leader', icon: '🎓' },
   { id: 'solar_vendor', label: 'Solar Partner', icon: '☀️' },
   { id: 'admin', label: 'State Admin', icon: '🏛️' }
@@ -47,9 +51,29 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
   const [rememberMe, setRememberMe] = useState(true);
   const [displayName, setDisplayName] = useState('');
   const [district, setDistrict] = useState('Ahmedabad');
+
+  // Student-specific registration state
+  const [studentUniversity, setStudentUniversity] = useState('IIT Gandhinagar');
+  const [studentCollegeId, setStudentCollegeId] = useState('');
+  const [studentDepartment, setStudentDepartment] = useState('Computer Science & Engineering');
+  const [studentYear, setStudentYear] = useState('2nd Year (Batch 2023-27)');
+  const [studentHostel, setStudentHostel] = useState('Hostel Hall 5 (Sabarmati)');
+  const [studentIdCardPreview, setStudentIdCardPreview] = useState(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [googleNotice, setGoogleNotice] = useState(null);
+
+  const handleStudentIdUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setStudentIdCardPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // When selected role changes in login mode, prefill demo credentials for convenience
   const handleRoleSelect = (roleId) => {
@@ -91,7 +115,34 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
     if (mode === 'login') {
       res = await loginWithEmail(email, password, selectedRole);
     } else {
-      res = await registerWithEmail(email, password, displayName, district, selectedRole);
+      const extraMetadata = selectedRole === 'student' ? {
+        universityName: studentUniversity,
+        campusName: `${studentUniversity} Eco Squad`,
+        collegeId: studentCollegeId.trim().toUpperCase() || '23BCE094',
+        department: studentDepartment,
+        yearOfStudy: studentYear,
+        residenceType: studentHostel,
+        idCardPhotoUrl: studentIdCardPreview || "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=400&q=80",
+        verificationStatus: "pending",
+        verifiedBy: null,
+        campusLeaderName: "Aarav Mehta"
+      } : {};
+
+      res = await registerWithEmail(email, password, displayName, district, selectedRole, extraMetadata);
+
+      if (res.success && selectedRole === 'student') {
+        submitStudentVerification({
+          userId: res.user.id,
+          studentName: res.user.name,
+          studentEmail: res.user.email,
+          universityName: studentUniversity,
+          collegeId: studentCollegeId.trim().toUpperCase() || '23BCE094',
+          department: studentDepartment,
+          yearOfStudy: studentYear,
+          residenceType: studentHostel,
+          idCardPhotoUrl: studentIdCardPreview || "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=400&q=80"
+        });
+      }
     }
 
     setLoading(false);
@@ -191,7 +242,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
           <p className="text-[11px] font-bold text-center tracking-wider text-slate-500 dark:text-slate-400 uppercase mb-2.5 font-mono">
             I AM SIGNING IN AS
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
             {ROLES.map((role) => {
               const isSelected = selectedRole === role.id;
               return (
@@ -199,7 +250,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                   key={role.id}
                   type="button"
                   onClick={() => handleRoleSelect(role.id)}
-                  className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex items-center justify-center gap-1.5 py-2 px-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-emerald-800 text-white shadow-sm font-bold'
                       : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700/50'
@@ -290,14 +341,14 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
             <>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Full Name / Entity Name
+                  {selectedRole === 'student' ? 'Student Full Name' : 'Full Name / Entity Name'}
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Pooja Patel or Solar Tech LLP"
+                    placeholder={selectedRole === 'student' ? "e.g. Priyan Patel" : "e.g. Pooja Patel or Solar Tech LLP"}
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
@@ -322,6 +373,136 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                   </select>
                 </div>
               </div>
+
+              {selectedRole === 'student' && (
+                <div className="p-3.5 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-800/60 space-y-3">
+                  <div className="flex items-center gap-2 text-indigo-900 dark:text-indigo-200 font-bold text-xs">
+                    <GraduationCap className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <span>University Student Verification Details</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      University / Institute
+                    </label>
+                    <select
+                      value={studentUniversity}
+                      onChange={(e) => setStudentUniversity(e.target.value)}
+                      className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 cursor-pointer"
+                    >
+                      {POPULAR_UNIVERSITIES.map(u => (
+                        <option key={u} value={u}>{u}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Student Roll / ID No.
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 23BCE094"
+                        value={studentCollegeId}
+                        onChange={(e) => setStudentCollegeId(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Department / Branch
+                      </label>
+                      <select
+                        value={studentDepartment}
+                        onChange={(e) => setStudentDepartment(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 cursor-pointer"
+                      >
+                        {DEPARTMENTS.map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Year of Study
+                      </label>
+                      <select
+                        value={studentYear}
+                        onChange={(e) => setStudentYear(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 cursor-pointer"
+                      >
+                        <option value="1st Year (Batch 2024-28)">1st Year (Batch 2024-28)</option>
+                        <option value="2nd Year (Batch 2023-27)">2nd Year (Batch 2023-27)</option>
+                        <option value="3rd Year (Batch 2022-26)">3rd Year (Batch 2022-26)</option>
+                        <option value="4th Year (Batch 2021-25)">4th Year (Batch 2021-25)</option>
+                        <option value="Postgraduate / PhD">Postgraduate / PhD</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Hostel / Residence Block
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Hostel Hall 5 (Sabarmati)"
+                        value={studentHostel}
+                        onChange={(e) => setStudentHostel(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Upload College Student ID Card (Photo Proof)
+                    </label>
+                    <div className="relative border-2 border-dashed border-indigo-200 dark:border-indigo-800/80 rounded-xl p-3 text-center bg-white/70 dark:bg-slate-800/60 hover:bg-white transition-colors">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleStudentIdUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      />
+                      {studentIdCardPreview ? (
+                        <div className="flex items-center justify-center gap-3">
+                          <img
+                            src={studentIdCardPreview}
+                            alt="Student ID Preview"
+                            className="w-12 h-12 object-cover rounded-lg border border-indigo-300 shadow-xs"
+                          />
+                          <div className="text-left">
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                              <Check className="w-3.5 h-3.5" /> ID Card Photo Attached
+                            </span>
+                            <p className="text-[10px] text-slate-400">Click to change photo file</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          <Upload className="w-5 h-5 text-indigo-500" />
+                          <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                            Click to browse institutional ID card
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            JPG, PNG or WEBP (Max 5MB)
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900/40 text-[11px] text-amber-800 dark:text-amber-200 leading-snug">
+                    <span className="font-bold">Campus Leader Verification:</span> Your ID card is submitted to your university Campus Leader for verification. Once approved, your daily eco actions and points will actively boost your university's ranking.
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -438,19 +619,27 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
             <button
               type="button"
               onClick={() => handleQuickPresetLogin('citizen')}
-              className="py-1.5 px-2 rounded-full border border-emerald-500 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-xs font-semibold transition-colors cursor-pointer text-center truncate"
+              className="py-1.5 px-1.5 rounded-full border border-emerald-500 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-[11px] font-semibold transition-colors cursor-pointer text-center truncate"
             >
               Citizen
             </button>
 
             <button
               type="button"
+              onClick={() => handleQuickPresetLogin('student')}
+              className="py-1.5 px-1.5 rounded-full border border-indigo-500 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-[11px] font-semibold transition-colors cursor-pointer text-center truncate"
+            >
+              Student
+            </button>
+
+            <button
+              type="button"
               onClick={() => handleQuickPresetLogin('campus_leader')}
-              className="py-1.5 px-2 rounded-full border border-blue-500 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-xs font-semibold transition-colors cursor-pointer text-center truncate"
+              className="py-1.5 px-1.5 rounded-full border border-blue-500 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-[11px] font-semibold transition-colors cursor-pointer text-center truncate"
             >
               Campus Leader
             </button>
@@ -458,7 +647,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
             <button
               type="button"
               onClick={() => handleQuickPresetLogin('solar_vendor')}
-              className="py-1.5 px-2 rounded-full border border-amber-500 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-xs font-semibold transition-colors cursor-pointer text-center truncate"
+              className="py-1.5 px-1.5 rounded-full border border-amber-500 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-[11px] font-semibold transition-colors cursor-pointer text-center truncate"
             >
               Solar Partner
             </button>
@@ -466,7 +655,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
             <button
               type="button"
               onClick={() => handleQuickPresetLogin('admin')}
-              className="py-1.5 px-2 rounded-full border border-slate-400 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition-colors cursor-pointer text-center truncate"
+              className="py-1.5 px-1.5 rounded-full border border-slate-400 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-semibold transition-colors cursor-pointer text-center truncate"
             >
               Admin
             </button>

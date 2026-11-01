@@ -183,7 +183,7 @@ export default function LandingPage({
             <span>⚡ Instant 1-Click Demo Evaluation Presets:</span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
             <button
               onClick={() => onQuickDemoLogin('citizen')}
               className="p-3 rounded-2xl border border-emerald-200 dark:border-emerald-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-left transition-all cursor-pointer group"
@@ -194,6 +194,18 @@ export default function LandingPage({
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 truncate">Pooja Patel</p>
               <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Ahmedabad</p>
+            </button>
+
+            <button
+              onClick={() => onQuickDemoLogin('student')}
+              className="p-3 rounded-2xl border border-indigo-200 dark:border-indigo-800/80 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-left transition-all cursor-pointer group"
+            >
+              <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-800 dark:text-indigo-300">
+                <span>🎒</span>
+                <span>Student</span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 truncate">Priyan Patel</p>
+              <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium">IIT Gandhinagar</p>
             </button>
 
             <button
@@ -428,9 +440,9 @@ export default function LandingPage({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Citizen */}
-          <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+          <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
             <div>
               <span className="text-3xl mb-3 block">🌱</span>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">Residential Citizen</h3>
@@ -446,54 +458,71 @@ export default function LandingPage({
             </button>
           </div>
 
+          {/* Student Volunteer */}
+          <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div>
+              <span className="text-3xl mb-3 block">🎒</span>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Student Volunteer</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+                Student ID verification pass, personal green habits, and direct point contribution to university ranking.
+              </p>
+            </div>
+            <button
+              onClick={() => onQuickDemoLogin('student')}
+              className="mt-5 w-full py-2.5 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-800 dark:text-indigo-300 text-xs font-bold transition-colors cursor-pointer"
+            >
+              Sign In as Student →
+            </button>
+          </div>
+
           {/* Campus Leader */}
-          <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+          <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
             <div>
               <span className="text-3xl mb-3 block">🎓</span>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">Campus Youth Leader</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                Campus Squad Hub, inter-hostel AC energy sprints, zero food waste mess campaigns, and Gujarat campus league (#1).
+                Campus Squad Hub, student ID verification queue, inter-hostel AC energy sprints, and campus ranking.
               </p>
             </div>
             <button
               onClick={() => onQuickDemoLogin('campus_leader')}
               className="mt-5 w-full py-2.5 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-300 text-xs font-bold transition-colors cursor-pointer"
             >
-              Sign In as Campus Leader →
+              Sign In as Leader →
             </button>
           </div>
 
           {/* Solar Partner */}
-          <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+          <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
             <div>
               <span className="text-3xl mb-3 block">☀️</span>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">GEDA Solar Partner</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                Empanelled installer portal, citizen rooftop inquiries queue, site survey booking with field engineer, and subsidy quotes.
+                Empanelled installer portal, citizen rooftop inquiries queue, quote generation, and interactive chat.
               </p>
             </div>
             <button
               onClick={() => onQuickDemoLogin('solar_vendor')}
               className="mt-5 w-full py-2.5 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 text-xs font-bold transition-colors cursor-pointer"
             >
-              Sign In as Solar Partner →
+              Sign In as Partner →
             </button>
           </div>
 
           {/* State Admin */}
-          <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+          <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
             <div>
               <span className="text-3xl mb-3 block">🏛️</span>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">GEDA State Admin</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                33-district monitoring heatmap, residential ToD peak hours compliance %, GWh savings, and official CSV audit exports.
+                State & district impact analytics, solar adoption graphs, user account controls, and scheme planning.
               </p>
             </div>
             <button
               onClick={() => onQuickDemoLogin('admin')}
               className="mt-5 w-full py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer"
             >
-              Sign In as State Admin →
+              Sign In as Admin →
             </button>
           </div>
         </div>

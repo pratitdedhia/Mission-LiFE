@@ -186,21 +186,24 @@ export async function loginWithDemoPreset(roleKey = 'citizen') {
   return { success: true, user: userObj, isDemoPreset: true };
 }
 
-export async function registerWithEmail(email, password, displayName, district = 'Ahmedabad', role = 'citizen') {
+export async function registerWithEmail(email, password, displayName, district = 'Ahmedabad', role = 'citizen', extraMetadata = {}) {
   try {
+    const basePreset = DEMO_USERS[role] || DEMO_USERS.citizen;
     if (auth) {
       const userCred = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCred.user;
       await updateProfile(user, { displayName });
       const newProfile = {
-        ...INITIAL_USER,
+        ...basePreset,
         id: user.uid,
         role: role,
+        roleTitle: role === 'student' ? 'Student Volunteer' : (basePreset.roleTitle || 'Residential Citizen'),
         name: displayName || email.split('@')[0],
         email: user.email,
         district: district,
         city: district,
-        joinedDate: new Date().toISOString()
+        joinedDate: new Date().toISOString(),
+        ...extraMetadata
       };
       await syncUserProfile(newProfile);
       saveStoredUser(newProfile);
@@ -209,16 +212,19 @@ export async function registerWithEmail(email, password, displayName, district =
     }
   } catch (error) {
     console.warn("Firebase Auth signup error:", error.code, error.message);
+    const basePreset = DEMO_USERS[role] || DEMO_USERS.citizen;
     if (error.code === 'auth/configuration-not-found' || error.code === 'auth/network-request-failed' || error.code === 'auth/email-already-in-use') {
       const fallbackUser = {
-        ...INITIAL_USER,
+        ...basePreset,
         id: `usr_${Date.now()}`,
         role: role,
+        roleTitle: role === 'student' ? 'Student Volunteer' : (basePreset.roleTitle || 'Residential Citizen'),
         name: displayName || email.split('@')[0],
         email: email,
         district: district,
         city: district,
-        joinedDate: new Date().toISOString()
+        joinedDate: new Date().toISOString(),
+        ...extraMetadata
       };
       saveStoredUser(fallbackUser);
       setSessionActive(true);

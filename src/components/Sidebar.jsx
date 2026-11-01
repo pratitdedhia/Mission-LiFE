@@ -34,6 +34,14 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
       { id: 'vendor_grid', label: 'DISCOM Net-Metering', icon: Zap, badge: 'Grid' },
       { id: 'vendor_hardware', label: 'ALMM Hardware Catalog', icon: ShieldCheck, badge: 'GEDA' }
     ];
+  } else if (userRole === 'student') {
+    navItems = [
+      { id: 'student_portal', label: 'My Campus Eco Hub', icon: GraduationCap, badge: 'Student' },
+      { id: 'missions', label: 'Campus Challenges', icon: CheckCircle2 },
+      { id: 'community', label: 'University Rankings', icon: Users },
+      { id: 'scan', label: 'Appliance Scanner', icon: Camera, badge: 'YOLOv8' },
+      { id: 'coach', label: 'Campus AI Coach', icon: Bot }
+    ];
   } else if (userRole === 'campus_leader') {
     navItems = [
       { id: 'campus_leader', label: 'Campus Squad Hub', icon: GraduationCap, badge: 'Leader' },
@@ -51,11 +59,10 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
       { id: 'directory', label: t.navDirectory, icon: BookOpen }
     ];
   } else {
-    // Default Citizen role - strict RBAC: no admin view exposed to citizens
+    // Default Citizen role - strict RBAC: no student portal or admin view exposed to citizens
     navItems = [
       { id: 'dashboard', label: t.navDashboard, icon: LayoutDashboard },
       { id: 'scan', label: 'Appliance Scanner', icon: Camera, badge: 'YOLOv8' },
-      { id: 'student_portal', label: 'Student Portal', icon: GraduationCap, badge: 'Campus' },
       { id: 'footprint', label: t.navFootprint, icon: Footprints },
       { id: 'missions', label: t.navMissions, icon: CheckCircle2 },
       { id: 'community', label: t.navCommunity, icon: Users },
@@ -67,6 +74,7 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
 
   const rolePillMap = {
     citizen: { label: "Citizen", color: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200" },
+    student: { label: "Student Volunteer", color: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200" },
     campus_leader: { label: "Campus Leader", color: "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200" },
     solar_vendor: { label: "Solar Partner", color: "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200" },
     admin: { label: "State Admin", color: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border-slate-300" }
@@ -84,7 +92,7 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
         >
           <div className="flex items-center gap-2 overflow-hidden">
             <div className="w-7 h-7 rounded-lg bg-emerald-800 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
-              {userRole === 'campus_leader' ? '🎓' : userRole === 'solar_vendor' ? '☀️' : userRole === 'admin' ? '🏛️' : '🌱'}
+              {userRole === 'campus_leader' ? '🎓' : userRole === 'student' ? '🎒' : userRole === 'solar_vendor' ? '☀️' : userRole === 'admin' ? '🏛️' : '🌱'}
             </div>
             <div className="truncate">
               <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider">Active Role</p>
@@ -160,6 +168,16 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
             </div>
             <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 leading-snug">
               Gujarat Youth Climate Fellowship
+            </p>
+          </div>
+        ) : userRole === 'student' ? (
+          <div className="w-full p-3 rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100/50 dark:from-indigo-950/40 dark:to-slate-900 border border-indigo-200/80 dark:border-indigo-800/40 text-left shadow-xs">
+            <div className="flex items-center gap-1.5 text-indigo-700 dark:text-indigo-300 text-xs font-bold">
+              <GraduationCap className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span>Student Eco Volunteer</span>
+            </div>
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 leading-snug">
+              Verified Campus Youth Member
             </p>
           </div>
         ) : (

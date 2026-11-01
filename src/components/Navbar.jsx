@@ -55,6 +55,7 @@ export default function Navbar({
     if (user?.role === 'solar_vendor') setActiveTab('solar_vendor');
     else if (user?.role === 'campus_leader') setActiveTab('campus_leader');
     else if (user?.role === 'admin') setActiveTab('admin');
+    else if (user?.role === 'student') setActiveTab('student_portal');
     else setActiveTab('dashboard');
   };
 
@@ -144,7 +145,7 @@ export default function Navbar({
               className="flex items-center gap-2 p-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-colors cursor-pointer"
             >
               <div className="w-6 h-6 rounded-full bg-emerald-700 text-white flex items-center justify-center text-xs font-bold">
-                {user.role === 'campus_leader' ? '🎓' : user.role === 'solar_vendor' ? '☀️' : user.role === 'admin' ? '🏛️' : (user.name?.[0] || 'C')}
+                {user.role === 'campus_leader' ? '🎓' : user.role === 'student' ? '🎒' : user.role === 'solar_vendor' ? '☀️' : user.role === 'admin' ? '🏛️' : (user.name?.[0] || 'C')}
               </div>
               <div className="hidden sm:flex flex-col text-left leading-tight">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200 max-w-[110px] truncate">
@@ -222,6 +223,34 @@ export default function Navbar({
                       <GraduationCap className="w-4 h-4 text-blue-500" />
                       <span>Campus Youth Squad Hub</span>
                     </button>
+                  )}
+
+                  {user.role === 'student' && (
+                    <>
+                      <button
+                        onClick={() => { setShowProfileMenu(false); setActiveTab('student_portal'); }}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                      >
+                        <GraduationCap className="w-4 h-4 text-indigo-500" />
+                        <span>My Campus Eco Hub</span>
+                      </button>
+
+                      <button
+                        onClick={() => { setShowProfileMenu(false); setActiveTab('missions'); }}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                      >
+                        <Sparkles className="w-4 h-4 text-emerald-500" />
+                        <span>Campus Challenges</span>
+                      </button>
+
+                      <button
+                        onClick={() => { setShowProfileMenu(false); setActiveTab('community'); }}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                      >
+                        <Award className="w-4 h-4 text-amber-500" />
+                        <span>University Rankings</span>
+                      </button>
+                    </>
                   )}
 
                   {user.role === 'citizen' && (

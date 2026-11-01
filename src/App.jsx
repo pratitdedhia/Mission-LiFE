@@ -131,10 +131,21 @@ export default function App() {
       if (!allowedCampusTabs.includes(activeTab)) {
         setActiveTab('campus_leader');
       }
+    } else if (user?.role === 'student') {
+      const allowedStudentTabs = ['student_portal', 'missions', 'community', 'scan', 'coach'];
+      if (!allowedStudentTabs.includes(activeTab)) {
+        setActiveTab('student_portal');
+      }
     } else if (user?.role === 'admin') {
       const allowedAdminTabs = ['admin', 'admin_impact', 'admin_users', 'admin_solar', 'directory'];
       if (!allowedAdminTabs.includes(activeTab)) {
         setActiveTab('admin');
+      }
+    } else {
+      // Citizen role - strict isolation: no student portal, solar partner, or admin tabs
+      const citizenRestricted = ['admin', 'admin_impact', 'admin_users', 'admin_solar', 'solar_vendor', 'vendor_chat', 'vendor_grid', 'vendor_hardware', 'campus_leader', 'student_portal'];
+      if (citizenRestricted.includes(activeTab)) {
+        setActiveTab('dashboard');
       }
     }
   }, [user?.role, activeTab]);
@@ -255,6 +266,8 @@ export default function App() {
       setActiveTab('campus_leader');
     } else if (authenticatedUser.role === 'admin') {
       setActiveTab('admin');
+    } else if (authenticatedUser.role === 'student') {
+      setActiveTab('student_portal');
     } else {
       setActiveTab('dashboard');
     }

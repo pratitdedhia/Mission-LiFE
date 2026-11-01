@@ -33,9 +33,9 @@ export const DEPARTMENTS = [
 const INITIAL_VERIFICATIONS = [
   {
     id: "stu_ver_1",
-    studentId: "usr_guest", // Can match default demo user
+    studentId: "usr_student_priyan",
     studentName: "Priyan Patel",
-    studentEmail: "priyan.patel@alumni.iitgn.ac.in",
+    studentEmail: "student.priyan@iitgn.ac.in",
     universityName: "IIT Gandhinagar",
     collegeId: "23BCE094",
     department: "Computer Science & Engineering",
