@@ -366,3 +366,357 @@ export function getCampusStudentSummary(targetUniversity = "IIT Gandhinagar") {
   };
 }
 
+/**
+ * Official Base University Squads for Gujarat Collegiate Sustainability League
+ */
+export const BASE_UNIVERSITIES = [
+  {
+    id: "uni_iitgn",
+    name: "IIT Gandhinagar Eco Squad",
+    shortName: "IIT Gandhinagar",
+    aliases: ["iit gandhinagar", "iitgn", "iit gn", "palaj"],
+    city: "Gandhinagar",
+    district: "Gandhinagar",
+    leader: "Aarav Mehta",
+    badge: "🏆 Net-Zero Campus",
+    baseStudents: 420,
+    basePoints: 84890,
+    baseCo2Kg: 12400
+  },
+  {
+    id: "uni_svnit",
+    name: "SVNIT Surat Eco-Warriors",
+    shortName: "SVNIT Surat",
+    aliases: ["svnit", "svnit surat", "sardar vallabhbhai national institute", "surat nit"],
+    city: "Surat",
+    district: "Surat",
+    leader: "Dr. R. Patel",
+    badge: "🥈 Solar Innovation",
+    baseStudents: 270,
+    basePoints: 71400,
+    baseCo2Kg: 9800
+  },
+  {
+    id: "uni_msu",
+    name: "MS University Vadodara",
+    shortName: "MS University",
+    aliases: ["ms university", "msu", "maharaja sayajirao", "baroda", "vadodara"],
+    city: "Vadodara",
+    district: "Vadodara",
+    leader: "Prof. Trivedi",
+    badge: "🥉 Plastic Free Zone",
+    baseStudents: 230,
+    basePoints: 59200,
+    baseCo2Kg: 7900
+  },
+  {
+    id: "uni_gu",
+    name: "Gujarat University Green League",
+    shortName: "Gujarat University",
+    aliases: ["gujarat university", "gu ahmedabad", "gu", "navrangpura"],
+    city: "Ahmedabad",
+    district: "Ahmedabad",
+    leader: "H. Desai",
+    badge: "⭐ Energy Shift Champion",
+    baseStudents: 310,
+    basePoints: 52100,
+    baseCo2Kg: 6850
+  },
+  {
+    id: "uni_nirma",
+    name: "Nirma University Eco-Council",
+    shortName: "Nirma University",
+    aliases: ["nirma", "nirma university", "sg highway nirma"],
+    city: "Ahmedabad",
+    district: "Ahmedabad",
+    leader: "K. Shah",
+    badge: "⭐ Circular Campus",
+    baseStudents: 190,
+    basePoints: 44300,
+    baseCo2Kg: 5600
+  },
+  {
+    id: "uni_pdeu",
+    name: "PDEU Gandhinagar CleanTech",
+    shortName: "PDEU",
+    aliases: ["pdeu", "pandit deendayal", "pdpu", "petroleum university"],
+    city: "Gandhinagar",
+    district: "Gandhinagar",
+    leader: "M. Dave",
+    badge: "⭐ Geothermal & Solar",
+    baseStudents: 180,
+    basePoints: 39800,
+    baseCo2Kg: 4900
+  },
+  {
+    id: "uni_ldce",
+    name: "L.D. College of Engineering (LDCE)",
+    shortName: "LDCE",
+    aliases: ["ldce", "ld college", "l.d. college", "lalbhai dalpatbhai"],
+    city: "Ahmedabad",
+    district: "Ahmedabad",
+    leader: "S. Parikh",
+    badge: "⭐ E-Waste Pioneers",
+    baseStudents: 210,
+    basePoints: 36500,
+    baseCo2Kg: 4400
+  },
+  {
+    id: "uni_daiict",
+    name: "DA-IICT Green Computing",
+    shortName: "DA-IICT",
+    aliases: ["da-iict", "daiict", "dhirubhai ambani institute", "da iict"],
+    city: "Gandhinagar",
+    district: "Gandhinagar",
+    leader: "Prof. Joshi",
+    badge: "⭐ Smart Campus IoT",
+    baseStudents: 150,
+    basePoints: 31200,
+    baseCo2Kg: 3820
+  },
+  {
+    id: "uni_marwadi",
+    name: "Marwadi University Eco Cell",
+    shortName: "Marwadi University",
+    aliases: ["marwadi", "marwadi university", "rajkot marwadi"],
+    city: "Rajkot",
+    district: "Rajkot",
+    leader: "Dr. Mehta",
+    badge: "⭐ Water Harvesting Hub",
+    baseStudents: 135,
+    basePoints: 26400,
+    baseCo2Kg: 3120
+  },
+  {
+    id: "uni_charusat",
+    name: "CHARUSAT Sustainability Club",
+    shortName: "CHARUSAT",
+    aliases: ["charusat", "charotar university", "changa", "charusat anand"],
+    city: "Changa / Anand",
+    district: "Anand",
+    leader: "Prof. Patel",
+    badge: "⭐ Green Chemistry",
+    baseStudents: 120,
+    basePoints: 22100,
+    baseCo2Kg: 2710
+  }
+];
+
+/**
+ * Universal university matcher for student verification records
+ */
+export function matchesUniversity(studentUniName = '', baseUni) {
+  if (!studentUniName || !baseUni) return false;
+  const s = studentUniName.toLowerCase().trim();
+  const name = (baseUni.name || '').toLowerCase().trim();
+  const short = (baseUni.shortName || '').toLowerCase().trim();
+
+  if (s === name || s === short) return true;
+  if (name.includes(s) || s.includes(name) || short.includes(s) || s.includes(short)) return true;
+
+  if (Array.isArray(baseUni.aliases)) {
+    if (baseUni.aliases.some(alias => s.includes(alias.toLowerCase()) || alias.toLowerCase().includes(s))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Authoritative University Leaderboard Engine
+ * Aggregates verified student contributions dynamically into university rankings
+ */
+export function getUniversityLeaderboard() {
+  const verifiedStudents = getStudentVerifications().filter(s => s.status === 'verified');
+
+  const rankings = BASE_UNIVERSITIES.map(u => {
+    // Find all verified students associated to this university using universal matcher
+    const studentsForUni = verifiedStudents.filter(s => matchesUniversity(s.universityName, u));
+
+    const additionalPoints = studentsForUni.reduce((sum, s) => sum + (s.totalPoints || 0), 0);
+    const additionalCo2 = studentsForUni.reduce((sum, s) => sum + (s.co2SavedKg || 0), 0);
+    const liveStudentCount = u.baseStudents + studentsForUni.length;
+    const livePoints = u.basePoints + additionalPoints;
+    const liveCo2Kg = Math.round(u.baseCo2Kg + additionalCo2);
+
+    return {
+      id: u.id,
+      name: u.name,
+      shortName: u.shortName,
+      city: u.city,
+      district: u.district,
+      leader: u.leader,
+      badge: u.badge,
+      students: liveStudentCount,
+      points: livePoints,
+      co2AvoidedKg: liveCo2Kg,
+      verifiedRosterCount: studentsForUni.length,
+      verifiedRoster: studentsForUni
+    };
+  });
+
+  // Track matched student IDs to detect any custom universities registered by students
+  const matchedStudentIds = new Set();
+  rankings.forEach(r => {
+    (r.verifiedRoster || []).forEach(s => matchedStudentIds.add(s.id));
+  });
+
+  const unmatchedStudents = verifiedStudents.filter(s => !matchedStudentIds.has(s.id));
+  const customUniMap = {};
+  unmatchedStudents.forEach(s => {
+    const uName = s.universityName || 'Other College';
+    if (!customUniMap[uName]) {
+      customUniMap[uName] = {
+        id: `uni_custom_${uName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+        name: `${uName} Eco Squad`,
+        shortName: uName,
+        city: 'Gujarat',
+        district: 'Gujarat',
+        leader: 'Student Lead',
+        badge: '🌱 Emerging Green Squad',
+        students: 0,
+        points: 0,
+        co2AvoidedKg: 0,
+        verifiedRosterCount: 0,
+        verifiedRoster: []
+      };
+    }
+    customUniMap[uName].students += 1;
+    customUniMap[uName].points += (s.totalPoints || 0);
+    customUniMap[uName].co2AvoidedKg += Math.round(s.co2SavedKg || 0);
+    customUniMap[uName].verifiedRosterCount += 1;
+    customUniMap[uName].verifiedRoster.push(s);
+  });
+
+  Object.values(customUniMap).forEach(cUni => rankings.push(cUni));
+
+  // Sort by total points descending
+  rankings.sort((a, b) => b.points - a.points);
+
+  // Assign live rank
+  return rankings.map((item, idx) => ({
+    ...item,
+    rank: idx + 1
+  }));
+}
+
+// Campus Sprints Storage
+const SPRINTS_STORAGE_KEY = (uni) => `life_campus_sprints_${(uni || 'IIT Gandhinagar').replace(/\s+/g, '_')}`;
+
+export const DEFAULT_CAMPUS_SPRINTS = [
+  {
+    id: "sprint_hostel_ac26",
+    title: "Inter-Hostel AC 26°C Challenge",
+    theme: "save_energy",
+    category: "Campus Sprint",
+    description: "Hostels 3, 5, and 7 compete to maintain AC thermostat setpoints at 26°C with corridor window shut and shift heavy laundry away from 6–10 PM peak.",
+    impactSummary: "Reduces aggregate hostel cooling draw • Saves ~3.8 MWh peak power",
+    points: 75,
+    co2Kg: 2.4,
+    organizer: "Aarav Mehta (Campus Youth Leader)",
+    organizerRole: "Campus Leader",
+    requiresPhotoProof: true,
+    photoGuidance: "Upload photo of your hostel room AC remote/display set at 26°C or higher.",
+    activeParticipants: 245,
+    progressPercent: 78,
+    participatingHostels: ["Hall 3 (Narmada)", "Hall 5 (Sabarmati)", "Hall 7 (Tapti)"],
+    status: "active"
+  },
+  {
+    id: "sprint_zero_food_mess",
+    title: "Zero Food-Waste Mess Challenge",
+    theme: "sustainable_food",
+    category: "Campus Sprint",
+    description: "Dining halls diverting 100% of organic food waste to campus biogas digester and organic vermicomposting beds.",
+    impactSummary: "Zero leftover food on dining tray • Clean plate verification",
+    points: 50,
+    co2Kg: 1.8,
+    organizer: "Central Dining Mess Committee",
+    organizerRole: "Campus Committee",
+    requiresPhotoProof: true,
+    photoGuidance: "Upload photo of your finished, clean dining hall tray at the tray return station.",
+    activeParticipants: 380,
+    progressPercent: 92,
+    participatingHostels: ["Central Dining Mess A", "Dining Mess B"],
+    status: "active"
+  },
+  {
+    id: "sprint_solar_rooftop_walk",
+    title: "Solar Rooftop Campus Walk & Shadow Audit",
+    theme: "save_energy",
+    category: "Campus Sprint",
+    description: "Interactive peer tour of IITGN's 320 kW rooftop solar installation on Academic Blocks 3 & 4 with physical shadow survey.",
+    impactSummary: "Hands-on solar orientation audit • Rooftop generation check",
+    points: 100,
+    co2Kg: 5.0,
+    organizer: "Green Club & Energy Cell",
+    organizerRole: "Student Technical Club",
+    requiresPhotoProof: true,
+    photoGuidance: "Upload photo at the Academic Block terrace solar inverter or panel array.",
+    activeParticipants: 160,
+    progressPercent: 64,
+    participatingHostels: ["UG Freshers Squad", "Postgrad Climate Group"],
+    status: "active"
+  },
+  {
+    id: "sprint_hostel_power_cut",
+    title: "Hostel Corridor Standby Power Cut",
+    theme: "save_energy",
+    category: "Campus Sprint",
+    description: "Coordinate with hostel wing mates to turn off corridor lighting and common room lounge appliances post 11 PM.",
+    impactSummary: "Cuts idle vampire nighttime consumption across hostel wings",
+    points: 40,
+    co2Kg: 1.1,
+    organizer: "Hostel Student Council",
+    organizerRole: "Student Council",
+    requiresPhotoProof: true,
+    photoGuidance: "Upload photo of switched-off corridor lighting or lounge entertainment switch.",
+    activeParticipants: 190,
+    progressPercent: 83,
+    participatingHostels: ["All Campus Hostel Wings"],
+    status: "active"
+  },
+  {
+    id: "sprint_campus_ewaste_drive",
+    title: "Campus E-Waste & Cable Recycling Drive",
+    theme: "e_waste",
+    category: "Campus Sprint",
+    description: "Hand over retired smartphone charging cords, dead laptop battery packs, and electronics to the campus library green bin.",
+    impactSummary: "Safe circular e-waste recycling • Diverts heavy metals from municipal landfills",
+    points: 60,
+    co2Kg: 3.5,
+    organizer: "Youth Climate Fellowship",
+    organizerRole: "Campus Green Chapter",
+    requiresPhotoProof: true,
+    photoGuidance: "Upload photo of e-waste deposit into the designated library green bin.",
+    activeParticipants: 140,
+    progressPercent: 70,
+    participatingHostels: ["Central Library Green Bin", "Student Activity Center"],
+    status: "active"
+  }
+];
+
+export function getCampusLeaderSprints(universityName = "IIT Gandhinagar") {
+  const key = SPRINTS_STORAGE_KEY(universityName);
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) return JSON.parse(raw);
+    localStorage.setItem(key, JSON.stringify(DEFAULT_CAMPUS_SPRINTS));
+    return DEFAULT_CAMPUS_SPRINTS;
+  } catch (e) {
+    return DEFAULT_CAMPUS_SPRINTS;
+  }
+}
+
+export function broadcastCampusLeaderSprint(universityName = "IIT Gandhinagar", newSprint) {
+  const sprints = getCampusLeaderSprints(universityName);
+  const updated = [newSprint, ...sprints];
+  const key = SPRINTS_STORAGE_KEY(universityName);
+  try {
+    localStorage.setItem(key, JSON.stringify(updated));
+  } catch (e) {
+    console.error("Failed to save broadcasted sprint", e);
+  }
+  return updated;
+}
+

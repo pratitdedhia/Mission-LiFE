@@ -25,7 +25,12 @@ import confetti from 'canvas-confetti';
 import { useTranslation } from 'react-i18next';
 import { getCommunityFeed, createFeedPost, likeFeedPost } from '../services/firestoreService';
 import { uploadProofImage } from '../services/storageService';
-import { getStudentVerifications, POPULAR_UNIVERSITIES } from '../services/studentVerificationService';
+import { 
+  getStudentVerifications, 
+  getUniversityLeaderboard,
+  matchesUniversity,
+  POPULAR_UNIVERSITIES 
+} from '../services/studentVerificationService';
 import { BRANDING } from '../config/branding';
 
 export default function CommunityImpact({ community = {}, user = {} }) {
@@ -151,21 +156,19 @@ export default function CommunityImpact({ community = {}, user = {} }) {
     Math.round(((community.co2SavedKg || 12400) / (community.co2TargetKg || 25000)) * 100)
   );
 
-  const universityRankings = [
-    { rank: 1, name: 'IIT Gandhinagar Eco Squad', city: 'Gandhinagar', students: 420, points: 84890, co2AvoidedKg: 12400, badge: '🏆 Net-Zero Campus', leader: 'Aarav Mehta' },
-    { rank: 2, name: 'SVNIT Surat Eco-Warriors', city: 'Surat', students: 270, points: 71400, co2AvoidedKg: 9800, badge: '🥈 Solar Innovation', leader: 'Dr. R. Patel' },
-    { rank: 3, name: 'MS University Vadodara', city: 'Vadodara', students: 230, points: 59200, co2AvoidedKg: 7900, badge: '🥉 Plastic Free Zone', leader: 'Prof. Trivedi' },
-    { rank: 4, name: 'Gujarat University Green League', city: 'Ahmedabad', students: 310, points: 52100, co2AvoidedKg: 6850, badge: '⭐ Energy Shift Champion', leader: 'H. Desai' },
-    { rank: 5, name: 'Nirma University Eco-Council', city: 'Ahmedabad', students: 190, points: 44300, co2AvoidedKg: 5600, badge: '⭐ Circular Campus', leader: 'K. Shah' },
-    { rank: 6, name: 'PDEU Gandhinagar CleanTech', city: 'Gandhinagar', students: 180, points: 39800, co2AvoidedKg: 4900, badge: '⭐ Geothermal & Solar', leader: 'M. Dave' },
-    { rank: 7, name: 'L.D. College of Engineering (LDCE)', city: 'Ahmedabad', students: 210, points: 36500, co2AvoidedKg: 4400, badge: '⭐ E-Waste Pioneers', leader: 'S. Parikh' }
-  ];
+  // Dynamic authoritative university rankings
+  const universityRankings = getUniversityLeaderboard();
 
-  // Filter students by selected university
+  // Filter students by selected university using authoritative matcher
   const filteredStudents = verifiedStudents.filter(s => {
     if (selectedUniversityFilter === 'all') return true;
-    return s.universityName.toLowerCase().includes(selectedUniversityFilter.toLowerCase()) ||
-           selectedUniversityFilter.toLowerCase().includes(s.universityName.toLowerCase());
+    const targetUni = universityRankings.find(u => u.shortName === selectedUniversityFilter || u.name === selectedUniversityFilter);
+    if (targetUni) {
+      return matchesUniversity(s.universityName, targetUni);
+    }
+    const fLower = selectedUniversityFilter.toLowerCase();
+    const uLower = (s.universityName || '').toLowerCase();
+    return uLower.includes(fLower) || fLower.includes(uLower) || uLower.includes(fLower.split(' ')[0]);
   });
 
   return (
@@ -268,36 +271,75 @@ export default function CommunityImpact({ community = {}, user = {} }) {
 
           {/* TAB 1: UNIVERSITIES LEADERBOARD */}
           {leaderboardTab === 'campuses' && (
-            <div className="space-y-2.5">
-              {universityRankings.map((item) => (
-                <div 
-                  key={item.rank} 
-                  className={`p-3.5 rounded-xl flex items-center justify-between text-xs border transition-colors ${
-                    item.rank === 1
-                      ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800/60 shadow-xs'
-                      : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-800'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 overflow-hidden">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center font-mono font-bold text-[11px] flex-shrink-0 ${
-                      item.rank === 1 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' :
-                      item.rank === 2 ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300' :
-                      item.rank === 3 ? 'bg-amber-200/60 text-amber-800 dark:bg-amber-700/20 dark:text-amber-600' :
-                      'text-slate-400 bg-slate-100 dark:bg-slate-800'
-                    }`}>
-                      {item.rank}
-                    </span>
-                    <div className="truncate">
-                      <span className="font-bold text-slate-900 dark:text-white block truncate">{item.name}</span>
-                      <span className="text-[10px] text-slate-400">{item.students}+ students • {item.badge}</span>
+            <div className="space-y-3">
+              {universityRankings.map((item) => {
+                const userUni = user.universityName || user.campusName || user.university || '';
+                const isUserSquad = matchesUniversity(userUni, item);
+
+                return (
+                  <div 
+                    key={item.id || item.rank} 
+                    className={`p-3.5 rounded-xl text-xs border transition-all ${
+                      isUserSquad
+                        ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-400 dark:border-blue-700 shadow-xs ring-1 ring-blue-400/30'
+                        : item.rank === 1
+                        ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/60 shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-mono font-bold text-[11px] flex-shrink-0 ${
+                          item.rank === 1 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' :
+                          item.rank === 2 ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300' :
+                          item.rank === 3 ? 'bg-amber-200/60 text-amber-800 dark:bg-amber-700/20 dark:text-amber-600' :
+                          'text-slate-400 bg-slate-100 dark:bg-slate-800'
+                        }`}>
+                          {item.rank}
+                        </span>
+                        <div className="truncate">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-slate-900 dark:text-white truncate">{item.name}</span>
+                            {isUserSquad && (
+                              <span className="text-[10px] bg-blue-600 text-white font-bold px-1.5 py-0.2 rounded-full font-sans">
+                                🏅 Your Squad
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
+                            <span>{item.city}</span>
+                            <span>•</span>
+                            <span>Leader: {item.leader}</span>
+                            <span>•</span>
+                            <span className="text-amber-600 dark:text-amber-400">{item.badge}</span>
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <span className="font-mono text-blue-600 dark:text-blue-400 font-bold block">{item.points.toLocaleString()} pts</span>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">-{item.co2AvoidedKg.toLocaleString()} kg CO₂</span>
+                      </div>
+                    </div>
+
+                    {/* Interactive Roster Pill */}
+                    <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-[11px]">
+                      <span className="text-slate-500 dark:text-slate-400 font-medium">
+                        {item.students.toLocaleString()} active student volunteers
+                      </span>
+                      <button
+                        onClick={() => {
+                          setSelectedUniversityFilter(item.shortName);
+                          setLeaderboardTab('students');
+                        }}
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-700 font-bold flex items-center gap-1 hover:underline cursor-pointer"
+                      >
+                        <span>View Students Roster ({item.verifiedRosterCount || item.students})</span>
+                        <span>→</span>
+                      </button>
                     </div>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <span className="font-mono text-blue-600 dark:text-blue-400 font-bold block">{item.points.toLocaleString()} pts</span>
-                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">-{item.co2AvoidedKg} kg CO₂</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -310,58 +352,80 @@ export default function CommunityImpact({ community = {}, user = {} }) {
                 <select
                   value={selectedUniversityFilter}
                   onChange={(e) => setSelectedUniversityFilter(e.target.value)}
-                  className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-700 dark:text-slate-200 focus:outline-none"
+                  className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-700 dark:text-slate-200 focus:outline-none max-w-[230px] truncate"
                 >
-                  <option value="IIT Gandhinagar">IIT Gandhinagar</option>
-                  <option value="SVNIT Surat">SVNIT Surat</option>
-                  <option value="MS University">MS University Vadodara</option>
-                  <option value="all">All Gujarat Campuses</option>
+                  <option value="all">All Gujarat Campuses ({verifiedStudents.length} Students)</option>
+                  {universityRankings.map((u) => (
+                    <option key={u.id} value={u.shortName}>
+                      {u.shortName} ({u.verifiedRosterCount || 0} verified)
+                    </option>
+                  ))}
                 </select>
               </div>
 
-              <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
-                {filteredStudents.map((stu, idx) => {
-                  const rank = idx + 1;
-                  const isUser = stu.studentId === user.id || stu.studentName === user.name;
-                  return (
-                    <div
-                      key={stu.id}
-                      className={`p-3 rounded-xl flex items-center justify-between text-xs border transition-colors ${
-                        isUser
-                          ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
-                          : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-800 text-slate-800 dark:text-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 overflow-hidden">
-                        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-mono font-bold text-[11px] flex-shrink-0 ${
-                          rank === 1 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' :
-                          rank === 2 ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300' :
-                          rank === 3 ? 'bg-amber-200/60 text-amber-800 dark:bg-amber-700/20 dark:text-amber-600' :
-                          'text-slate-400 bg-slate-100 dark:bg-slate-800'
-                        }`}>
-                          {rank}
-                        </span>
-                        <div className="truncate">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-slate-900 dark:text-white truncate">{stu.studentName}</span>
-                            {isUser && <span className="text-[10px] text-emerald-600 font-bold">(You)</span>}
+              {filteredStudents.length === 0 ? (
+                <div className="p-6 text-center rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-800 space-y-2">
+                  <GraduationCap className="w-8 h-8 text-slate-400 mx-auto" />
+                  <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    No Verified Students in {selectedUniversityFilter} yet
+                  </p>
+                  <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                    Students can submit their institutional student ID through the Student Sustainability Portal for verification by their Campus Youth Leader.
+                  </p>
+                  <button
+                    onClick={() => setSelectedUniversityFilter('all')}
+                    className="mt-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                  >
+                    View All Gujarat Campuses →
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
+                  {filteredStudents.map((stu, idx) => {
+                    const rank = idx + 1;
+                    const isUser = stu.studentId === user.id || stu.studentName === user.name;
+                    return (
+                      <div
+                        key={stu.id}
+                        className={`p-3 rounded-xl flex items-center justify-between text-xs border transition-colors ${
+                          isUser
+                            ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
+                            : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-800 text-slate-800 dark:text-slate-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 overflow-hidden">
+                          <span className={`w-6 h-6 rounded-full flex items-center justify-center font-mono font-bold text-[11px] flex-shrink-0 ${
+                            rank === 1 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' :
+                            rank === 2 ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300' :
+                            rank === 3 ? 'bg-amber-200/60 text-amber-800 dark:bg-amber-700/20 dark:text-amber-600' :
+                            'text-slate-400 bg-slate-100 dark:bg-slate-800'
+                          }`}>
+                            {rank}
+                          </span>
+                          <div className="truncate">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-slate-900 dark:text-white truncate">{stu.studentName}</span>
+                              {isUser && <span className="text-[10px] text-emerald-600 font-bold">(You)</span>}
+                            </div>
+                            <p className="text-[10px] text-slate-400 flex items-center gap-1 truncate">
+                              <span className="font-mono text-blue-600 dark:text-blue-400 font-semibold">{stu.collegeId}</span>
+                              <span>•</span>
+                              <span className="truncate">{stu.residenceType}</span>
+                              <span>•</span>
+                              <span className="truncate text-slate-500">{stu.universityName}</span>
+                            </p>
                           </div>
-                          <p className="text-[10px] text-slate-400 flex items-center gap-1 truncate">
-                            <span className="font-mono text-blue-600 dark:text-blue-400 font-semibold">{stu.collegeId}</span>
-                            <span>•</span>
-                            <span className="truncate">{stu.residenceType}</span>
-                          </p>
+                        </div>
+
+                        <div className="text-right flex-shrink-0">
+                          <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold block">+{stu.totalPoints} pts</span>
+                          <span className="text-[10px] text-slate-400 font-mono">-{stu.co2SavedKg} kg CO₂</span>
                         </div>
                       </div>
-
-                      <div className="text-right flex-shrink-0">
-                        <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold block">+{stu.totalPoints} pts</span>
-                        <span className="text-[10px] text-slate-400 font-mono">-{stu.co2SavedKg} kg CO₂</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>

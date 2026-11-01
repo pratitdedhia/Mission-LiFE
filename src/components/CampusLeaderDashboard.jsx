@@ -30,7 +30,9 @@ import confetti from 'canvas-confetti';
 import { 
   getCampusStudentSummary, 
   verifyStudent, 
-  rejectStudent 
+  rejectStudent,
+  getCampusLeaderSprints,
+  broadcastCampusLeaderSprint
 } from '../services/studentVerificationService';
 
 export default function CampusLeaderDashboard({ user, onCompleteMission }) {
@@ -41,38 +43,7 @@ export default function CampusLeaderDashboard({ user, onCompleteMission }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('all');
 
-  const [sprints, setSprints] = useState([
-    {
-      id: "sprint_1",
-      title: "Inter-Hostel AC 26°C Challenge",
-      description: "Hostels 3, 5, and 7 compete to maintain AC setpoint at 26°C and shift laundry away from 6-10 PM peak hours.",
-      participatingHostels: ["Hall 3 (Narmada)", "Hall 5 (Sabarmati)", "Hall 7 (Tapti)"],
-      currentLeader: "Hall 5 (Sabarmati)",
-      progressPercent: 78,
-      kwhSaved: 3820,
-      activeParticipants: 245
-    },
-    {
-      id: "sprint_2",
-      title: "Zero Food-Waste Mess Challenge",
-      description: "Dining halls diverting 100% of organic waste to the campus biogas plant and vermicomposting facility.",
-      participatingHostels: ["Central Dining Mess A", "Dining Mess B"],
-      currentLeader: "Central Dining Mess A",
-      progressPercent: 92,
-      kwhSaved: 1450,
-      activeParticipants: 380
-    },
-    {
-      id: "sprint_3",
-      title: "Solar Rooftop Campus Walk",
-      description: "Interactive peer tour of IITGN's 320 kW rooftop solar installation on Academic Blocks 3 & 4.",
-      participatingHostels: ["UG Freshers Squad", "Postgrad Climate Group"],
-      currentLeader: "UG Freshers Squad",
-      progressPercent: 64,
-      kwhSaved: 890,
-      activeParticipants: 160
-    }
-  ]);
+  const [sprints, setSprints] = useState(() => getCampusLeaderSprints(user?.campusName || "IIT Gandhinagar"));
 
   const [newChallengeTitle, setNewChallengeTitle] = useState('');
   const [toastMsg, setToastMsg] = useState(null);
@@ -125,16 +96,26 @@ export default function CampusLeaderDashboard({ user, onCompleteMission }) {
 
     const newSprint = {
       id: `sprint_${Date.now()}`,
-      title: newChallengeTitle,
-      description: `Campus-wide youth initiative initiated by ${user.name}.`,
+      title: newChallengeTitle.trim(),
+      theme: "save_energy",
+      category: "Campus Sprint",
+      description: `Campus-wide youth initiative initiated by ${user?.name || 'Campus Leader'}.`,
+      impactSummary: `Campus sustainability initiative initiated by ${user?.name || 'Campus Leader'}`,
+      points: 50,
+      co2Kg: 1.5,
+      organizer: `${user?.name || 'Aarav Mehta'} (Campus Youth Leader)`,
+      organizerRole: "Campus Leader",
+      requiresPhotoProof: true,
       participatingHostels: ["Hostel Wing A", "Hostel Wing B", "Day Scholars"],
       currentLeader: "Campus Eco Squad",
       progressPercent: 10,
       kwhSaved: 100,
-      activeParticipants: 42
+      activeParticipants: 42,
+      status: "active"
     };
 
-    setSprints([newSprint, ...sprints]);
+    const updated = broadcastCampusLeaderSprint(user?.campusName || "IIT Gandhinagar", newSprint);
+    setSprints(updated);
     setNewChallengeTitle('');
     showToast("New campus green sprint broadcasted to all verified students!");
   };

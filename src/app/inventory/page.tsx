@@ -613,3 +613,4 @@ export default function ApplianceInventoryPage({ user = {}, onNavigate, onUserUp
     </div>
   );
 }
+

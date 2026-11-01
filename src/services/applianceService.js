@@ -351,3 +351,4 @@ export async function syncInventoryBaselineToFirestore(uid, dynamicBaseline) {
     return { success: false, error: err.message };
   }
 }
+
