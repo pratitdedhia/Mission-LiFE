@@ -53,6 +53,7 @@ export default function Dashboard({
   const [iotWatts, setIotWatts] = useState(0);
   const [iotVoltage, setIotVoltage] = useState(230.1);
   const [hardwareNudge, setHardwareNudge] = useState(null);
+  const [nudgeMeta, setNudgeMeta] = useState(null);
   const [showPointsHistory, setShowPointsHistory] = useState(false);
   const [citizenAnalytics, setCitizenAnalytics] = useState(null);
   const [analyticsTab, setAnalyticsTab] = useState('telemetry'); // 'telemetry' | 'points' | 'challenges' | 'solar'
@@ -99,15 +100,21 @@ export default function Dashboard({
           setIotWatts(Number(reading.current_wattage) || 0);
           setIotVoltage(Number(reading.voltage) || 230);
           setHardwareNudge(reading.nudge_message || null);
+          setNudgeMeta({
+            rule: reading.nudge_rule || null,
+            time: reading.current_time_ist || null
+          });
         } else {
           setIotWatts(0);
           setHardwareNudge(null);
+          setNudgeMeta(null);
         }
       } catch (error) {
         if (!isMounted) return;
         console.error('Could not load Wokwi telemetry:', error);
         setIotOnline(false);
         setHardwareNudge(null);
+        setNudgeMeta(null);
       }
     };
 
@@ -197,16 +204,37 @@ export default function Dashboard({
         </div>
 
         {/* Live Hardware Telemetry Nudge Message */}
-        {hardwareNudge && (
-          <div className="mt-3 pt-3 border-t border-emerald-500/20 dark:border-emerald-500/30 flex items-start sm:items-center gap-2 text-xs animate-fade-in">
-            <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 uppercase tracking-wider flex-shrink-0">
-              Live Nudge
-            </span>
-            <span className="font-semibold text-slate-800 dark:text-slate-100 leading-snug">
-              {hardwareNudge}
-            </span>
-          </div>
-        )}
+        {hardwareNudge && (() => {
+          const match = hardwareNudge.match(/^(.*?)\s*\[Time:\s*([^|\]]+)\s*\|\s*Rule:\s*([^\]]+)\]$/);
+          const cleanMsg = match ? match[1].trim() : hardwareNudge;
+          const devTime = match ? match[2].trim() : nudgeMeta?.time;
+          const devRule = match ? match[3].trim() : nudgeMeta?.rule;
+
+          return (
+            <div className="mt-3 pt-3 border-t border-emerald-500/20 dark:border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs animate-fade-in">
+              <div className="flex items-start sm:items-center gap-2">
+                <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 uppercase tracking-wider flex-shrink-0">
+                  Live Nudge
+                </span>
+                <span className="font-semibold text-slate-800 dark:text-slate-100 leading-snug">
+                  {cleanMsg}
+                </span>
+              </div>
+              {(devTime || devRule) && (
+                <div className="flex items-center gap-1.5 font-mono text-[10px] px-2 py-0.5 rounded-md bg-amber-500/10 dark:bg-amber-400/10 text-amber-800 dark:text-amber-300 border border-amber-300/40 dark:border-amber-600/40 flex-shrink-0 self-start sm:self-auto">
+                  <span className="font-bold">DEV:</span>
+                  {devTime && <span>Time: <strong>{devTime}</strong></span>}
+                  {devTime && devRule && <span className="text-amber-400 dark:text-amber-600">|</span>}
+                  {devRule && (
+                    <span>
+                      Rule: <strong className={devRule === 'PEAK_HIGH_LOAD' ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-emerald-700 dark:text-emerald-300 font-bold'}>{devRule}</strong>
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
       
       {/* Real-Time Smart Grid Load Nudge Banner */}

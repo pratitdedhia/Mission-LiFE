@@ -49,6 +49,7 @@ export default function StudentPortal({ user, onNavigate }) {
   const [meterVolts, setMeterVolts] = useState(230);
   const [meterAmps, setMeterAmps] = useState(0);
   const [meterNudge, setMeterNudge] = useState(null);
+  const [meterNudgeMeta, setMeterNudgeMeta] = useState(null);
 
   // Poll live hardware telemetry from Wokwi ESP32 microservice
   useEffect(() => {
@@ -91,11 +92,16 @@ export default function StudentPortal({ user, onNavigate }) {
           setMeterVolts(volts);
           setMeterAmps(amps);
           setMeterNudge(reading.nudge_message || null);
+          setMeterNudgeMeta({
+            rule: reading.nudge_rule || null,
+            time: reading.current_time_ist || null
+          });
         } else {
           setMeterWatts(0);
           setMeterVolts(230);
           setMeterAmps(0);
           setMeterNudge(null);
+          setMeterNudgeMeta(null);
         }
       } catch (error) {
         if (!isMounted) return;
@@ -104,6 +110,7 @@ export default function StudentPortal({ user, onNavigate }) {
         setMeterVolts(230);
         setMeterAmps(0);
         setMeterNudge(null);
+        setMeterNudgeMeta(null);
       }
     };
 
@@ -283,16 +290,37 @@ export default function StudentPortal({ user, onNavigate }) {
         </div>
 
         {/* Live Hardware Telemetry Nudge Message */}
-        {meterNudge && (
-          <div className="mt-3.5 pt-3.5 border-t border-emerald-500/20 dark:border-emerald-500/30 flex items-start sm:items-center gap-2 text-xs animate-fade-in">
-            <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 uppercase tracking-wider flex-shrink-0">
-              Live Nudge
-            </span>
-            <span className="font-semibold text-slate-800 dark:text-slate-100 leading-snug">
-              {meterNudge}
-            </span>
-          </div>
-        )}
+        {meterNudge && (() => {
+          const match = meterNudge.match(/^(.*?)\s*\[Time:\s*([^|\]]+)\s*\|\s*Rule:\s*([^\]]+)\]$/);
+          const cleanMsg = match ? match[1].trim() : meterNudge;
+          const devTime = match ? match[2].trim() : meterNudgeMeta?.time;
+          const devRule = match ? match[3].trim() : meterNudgeMeta?.rule;
+
+          return (
+            <div className="mt-3.5 pt-3.5 border-t border-emerald-500/20 dark:border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs animate-fade-in">
+              <div className="flex items-start sm:items-center gap-2">
+                <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 uppercase tracking-wider flex-shrink-0">
+                  Live Nudge
+                </span>
+                <span className="font-semibold text-slate-800 dark:text-slate-100 leading-snug">
+                  {cleanMsg}
+                </span>
+              </div>
+              {(devTime || devRule) && (
+                <div className="flex items-center gap-1.5 font-mono text-[10px] px-2 py-0.5 rounded-md bg-amber-500/10 dark:bg-amber-400/10 text-amber-800 dark:text-amber-300 border border-amber-300/40 dark:border-amber-600/40 flex-shrink-0 self-start sm:self-auto">
+                  <span className="font-bold">DEV:</span>
+                  {devTime && <span>Time: <strong>{devTime}</strong></span>}
+                  {devTime && devRule && <span className="text-amber-400 dark:text-amber-600">|</span>}
+                  {devRule && (
+                    <span>
+                      Rule: <strong className={devRule === 'PEAK_HIGH_LOAD' ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-emerald-700 dark:text-emerald-300 font-bold'}>{devRule}</strong>
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* VIEW STATE 1: VERIFIED STUDENT ECO-BADGE & CAMPUS CONTRIBUTION */}

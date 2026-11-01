@@ -7,6 +7,7 @@ import io
 import os
 import json
 import time
+from datetime import datetime, timezone, timedelta, time as time_obj
 from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, File, UploadFile, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,6 +15,11 @@ from pydantic import BaseModel, Field
 import numpy as np
 import cv2
 import requests
+
+try:
+    from nudge_engine import evaluate_telemetry_nudge, get_kolkata_tz
+except ImportError:
+    from microservice.nudge_engine import evaluate_telemetry_nudge, get_kolkata_tz
 
 # In-memory circular buffer for fast telemetry auditing and dashboard stream
 TELEMETRY_LEDGER: List[Dict[str, Any]] = []
@@ -201,6 +207,8 @@ class TelemetryResponse(BaseModel):
     current_hourly_cost_inr: float
     is_peak_hours: bool
     nudge_message: str
+    nudge_rule: Optional[str] = "EFFICIENT_GRID_DRAW"
+    current_time_ist: Optional[str] = None
     saved_to_firestore: bool
     source_type: str = "wokwi_simulated"
     is_simulated: bool = True
@@ -222,7 +230,9 @@ async def save_hardware_telemetry_to_firestore(
     nudge: str,
     timestamp: int,
     source_type: str = "wokwi_simulated",
-    location: Optional[Dict[str, Any]] = None
+    location: Optional[Dict[str, Any]] = None,
+    nudge_rule: Optional[str] = None,
+    current_time_ist: Optional[str] = None
 ) -> bool:
     """
     Persists incoming smart meter telemetry to Firestore and durable disk store under:
@@ -242,6 +252,8 @@ async def save_hardware_telemetry_to_firestore(
         "current_hourly_cost_inr": hourly_cost_inr,
         "is_peak_hours": is_peak,
         "nudge_message": nudge,
+        "nudge_rule": nudge_rule,
+        "current_time_ist": current_time_ist,
         "timestamp": timestamp,
         "source": "Wokwi ESP32 Telemetry Bridge" if is_simulated else "Smart Meter Hardware Bridge",
         "source_type": source_type,
@@ -290,6 +302,8 @@ async def save_hardware_telemetry_to_firestore(
             "power_watts": {"doubleValue": power_watts},
             "is_peak_hours": {"booleanValue": is_peak},
             "nudge_message": {"stringValue": nudge},
+            "nudge_rule": {"stringValue": nudge_rule or ""},
+            "current_time_ist": {"stringValue": current_time_ist or ""},
             "timestamp": {"integerValue": str(timestamp)}
         }
         resp = requests.post(url, json={"fields": fields}, timeout=2.0)
@@ -428,16 +442,13 @@ async def receive_hardware_telemetry(payload: HardwareTelemetry):
     kwh_hourly = power_watts / 1000.0
     hourly_cost_inr = round(kwh_hourly * 6.50, 2)
 
-    # 3. Check peak hours (18:00 - 22:00 IST)
-    current_hour = time.localtime().tm_hour
-    is_peak = 18 <= current_hour < 22
-
-    if is_peak and power_watts > 1200:
-        nudge = f"⚠️ HIGH LOAD WARNING: {power_watts:.0f}W running during Peak Grid Hours (6-10 PM). Defer high-wattage cycles to avoid premium ToD tariffs."
-    elif power_watts > 2000:
-        nudge = f"⚡ High Demand detected ({power_watts:.0f}W). Switch off idle appliances."
-    else:
-        nudge = f"🟢 Efficient Grid Draw ({power_watts:.0f}W). Optimal consumption profile."
+    # 3. Evaluate live energy nudge strictly in Asia/Kolkata (6:00 PM - 10:00 PM IST)
+    # Never claims peak hours unless current Asia/Kolkata time is within 18:00 <= t < 22:00
+    nudge_eval = evaluate_telemetry_nudge(power_watts=power_watts, raw_timestamp=payload.timestamp)
+    is_peak = nudge_eval["is_peak"]
+    nudge = nudge_eval["nudge_message"]
+    nudge_rule = nudge_eval["nudge_rule"]
+    current_time_ist = nudge_eval["current_time_ist"]
 
     # 4. Save to Firestore (users/{uid}/telemetry and users/{uid}/appliances/{device_id})
     is_sim = (payload.user_id == "user_12345" or payload.source_type == "wokwi_simulated")
@@ -452,9 +463,11 @@ async def receive_hardware_telemetry(payload: HardwareTelemetry):
         hourly_cost_inr=hourly_cost_inr,
         is_peak=is_peak,
         nudge=nudge,
-        timestamp=payload.timestamp or int(time.time()),
+        timestamp=payload.timestamp or nudge_eval["timestamp_utc"],
         source_type=payload.source_type or "wokwi_simulated",
-        location=payload.location
+        location=payload.location,
+        nudge_rule=nudge_rule,
+        current_time_ist=current_time_ist
     )
 
     return TelemetryResponse(
@@ -467,10 +480,45 @@ async def receive_hardware_telemetry(payload: HardwareTelemetry):
         current_hourly_cost_inr=hourly_cost_inr,
         is_peak_hours=is_peak,
         nudge_message=nudge,
+        nudge_rule=nudge_rule,
+        current_time_ist=current_time_ist,
         saved_to_firestore=saved,
         source_type=payload.source_type or "wokwi_simulated",
         is_simulated=is_sim
     )
+
+
+@app.get("/api/hardware/verify-nudge")
+def verify_nudge(
+    power_watts: float = 1645.0,
+    hour_ist: Optional[int] = None,
+    minute_ist: Optional[int] = 0,
+    second_ist: Optional[int] = 0
+):
+    """
+    Development verification helper to test nudge evaluation across different hours.
+    Allows simulating specific IST times to verify peak boundary rules.
+    """
+    tz = get_kolkata_tz()
+    if hour_ist is not None:
+        now_ist = datetime.now(tz)
+        sim_dt = datetime(now_ist.year, now_ist.month, now_ist.day, hour_ist, minute_ist or 0, second_ist or 0, tzinfo=tz)
+        raw_ts = sim_dt.timestamp()
+    else:
+        raw_ts = datetime.now(timezone.utc).timestamp()
+
+    result = evaluate_telemetry_nudge(power_watts=power_watts, raw_timestamp=raw_ts)
+    return {
+        "status": "success",
+        "power_watts": power_watts,
+        "simulated_hour_ist": hour_ist,
+        "is_peak_hours": result["is_peak"],
+        "nudge_rule": result["nudge_rule"],
+        "current_time_ist": result["current_time_ist"],
+        "base_message": result["base_message"],
+        "nudge_message": result["nudge_message"],
+        "boundary_spec": "Peak window: 18:00:00 (6 PM inclusive) to 22:00:00 (10 PM exclusive) Asia/Kolkata"
+    }
 
 
 @app.get("/api/hardware/latest")
