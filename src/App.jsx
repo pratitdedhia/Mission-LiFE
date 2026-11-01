@@ -41,7 +41,8 @@ import { recordStudentAction } from './services/studentVerificationService';
 import { Check } from 'lucide-react';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState(() => isSessionActive() ? 'app' : 'landing');
+  // Always start fresh from the Landing Page when the link is opened
+  const [currentView, setCurrentView] = useState('landing');
   const [authModalMode, setAuthModalMode] = useState('login');
   const [user, setUser] = useState(() => getStoredUser());
   const [community, setCommunity] = useState(() => {
