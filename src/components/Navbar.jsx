@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Leaf,
   Globe,
-  User,
   LogOut,
   Award,
   ShieldCheck,
@@ -213,14 +212,6 @@ export default function Navbar({
                   >
                     <Building2 className="w-4 h-4 text-cyan-500" />
                     <span>GEDA State Admin View</span>
-                  </button>
-
-                  <button
-                    onClick={() => { setShowProfileMenu(false); onOpenAuth(); }}
-                    className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
-                  >
-                    <User className="w-4 h-4 text-violet-500" />
-                    <span>Switch Role / Demo Presets</span>
                   </button>
 
                   {onOpenLanding && (
