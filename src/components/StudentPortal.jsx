@@ -15,6 +15,7 @@ import {
   Zap, 
   Camera, 
   ExternalLink,
+  Activity,
   ChevronRight,
   MapPin
 } from 'lucide-react';
@@ -41,6 +42,79 @@ export default function StudentPortal({ user, onNavigate }) {
   const [idCardPreview, setIdCardPreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [notification, setNotification] = useState(null);
+
+  // Wokwi ESP32 Smart-Meter Telemetry states
+  const [meterOnline, setMeterOnline] = useState(false);
+  const [meterWatts, setMeterWatts] = useState(0);
+  const [meterVolts, setMeterVolts] = useState(230);
+  const [meterAmps, setMeterAmps] = useState(0);
+  const [meterNudge, setMeterNudge] = useState(null);
+
+  // Poll live hardware telemetry from Wokwi ESP32 microservice
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadTelemetry = async () => {
+      try {
+        const response = await fetch(
+          'https://mission-life.onrender.com/api/hardware/latest?user_id=user_12345',
+          { cache: 'no-store' }
+        );
+
+        if (!response.ok) {
+          throw new Error('Telemetry API returned HTTP ' + response.status);
+        }
+
+        const data = await response.json();
+        const reading = data?.latest;
+        const timestamp = Number(reading?.timestamp);
+        const ageSeconds = Number.isFinite(timestamp)
+          ? Date.now() / 1000 - timestamp
+          : Infinity;
+        const isFresh = Boolean(reading) && ageSeconds >= 0 && ageSeconds <= 20;
+
+        if (!isMounted) return;
+
+        setMeterOnline(isFresh);
+
+        if (isFresh) {
+          const watts = Number(reading.current_wattage) || 0;
+          const volts = Number(reading.voltage) || 230;
+          let amps = 0;
+          if (reading.current !== undefined && reading.current !== null) {
+            amps = Number(reading.current);
+          } else if (volts > 0) {
+            amps = Number((watts / volts).toFixed(2));
+          }
+
+          setMeterWatts(watts);
+          setMeterVolts(volts);
+          setMeterAmps(amps);
+          setMeterNudge(reading.nudge_message || null);
+        } else {
+          setMeterWatts(0);
+          setMeterVolts(230);
+          setMeterAmps(0);
+          setMeterNudge(null);
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        setMeterOnline(false);
+        setMeterWatts(0);
+        setMeterVolts(230);
+        setMeterAmps(0);
+        setMeterNudge(null);
+      }
+    };
+
+    loadTelemetry();
+    const interval = setInterval(loadTelemetry, 3000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const showNotification = (msg) => {
     setNotification(msg);
@@ -155,6 +229,70 @@ export default function StudentPortal({ user, onNavigate }) {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Wokwi Smart-Meter Telemetry Bridge Card */}
+      <div className={`p-4 sm:p-5 rounded-3xl border transition-all ${
+        meterOnline 
+          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-950 dark:text-emerald-100 shadow-sm' 
+          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 shadow-xs'
+      }`}>
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+              meterOnline 
+                ? 'bg-emerald-600 text-white shadow-xs' 
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+            }`}>
+              <Activity className={`w-5 h-5 ${meterOnline ? 'animate-pulse' : ''}`} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${meterOnline ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`} />
+                  <span>Wokwi Smart Meter: {meterOnline ? 'Online' : 'Offline'}</span>
+                </span>
+                {meterOnline && (
+                  <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700">
+                    ⚡ Live Draw: {meterWatts} W • {meterVolts} V • {meterAmps.toFixed(2)} A
+                  </span>
+                )}
+                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                  Campus IoT Telemetry
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                {meterOnline 
+                  ? 'Receiving real-time wattage readings from the Wokwi ESP32 smart meter simulator for appliance tracking.' 
+                  : 'Waiting for Wokwi telemetry. Start the ESP32 simulator to stream live hostel / campus lab power telemetry.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-end md:self-auto flex-shrink-0">
+            <a
+              href="https://wokwi.com/projects/479495732560719873"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
+            >
+              <span>Wokwi Sim</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        </div>
+
+        {/* Live Hardware Telemetry Nudge Message */}
+        {meterNudge && (
+          <div className="mt-3.5 pt-3.5 border-t border-emerald-500/20 dark:border-emerald-500/30 flex items-start sm:items-center gap-2 text-xs animate-fade-in">
+            <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 uppercase tracking-wider flex-shrink-0">
+              Live Nudge
+            </span>
+            <span className="font-semibold text-slate-800 dark:text-slate-100 leading-snug">
+              {meterNudge}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* VIEW STATE 1: VERIFIED STUDENT ECO-BADGE & CAMPUS CONTRIBUTION */}
