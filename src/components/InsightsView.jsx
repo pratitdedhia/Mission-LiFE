@@ -22,7 +22,8 @@ import {
   SlidersHorizontal,
   ChevronDown,
   Layers,
-  Cpu
+  Cpu,
+  Sparkles
 } from 'lucide-react';
 import { 
   fetchUnifiedInsights, 

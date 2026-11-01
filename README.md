@@ -186,7 +186,7 @@ flowchart TD
 The codebase includes full automated test suites across both TypeScript/JavaScript and Python:
 
 ```bash
-# Run Vitest test suite (38 tests across 6 test files)
+# Run Vitest test suite (43 tests across 6 test files)
 npx vitest run
 
 # Run Python nudge boundary test suite (7 tests)
@@ -194,7 +194,7 @@ python tests/test_nudge_evaluation.py
 ```
 
 ### Test Coverage:
-1. `tests/unit/insights.test.ts` (7 tests): Multi-role insights engine, Watts vs. kWh separation, forecasting threshold ($\ge 7$ days), privacy isolation, and Wokwi simulation tagging.
+1. `tests/unit/insights.test.ts` (12 tests): Multi-role insights engine, component rendering across all 5 user profiles, Watts vs. kWh separation, forecasting threshold ($\ge 7$ days), privacy isolation, and Wokwi simulation tagging.
 2. `tests/rules/firestore.test.ts` (5 tests): Firestore security rules for multi-role access.
 3. `tests/unit/rbacRouting.test.ts` (7 tests): Role-based automatic authentication and fallback.
 4. `tests/unit/nudge.test.ts` (5 tests): Asia/Kolkata boundary checking and neutral message verification.

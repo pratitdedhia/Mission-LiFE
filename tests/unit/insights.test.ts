@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
+import React from 'react';
+import { renderToString } from 'react-dom/server';
 import { fetchUnifiedInsights } from '../../src/services/analyticsService';
+import InsightsView from '../../src/components/InsightsView';
 
 describe('Unified Multi-Role Insights Engine', () => {
   beforeAll(() => {
@@ -194,5 +197,35 @@ describe('Unified Multi-Role Insights Engine', () => {
     expect(res.adminData.statewide).toBeDefined();
     expect(res.adminData.statewide.totalSolarKw).toBeGreaterThan(0);
     expect(res.timeSeries.length).toBe(12);
+  });
+
+  it('Component rendering: renders InsightsView for Citizen without throwing', () => {
+    const html = renderToString(React.createElement(InsightsView, { user: { role: 'citizen', name: 'Pooja' } }));
+    expect(html).toContain('Citizen Energy');
+    expect(html).toContain('Consumed Energy');
+  });
+
+  it('Component rendering: renders InsightsView for Student without throwing', () => {
+    const html = renderToString(React.createElement(InsightsView, { user: { role: 'student', name: 'Priyan' } }));
+    expect(html).toContain('Student');
+    expect(html).toContain('Campus Standing');
+  });
+
+  it('Component rendering: renders InsightsView for Campus Leader without throwing', () => {
+    const html = renderToString(React.createElement(InsightsView, { user: { role: 'campus_leader', name: 'Aarav' } }));
+    expect(html).toContain('Collegiate Squad');
+    expect(html).toContain('Verified Eco-Students');
+  });
+
+  it('Component rendering: renders InsightsView for Solar Partner without throwing', () => {
+    const html = renderToString(React.createElement(InsightsView, { user: { role: 'solar_vendor', name: 'Rajesh' } }));
+    expect(html).toContain('Solar Rooftop');
+    expect(html).toContain('Pipeline Volume');
+  });
+
+  it('Component rendering: renders InsightsView for State Admin without throwing', () => {
+    const html = renderToString(React.createElement(InsightsView, { user: { role: 'admin', name: 'Dr. Neha' } }));
+    expect(html).toContain('Gujarat State Department Master Insights');
+    expect(html).toContain('Statewide Sinks');
   });
 });

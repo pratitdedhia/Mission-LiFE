@@ -15,6 +15,7 @@ import SolarVendorDashboard from './components/SolarVendorDashboard';
 import CampusLeaderDashboard from './components/CampusLeaderDashboard';
 import StudentPortal from './components/StudentPortal';
 import InsightsView from './components/InsightsView';
+import ErrorBoundary from './components/ErrorBoundary';
 import LandingPage from './components/LandingPage';
 import AuthModal from './components/AuthModal';
 import PledgeModal from './components/PledgeModal';
@@ -368,6 +369,7 @@ export default function App() {
         />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+          <ErrorBoundary key={activeTab}>
           {activeTab === 'dashboard' && (
             <Dashboard
               user={user}
@@ -508,6 +510,7 @@ export default function App() {
               onNavigate={setActiveTab}
             />
           )}
+          </ErrorBoundary>
         </main>
       </div>
 
