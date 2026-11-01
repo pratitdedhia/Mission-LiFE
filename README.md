@@ -148,6 +148,7 @@ flowchart TD
     end
 
     subgraph FrontendApp["React 19 + Vite Frontend (GitHub Pages)"]
+        ErrorBoundary["ErrorBoundary.jsx\nReact Error Resilience Layer"]
         NudgeService["nudgeService.js\nAuthoritative Client-Side IST Evaluator"]
         AnalyticsService["analyticsService.js\nTrapezoidal Integration & Aggregations"]
         InsightsView["InsightsView.jsx\nInteractive Charts & Shared Filters"]
@@ -178,6 +179,10 @@ flowchart TD
   * `EFFICIENT_GRID_DRAW` ($P \le 1200\text{W}$):
     > `🟢 Efficient Grid Draw ({watts}W). Optimal consumption profile.`
 * **Dev Verification:** Displays current time and active rule (`[DEV: Time: <IST> | Rule: <RULE>]`).
+
+### UI Crash Resilience (`src/components/ErrorBoundary.jsx`)
+* **Scoped Error Boundaries:** Wraps the primary tab router in `App.jsx`, catching localized rendering exceptions and preventing full application blank-screen unmounts.
+* **Instant Recovery:** Renders a clean diagnostics and recovery card with a one-click *"Reload View"* action rather than failing silently.
 
 ---
 
