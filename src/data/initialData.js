@@ -814,3 +814,39 @@ export const TRANSLATIONS = {
     language: "भाषा"
   }
 };
+
+export const GUJARAT_DISTRICTS = [
+  "Ahmedabad",
+  "Surat",
+  "Vadodara",
+  "Rajkot",
+  "Gandhinagar",
+  "Bhavnagar",
+  "Jamnagar",
+  "Junagadh",
+  "Anand",
+  "Kheda",
+  "Mehsana",
+  "Banaskantha",
+  "Sabarkantha",
+  "Patan",
+  "Kutch",
+  "Bharuch",
+  "Navsari",
+  "Valsad",
+  "Dahod",
+  "Panchmahal",
+  "Surendranagar",
+  "Amreli",
+  "Porbandar",
+  "Gir Somnath",
+  "Morbi",
+  "Botad",
+  "Devbhumi Dwarka",
+  "Aravalli",
+  "Mahisagar",
+  "Chhota Udaipur",
+  "Tapi",
+  "Narmada",
+  "Dang"
+];

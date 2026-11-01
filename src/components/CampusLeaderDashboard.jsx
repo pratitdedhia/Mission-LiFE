@@ -34,6 +34,7 @@ import {
   getCampusLeaderSprints,
   broadcastCampusLeaderSprint
 } from '../services/studentVerificationService';
+import { getAllManagedUsers, approveManagedUser } from '../services/userManagementService';
 import StudentProfileModal from './StudentProfileModal';
 
 export default function CampusLeaderDashboard({ user, onCompleteMission }) {
@@ -45,6 +46,10 @@ export default function CampusLeaderDashboard({ user, onCompleteMission }) {
 
   const [sprints, setSprints] = useState(() => getCampusLeaderSprints(user?.campusName || "IIT Gandhinagar"));
 
+  const [pendingAdminRequests, setPendingAdminRequests] = useState(() => 
+    getAllManagedUsers().filter(u => u.role === 'admin' && (u.status === 'pending' || u.approvalRequiredBy === 'campus_leader'))
+  );
+
   const [newChallengeTitle, setNewChallengeTitle] = useState('');
   const [toastMsg, setToastMsg] = useState(null);
 
@@ -55,6 +60,14 @@ export default function CampusLeaderDashboard({ user, onCompleteMission }) {
 
   const reloadSummary = () => {
     setSummaryData(getCampusStudentSummary(user.campusName || "IIT Gandhinagar"));
+    setPendingAdminRequests(getAllManagedUsers().filter(u => u.role === 'admin' && (u.status === 'pending' || u.approvalRequiredBy === 'campus_leader')));
+  };
+
+  const handleGrantAdminClearance = (adminId, adminName) => {
+    approveManagedUser(adminId, user.name || "Aarav Mehta (Campus Youth Leader)");
+    confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
+    showToast(`Granted Campus Youth Leader clearance to State Admin ${adminName}!`);
+    reloadSummary();
   };
 
   const handleVerifyStudent = (studentId, studentName) => {
@@ -465,6 +478,68 @@ export default function CampusLeaderDashboard({ user, onCompleteMission }) {
                         <span>Verify & Accept Student</span>
                       </button>
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* SECTION: STATE ADMIN CLEARANCE REQUESTS (TO BE APPROVED BY CAMPUS LEADER) */}
+          <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-indigo-600" />
+                  <span>State Admin Oversight Clearance (Dual-Governance Approval)</span>
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  State agency energy officers registered with requirement: <em>To be approved by Campus Leader</em>.
+                </p>
+              </div>
+
+              <span className="text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                {pendingAdminRequests.length} Clearance Pending
+              </span>
+            </div>
+
+            {pendingAdminRequests.length === 0 ? (
+              <div className="p-6 text-center text-slate-400 rounded-2xl bg-slate-50/50 dark:bg-slate-800/20 border border-dashed border-slate-200 dark:border-slate-800">
+                <ShieldCheck className="w-8 h-8 text-indigo-500 mx-auto mb-2" />
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">No Pending State Admin Clearance Requests</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">All administrative energy officer access requests have been cleared.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {pendingAdminRequests.map((adm) => (
+                  <div 
+                    key={adm.id}
+                    className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-slate-900 dark:text-white text-sm">{adm.name}</span>
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300">
+                          {adm.employeeCode || "GEDA-OFFICER"}
+                        </span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                          Pending Campus Clearance
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">
+                        {adm.department || "Directorate of Clean Energy Planning"} • <span className="font-mono">{adm.email}</span>
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        Phone: {adm.phone} • District: {adm.district || "Gandhinagar"}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => handleGrantAdminClearance(adm.id, adm.name)}
+                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer self-end sm:self-auto"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span>Grant Campus Leader Clearance</span>
+                    </button>
                   </div>
                 ))}
               </div>

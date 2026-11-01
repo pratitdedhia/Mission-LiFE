@@ -17,6 +17,7 @@ import {
   GraduationCap,
   MessageSquare,
   SunMedium,
+  UserPlus,
   X
 } from 'lucide-react';
 import { GRID_HOURS } from '../data/initialData';
@@ -302,7 +303,15 @@ export default function Navbar({
                   )}
                 </div>
 
-                <div className="pt-1 border-t border-slate-100 dark:border-slate-700">
+                <div className="pt-1 border-t border-slate-100 dark:border-slate-700 space-y-0.5">
+                  <button
+                    onClick={() => { setShowProfileMenu(false); onOpenAuth(); }}
+                    className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                  >
+                    <UserPlus className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>Register New Role / Account</span>
+                  </button>
+
                   <button
                     onClick={() => { setShowProfileMenu(false); onLogout(); }}
                     className="w-full text-left px-3 py-2 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl flex items-center gap-2.5 text-rose-600 dark:text-rose-400 transition-colors cursor-pointer"

@@ -36,7 +36,8 @@ import {
   updateManagedUser, 
   createManagedUser, 
   deleteManagedUser, 
-  toggleUserStatus 
+  toggleUserStatus,
+  approveManagedUser 
 } from '../services/userManagementService';
 
 // Comprehensive District Master Data for Scheme Planning
@@ -149,6 +150,13 @@ export default function AdminDashboard({ community = {}, user = {}, activeTab = 
       refreshUsers();
       showToast(`User ${name} removed.`);
     }
+  };
+
+  const handleApproveUser = (userId, name, role) => {
+    approveManagedUser(userId, user?.name || "Dr. Neha Joshi (GEDA State Energy Officer)");
+    confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+    showToast(`Approved and certified ${name} as active ${role === 'solar_vendor' ? 'GEDA Solar Partner' : role === 'campus_leader' ? 'Campus Youth Leader' : role}!`);
+    refreshUsers();
   };
 
   const handleCreateUser = (e) => {
@@ -849,21 +857,39 @@ export default function AdminDashboard({ community = {}, user = {}, activeTab = 
                         </td>
 
                         <td className="py-3 px-4">
-                          <button
-                            onClick={() => handleToggleStatus(u.id)}
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold border cursor-pointer transition-colors ${
-                              isActive
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
-                                : 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800'
-                            }`}
-                            title="Click to toggle status"
-                          >
-                            {isActive ? '● Active' : '✕ Suspended'}
-                          </button>
+                          {u.status === 'pending' ? (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800 flex items-center gap-1 w-fit">
+                              <span className="animate-pulse">⏳</span>
+                              <span>Pending Review</span>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleToggleStatus(u.id)}
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-bold border cursor-pointer transition-colors ${
+                                isActive
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                                  : 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800'
+                              }`}
+                              title="Click to toggle status"
+                            >
+                              {isActive ? '● Active' : '✕ Suspended'}
+                            </button>
+                          )}
                         </td>
 
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            {u.status === 'pending' && (
+                              <button
+                                onClick={() => handleApproveUser(u.id, u.name, u.role)}
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                                title="Approve registration and activate account"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Approve</span>
+                              </button>
+                            )}
+
                             <button
                               onClick={() => handleToggleStatus(u.id)}
                               className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"

@@ -182,13 +182,79 @@ export const INITIAL_MANAGED_USERS = [
     city: "Vadodara",
     locality: "Alkapuri",
     authProvider: "Email / Password",
-    status: "pending",
+    status: "active",
     lifeScore: 190,
     co2SavedKg: 45,
     streak: 2,
     solarStatus: "Survey Requested (3 kW)",
     joinedDate: "2026-10-28",
     lastLogin: "4 days ago"
+  },
+  {
+    id: "usr_pending_vendor_kirtan",
+    name: "Kirtan Dave",
+    email: "kirtan.dave@greengridgujarat.in",
+    role: "solar_vendor",
+    roleTitle: "Empanelled Installer Applicant",
+    phone: "+91 98251 77210",
+    district: "Surat",
+    city: "Surat",
+    locality: "Adajan GIDC",
+    companyName: "GreenGrid Solar EPC Solutions",
+    licenseId: "GEDA-APPL-2026-SRT-091",
+    authProvider: "Self-Registered",
+    status: "pending",
+    approvalRequiredBy: "admin",
+    lifeScore: 0,
+    co2SavedKg: 0,
+    streak: 0,
+    solarStatus: "Empanelment Application Pending",
+    joinedDate: "2026-11-01",
+    lastLogin: "Never"
+  },
+  {
+    id: "usr_pending_campus_meera",
+    name: "Meera Trivedi",
+    email: "meera.trivedi@nirmauni.ac.in",
+    role: "campus_leader",
+    roleTitle: "Campus Youth Leader Nominee",
+    phone: "+91 99092 11445",
+    district: "Ahmedabad",
+    city: "Ahmedabad",
+    locality: "SG Highway Campus",
+    campusName: "Nirma University",
+    department: "Civil & Environmental Engineering",
+    authProvider: "Institutional Registration",
+    status: "pending",
+    approvalRequiredBy: "admin",
+    lifeScore: 0,
+    co2SavedKg: 0,
+    streak: 0,
+    solarStatus: "Campus Council Leader Nominee",
+    joinedDate: "2026-11-01",
+    lastLogin: "Never"
+  },
+  {
+    id: "usr_pending_admin_harsh",
+    name: "Harsh Vardhan",
+    email: "harsh.v@geda.gujarat.gov.in",
+    role: "admin",
+    roleTitle: "GEDA Energy Conservation Officer",
+    phone: "+91 79 2325 8811",
+    district: "Gandhinagar",
+    city: "Gandhinagar",
+    locality: "Sector 11 (GEDA Bhavan)",
+    department: "Directorate of Clean Energy Planning",
+    employeeCode: "GEDA-OFFICER-2026-GNR-14",
+    authProvider: "State Officer Registration",
+    status: "pending",
+    approvalRequiredBy: "campus_leader",
+    lifeScore: 0,
+    co2SavedKg: 0,
+    streak: 0,
+    solarStatus: "Statewide Oversight Applicant",
+    joinedDate: "2026-11-01",
+    lastLogin: "Never"
   }
 ];
 
@@ -239,34 +305,51 @@ export function updateManagedUser(userId, updates) {
 
 export function createManagedUser(userData) {
   const users = getAllManagedUsers();
-  const newId = `usr_${Date.now()}`;
+  const newId = userData.id || `usr_${Date.now()}`;
   const newUser = {
     id: newId,
-    name: userData.name || "New Registered Citizen",
+    name: userData.name || "New Registered User",
     email: userData.email,
     role: userData.role || "citizen",
-    roleTitle: userData.role === 'admin' ? 'State Energy Officer' :
-               userData.role === 'solar_vendor' ? 'GEDA Empanelled Installer' :
-               userData.role === 'campus_leader' ? 'Campus Youth Leader' : 'Residential Citizen',
+    roleTitle: userData.roleTitle || (
+      userData.role === 'admin' ? 'State Energy Officer' :
+      userData.role === 'solar_vendor' ? 'GEDA Empanelled Installer' :
+      userData.role === 'campus_leader' ? 'Campus Youth Leader' : 
+      userData.role === 'student' ? 'Student Volunteer' : 'Residential Citizen'
+    ),
     phone: userData.phone || "+91 98000 00000",
     district: userData.district || "Ahmedabad",
     city: userData.city || userData.district || "Ahmedabad",
     locality: userData.locality || "City Center",
     campusName: userData.campusName || null,
     companyName: userData.companyName || null,
-    authProvider: userData.authProvider || "Admin Provisioned",
+    licenseId: userData.licenseId || null,
+    department: userData.department || null,
+    employeeCode: userData.employeeCode || null,
+    authProvider: userData.authProvider || "Self-Registered",
     status: userData.status || "active",
-    lifeScore: Number(userData.lifeScore) || 100,
-    co2SavedKg: Number(userData.co2SavedKg) || 10,
-    streak: Number(userData.streak) || 1,
-    solarStatus: userData.solarStatus || "None",
+    approvalRequiredBy: userData.approvalRequiredBy || null,
+    lifeScore: Number(userData.lifeScore) || 0,
+    co2SavedKg: Number(userData.co2SavedKg) || 0,
+    streak: Number(userData.streak) || 0,
+    solarStatus: userData.solarStatus || (userData.role === 'solar_vendor' ? 'Empanelled Installer Tier-1' : 'None'),
     joinedDate: new Date().toISOString().split('T')[0],
-    lastLogin: "Never"
+    lastLogin: "Just Now",
+    ...userData
   };
 
   users.unshift(newUser);
   saveManagedUsers(users);
   return { success: true, user: newUser };
+}
+
+export function approveManagedUser(userId, approvedBy = "GEDA State Admin") {
+  return updateManagedUser(userId, { 
+    status: "active",
+    approvedAt: new Date().toISOString(),
+    approvedBy: approvedBy,
+    approvalRequiredBy: null
+  });
 }
 
 export function deleteManagedUser(userId) {
