@@ -172,7 +172,7 @@ export default function LandingPage({
             onClick={onOpenRegister}
             className="w-full sm:w-auto py-3.5 px-6 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-sm border border-slate-300 dark:border-slate-700 transition-all cursor-pointer shadow-xs"
           >
-            Create Citizen Profile
+            New Registration
           </button>
         </div>
 
@@ -546,7 +546,7 @@ export default function LandingPage({
               onClick={onOpenRegister}
               className="py-3 px-8 rounded-xl bg-white text-emerald-900 hover:bg-emerald-50 font-bold text-sm shadow-md transition-all cursor-pointer"
             >
-              Register Citizen Profile
+              New Registration
             </button>
             <button
               onClick={onOpenLogin}
