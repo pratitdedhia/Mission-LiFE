@@ -49,20 +49,54 @@ export default function Dashboard({
   const [showPointsHistory, setShowPointsHistory] = useState(false);
 
   useEffect(() => {
-    let interval = null;
-    if (iotOnline) {
-      setIotWatts(940);
-      interval = setInterval(() => {
-        setIotWatts(Math.floor(880 + Math.random() * 260));
-        setIotVoltage(Number((229.5 + Math.random() * 2.2).toFixed(1)));
-      }, 3000);
-    } else {
-      setIotWatts(0);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
+    // Read the latest telemetry sent by the Wokwi ESP32 to the FastAPI service.
+    // Keep this demo ID in sync with userId in the Wokwi sketch.
+    let isMounted = true;
+
+    const loadTelemetry = async () => {
+      try {
+        const response = await fetch(
+          'https://mission-life.onrender.com/api/hardware/latest?user_id=user_12345',
+          { cache: 'no-store' }
+        );
+
+        if (!response.ok) {
+          throw new Error('Telemetry API returned HTTP ' + response.status);
+        }
+
+        const data = await response.json();
+        const reading = data.latest;
+        const timestamp = Number(reading?.timestamp);
+        const ageSeconds = Number.isFinite(timestamp)
+          ? Date.now() / 1000 - timestamp
+          : Infinity;
+        const isFresh = Boolean(reading) && ageSeconds >= 0 && ageSeconds <= 20;
+
+        if (!isMounted) return;
+
+        setIotOnline(isFresh);
+
+        if (isFresh) {
+          setIotWatts(Number(reading.current_wattage) || 0);
+          setIotVoltage(Number(reading.voltage) || 230);
+        } else {
+          setIotWatts(0);
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        console.error('Could not load Wokwi telemetry:', error);
+        setIotOnline(false);
+      }
     };
-  }, [iotOnline]);
+
+    loadTelemetry();
+    const interval = setInterval(loadTelemetry, 3000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -107,7 +141,7 @@ export default function Dashboard({
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold flex items-center gap-1.5">
                 <span className={`w-2 h-2 rounded-full ${iotOnline ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`} />
-                <span>Simulated Smart Meter: {iotOnline ? 'Online' : 'Offline'}</span>
+                <span>Wokwi Smart Meter: {iotOnline ? 'Online' : 'Offline'}</span>
               </span>
               {iotOnline && (
                 <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700">
@@ -120,23 +154,13 @@ export default function Dashboard({
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
               {iotOnline 
-                ? 'Receiving dynamic telemetry payload from ESP32 current-sensor microcontroller. Live domestic wattage streams to Mission LiFE cloud.' 
-                : 'Hardware telemetry bridge ready. Launch the Wokwi ESP32 simulator or toggle live stream to stream real-time current sensor packets.'}
+                ? 'Receiving fresh wattage readings from the Wokwi ESP32 simulator.' 
+                : 'Waiting for Wokwi telemetry. Start the simulator to send live readings to Mission LiFE.'}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 self-end md:self-auto flex-shrink-0">
-          <button
-            onClick={() => setIotOnline(prev => !prev)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
-              iotOnline 
-                ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-600 shadow-xs' 
-                : 'bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 shadow-xs'
-            }`}
-          >
-            {iotOnline ? 'Disconnect Stream' : 'Simulate Live ESP32 Stream'}
-          </button>
           <a
             href="https://wokwi.com/projects/479495732560719873"
             target="_blank"
