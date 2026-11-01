@@ -35,7 +35,12 @@ import { BRANDING } from '../config/branding';
 
 export default function CommunityImpact({ community = {}, user = {} }) {
   const { t } = useTranslation();
-  const [leaderboardTab, setLeaderboardTab] = useState('campuses'); // 'campuses' | 'students'
+  
+  // Role separation: Citizen vs Student / Campus Leader
+  const userRole = user.role || 'citizen';
+  const isStudentOrCampus = userRole === 'student' || userRole === 'campus_leader';
+
+  const [leaderboardTab, setLeaderboardTab] = useState(isStudentOrCampus ? 'campuses' : 'citizens'); // 'campuses' | 'students' for students, 'citizens' | 'districts' | 'campuses' for citizens
   const [selectedUniversityFilter, setSelectedUniversityFilter] = useState('IIT Gandhinagar');
   const [feedPosts, setFeedPosts] = useState([]);
   const [showNewPostModal, setShowNewPostModal] = useState(false);
@@ -46,6 +51,7 @@ export default function CommunityImpact({ community = {}, user = {} }) {
   const [newContent, setNewContent] = useState('');
   const [newRollNo, setNewRollNo] = useState(user.collegeId || '');
   const [newHostel, setNewHostel] = useState(user.residenceType || 'Hostel Hall 5');
+  const [newLocality, setNewLocality] = useState(user.locality ? `${user.locality}, ${user.city || 'Gujarat'}` : (user.city || 'Bodakdev, Ahmedabad'));
   const [newTheme, setNewTheme] = useState('energy');
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -103,7 +109,7 @@ export default function CommunityImpact({ community = {}, user = {} }) {
       alert("Please provide an action title.");
       return;
     }
-    if (!newRollNo.trim()) {
+    if (isStudentOrCampus && !newRollNo.trim()) {
       alert("Please enter your Student Roll / College ID.");
       return;
     }
@@ -113,20 +119,26 @@ export default function CommunityImpact({ community = {}, user = {} }) {
     }
 
     setIsPosting(true);
-    let photoUrl = "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80";
+    let photoUrl = isStudentOrCampus 
+      ? "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80"
+      : "https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=800&q=80";
 
     if (selectedFile) {
-      const res = await uploadProofImage(selectedFile, user.id || 'usr_student');
+      const res = await uploadProofImage(selectedFile, user.id || (isStudentOrCampus ? 'usr_student' : 'usr_citizen'));
       if (res?.url) {
         photoUrl = res.url;
       }
     }
 
     const postObj = {
-      authorName: user.name || 'Campus Student Volunteer',
-      authorCity: user.campusName ? user.campusName.split(' ')[0] : 'IIT Gandhinagar',
-      authorDetails: `Roll: ${newRollNo || '23BCE094'} • ${newHostel || 'Hall 5'}`,
-      avatarColor: "bg-blue-600",
+      authorName: user.name || (isStudentOrCampus ? 'Campus Student Volunteer' : 'Gujarat Citizen'),
+      authorCity: isStudentOrCampus 
+        ? (user.campusName ? user.campusName.split(' ')[0] : 'IIT Gandhinagar')
+        : (newLocality || user.locality || user.city || 'Ahmedabad, Gujarat'),
+      authorDetails: isStudentOrCampus 
+        ? `Roll: ${newRollNo || '23BCE094'} • ${newHostel || 'Hall 5'}`
+        : (newLocality || 'Residential Citizen'),
+      avatarColor: isStudentOrCampus ? "bg-blue-600" : "bg-emerald-600",
       theme: newTheme,
       title: newTitle,
       content: newContent,
@@ -134,7 +146,7 @@ export default function CommunityImpact({ community = {}, user = {} }) {
       points: 25,
       photoUrl: photoUrl,
       verified: true,
-      verificationType: "Verified Student Evidence"
+      verificationType: isStudentOrCampus ? "Verified Student Evidence" : "Citizen Photo Evidence"
     };
 
     const res = await createFeedPost(postObj);
@@ -153,11 +165,33 @@ export default function CommunityImpact({ community = {}, user = {} }) {
 
   const progressPercent = Math.min(
     100,
-    Math.round(((community.co2SavedKg || 12400) / (community.co2TargetKg || 25000)) * 100)
+    Math.round(((community.co2SavedKg || 142854) / (community.co2TargetKg || 200000)) * 100)
   );
 
   // Dynamic authoritative university rankings
   const universityRankings = getUniversityLeaderboard();
+
+  // Citizen rankings for normal state residents
+  const citizenRankings = [
+    { rank: 1, name: 'Pooja Patel', city: 'Bodakdev, Ahmedabad', points: user.id === 'usr_citizen_pooja' ? (user.lifeScore || 780) : 780, streak: 7, badge: '🏆 Rooftop Solar Leader' },
+    { rank: 2, name: 'Aarav Mehta', city: 'Palaj, Gandhinagar', points: 740, streak: 12, badge: '🥈 Youth Energy Champion' },
+    { rank: 3, name: 'Rajesh Shah', city: 'Adajan, Surat', points: 690, streak: 5, badge: '🥉 Peak Shift Pioneer' },
+    { rank: 4, name: 'Priya Dave', city: 'Alkapuri, Vadodara', points: 610, streak: 4, badge: '⭐ Zero-Waste Household' },
+    { rank: 5, name: 'Kunal Vora', city: 'Kalawad Rd, Rajkot', points: 580, streak: 3, badge: '⭐ Water Harvesting Champion' },
+    { rank: 6, name: 'Hitesh Gandhi', city: 'Kudasan, Gandhinagar', points: 520, streak: 6, badge: '⭐ EV Commuter' },
+    { rank: 7, name: 'Kinjal Shah', city: 'Satellite, Ahmedabad', points: 490, streak: 4, badge: '⭐ Solar Water Heater' }
+  ];
+
+  // District rankings for Gujarat state
+  const districtRankings = [
+    { rank: 1, name: 'Ahmedabad Urban', citizens: 14200, points: 284000, co2AvoidedKg: 48500, badge: '🏆 Top Solar District' },
+    { rank: 2, name: 'Surat Municipal', citizens: 12100, points: 241000, co2AvoidedKg: 42100, badge: '🥈 Water Conservation Leader' },
+    { rank: 3, name: 'Gandhinagar Green Belt', citizens: 8400, points: 198000, co2AvoidedKg: 32800, badge: '🥇 Net-Zero Capital' },
+    { rank: 4, name: 'Vadodara Central', citizens: 9800, points: 165000, co2AvoidedKg: 26400, badge: '🥉 Peak Shift Champion' },
+    { rank: 5, name: 'Rajkot Municipal', citizens: 7600, points: 132000, co2AvoidedKg: 21000, badge: '⭐ Solar Pump Pioneer' },
+    { rank: 6, name: 'Bhavnagar Coastal', citizens: 5400, points: 98000, co2AvoidedKg: 15600, badge: '⭐ Wind & Solar Hybrid' },
+    { rank: 7, name: 'Kutch Renewable Zone', citizens: 4800, points: 89000, co2AvoidedKg: 14200, badge: '⭐ Solar Park Leader' }
+  ];
 
   // Filter students by selected university using authoritative matcher
   const filteredStudents = verifiedStudents.filter(s => {
@@ -178,44 +212,66 @@ export default function CommunityImpact({ community = {}, user = {} }) {
       <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
-              <GraduationCap className="w-3.5 h-3.5" />
-              <span>Campus Sustainability League</span>
+            <span className={`text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full flex items-center gap-1.5 ${
+              isStudentOrCampus
+                ? 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60'
+                : 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/60'
+            }`}>
+              {isStudentOrCampus ? <GraduationCap className="w-3.5 h-3.5" /> : <Users className="w-3.5 h-3.5" />}
+              <span>{isStudentOrCampus ? 'Campus Sustainability League' : 'Community & Social Proof'}</span>
             </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Gujarat Universities & Colleges</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              {isStudentOrCampus ? 'Gujarat Universities & Colleges' : 'Gujarat LiFE Champions'}
+            </span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1.5">
-            Campus & Student Leaderboards
+            {isStudentOrCampus ? 'Campus & Student Leaderboards' : 'Collective Action & Leaderboards'}
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
-            Track university squad benchmarks, celebrate verified student eco-actions, and power inter-college sustainability rankings.
+            {isStudentOrCampus 
+              ? 'Track university squad benchmarks, celebrate verified student eco-actions, and power inter-college sustainability rankings.'
+              : 'Track district benchmarks, celebrate verified citizen milestones, and build collaborative social accountability.'}
           </p>
         </div>
 
         <button
           onClick={() => setShowNewPostModal(true)}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer transition-colors self-start flex items-center gap-1.5"
+          className={`px-4 py-2 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer transition-colors self-start flex items-center gap-1.5 ${
+            isStudentOrCampus ? 'bg-blue-600 hover:bg-blue-500' : 'bg-emerald-600 hover:bg-emerald-500'
+          }`}
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>Post Student Eco-Action</span>
+          <span>{isStudentOrCampus ? 'Post Student Eco-Action' : 'Share Sustainable Action'}</span>
         </button>
       </div>
 
-      {/* Active Collegiate Campaign Sprint Card */}
-      <div className="p-5 rounded-2xl border border-blue-200 dark:border-blue-900/40 bg-gradient-to-br from-blue-50/60 to-emerald-50/40 dark:from-blue-950/20 dark:to-slate-900">
+      {/* Active Campaign Sprint Card */}
+      <div className={`p-5 rounded-2xl border ${
+        isStudentOrCampus
+          ? 'border-blue-200 dark:border-blue-900/40 bg-gradient-to-br from-blue-50/60 to-emerald-50/40 dark:from-blue-950/20 dark:to-slate-900'
+          : 'border-emerald-200 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/60 to-teal-50/40 dark:from-emerald-950/20 dark:to-slate-900'
+      }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800 dark:text-blue-400 block mb-0.5">
-              Active Inter-University Sprint
+            <span className={`text-[11px] font-bold uppercase tracking-wider block mb-0.5 ${
+              isStudentOrCampus ? 'text-blue-800 dark:text-blue-400' : 'text-emerald-800 dark:text-emerald-400'
+            }`}>
+              {isStudentOrCampus ? 'Active Inter-University Sprint' : 'Active Community Goal'}
             </span>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-              Gujarat Universities 200,000 kg CO₂ Avoidance Sprint
+              {isStudentOrCampus 
+                ? 'Gujarat Universities 200,000 kg CO₂ Avoidance Sprint'
+                : 'Gujarat Mission LiFE: 200,000 kg CO₂ Avoided Sprint'}
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-              Collective student challenge tracking hostel AC efficiency at 26°C, zero dining waste, and off-peak laundry shifts across Gujarat campuses.
+              {isStudentOrCampus 
+                ? 'Collective student challenge tracking hostel AC efficiency at 26°C, zero dining waste, and off-peak laundry shifts across Gujarat campuses.'
+                : 'Collective sprint tracking residential cooling, peak load reduction, and rooftop solar adoption.'}
             </p>
           </div>
-          <span className="text-2xl font-extrabold text-blue-700 dark:text-blue-400 font-mono self-start sm:self-auto">
+          <span className={`text-2xl font-extrabold font-mono self-start sm:self-auto ${
+            isStudentOrCampus ? 'text-blue-700 dark:text-blue-400' : 'text-emerald-700 dark:text-emerald-400'
+          }`}>
             {progressPercent}%
           </span>
         </div>
@@ -223,51 +279,170 @@ export default function CommunityImpact({ community = {}, user = {} }) {
         <div className="mt-4">
           <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-blue-600 to-emerald-500 rounded-full transition-all duration-700"
+              className={`h-full rounded-full transition-all duration-700 ${
+                isStudentOrCampus
+                  ? 'bg-gradient-to-r from-blue-600 to-emerald-500'
+                  : 'bg-gradient-to-r from-emerald-600 to-teal-400'
+              }`}
               style={{ width: `${progressPercent}%` }}
             />
           </div>
           <div className="flex justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-2">
-            <span>{(community.co2SavedKg || 12400).toLocaleString('en-IN')} kg avoided by students</span>
-            <span>Target: {(community.co2TargetKg || 25000).toLocaleString('en-IN')} kg</span>
+            <span>{(community.co2SavedKg || 142854).toLocaleString('en-IN')} kg avoided</span>
+            <span>Target: {(community.co2TargetKg || 200000).toLocaleString('en-IN')} kg</span>
           </div>
         </div>
       </div>
 
-      {/* Main Grid: University & Student Leaderboard & Student Social Wall */}
+      {/* Main Grid: Leaderboard & Social Wall */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         
-        {/* Left Column: Campus & Student Leaderboard */}
+        {/* Left Column: Rankings */}
         <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-              Campus Rankings
+              {isStudentOrCampus ? 'Campus Rankings' : 'Regional Leaderboards'}
             </h3>
             
-            {/* Toggle between University Squads and Students Leaderboard */}
-            <div className="flex items-center gap-1 p-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg text-[11px] font-semibold">
-              <button
-                onClick={() => setLeaderboardTab('campuses')}
-                className={`px-3 py-1 rounded-md cursor-pointer transition-colors ${
-                  leaderboardTab === 'campuses' 
-                    ? 'bg-blue-600 text-white shadow-xs' 
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-              >
-                Universities
-              </button>
-              <button
-                onClick={() => setLeaderboardTab('students')}
-                className={`px-3 py-1 rounded-md cursor-pointer transition-colors ${
-                  leaderboardTab === 'students' 
-                    ? 'bg-blue-600 text-white shadow-xs' 
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-              >
-                Top Students
-              </button>
-            </div>
+            {/* Toggle Tabs */}
+            {isStudentOrCampus ? (
+              <div className="flex items-center gap-1 p-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg text-[11px] font-semibold">
+                <button
+                  onClick={() => setLeaderboardTab('campuses')}
+                  className={`px-3 py-1 rounded-md cursor-pointer transition-colors ${
+                    leaderboardTab === 'campuses' 
+                      ? 'bg-blue-600 text-white shadow-xs' 
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  Universities
+                </button>
+                <button
+                  onClick={() => setLeaderboardTab('students')}
+                  className={`px-3 py-1 rounded-md cursor-pointer transition-colors ${
+                    leaderboardTab === 'students' 
+                      ? 'bg-blue-600 text-white shadow-xs' 
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  Top Students
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 p-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg text-[11px] font-semibold">
+                <button
+                  onClick={() => setLeaderboardTab('citizens')}
+                  className={`px-2.5 py-1 rounded-md cursor-pointer transition-colors ${
+                    leaderboardTab === 'citizens' 
+                      ? 'bg-emerald-600 text-white shadow-xs' 
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  Citizens
+                </button>
+                <button
+                  onClick={() => setLeaderboardTab('districts')}
+                  className={`px-2.5 py-1 rounded-md cursor-pointer transition-colors ${
+                    leaderboardTab === 'districts' 
+                      ? 'bg-emerald-600 text-white shadow-xs' 
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  Districts
+                </button>
+                <button
+                  onClick={() => setLeaderboardTab('campuses')}
+                  className={`px-2.5 py-1 rounded-md cursor-pointer transition-colors ${
+                    leaderboardTab === 'campuses' 
+                      ? 'bg-emerald-600 text-white shadow-xs' 
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  Campuses
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* CITIZENS LEADERBOARD (for Citizens) */}
+          {!isStudentOrCampus && leaderboardTab === 'citizens' && (
+            <div className="space-y-2.5">
+              {citizenRankings.map((c) => {
+                const isCurrentUser = c.name === user.name || (user.id === 'usr_citizen_pooja' && c.rank === 1);
+                return (
+                  <div 
+                    key={c.rank}
+                    className={`p-3 rounded-xl flex items-center justify-between text-xs border transition-colors ${
+                      isCurrentUser
+                        ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 overflow-hidden">
+                      <span className={`w-6 h-6 rounded-full flex items-center justify-center font-mono font-bold text-[11px] flex-shrink-0 ${
+                        c.rank === 1 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' :
+                        c.rank === 2 ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300' :
+                        c.rank === 3 ? 'bg-amber-200/60 text-amber-800 dark:bg-amber-700/20 dark:text-amber-600' :
+                        'text-slate-400 bg-slate-100 dark:bg-slate-800'
+                      }`}>
+                        {c.rank}
+                      </span>
+                      <div className="truncate">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-slate-900 dark:text-white truncate">{c.name}</span>
+                          {isCurrentUser && <span className="text-[10px] text-emerald-600 font-bold">(You)</span>}
+                        </div>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
+                          <span>{c.city}</span>
+                          <span>•</span>
+                          <span className="text-amber-600 dark:text-amber-400">{c.badge}</span>
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold block">{c.points.toLocaleString()} pts</span>
+                      <span className="text-[10px] text-slate-400 font-mono">{c.streak}d streak 🔥</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* DISTRICTS LEADERBOARD (for Citizens) */}
+          {!isStudentOrCampus && leaderboardTab === 'districts' && (
+            <div className="space-y-2.5">
+              {districtRankings.map((d) => (
+                <div 
+                  key={d.rank}
+                  className={`p-3 rounded-xl flex items-center justify-between text-xs border transition-colors ${
+                    d.rank === 1
+                      ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/60 shadow-xs'
+                      : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 overflow-hidden">
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center font-mono font-bold text-[11px] flex-shrink-0 ${
+                      d.rank === 1 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' :
+                      d.rank === 2 ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300' :
+                      d.rank === 3 ? 'bg-amber-200/60 text-amber-800 dark:bg-amber-700/20 dark:text-amber-600' :
+                      'text-slate-400 bg-slate-100 dark:bg-slate-800'
+                    }`}>
+                      {d.rank}
+                    </span>
+                    <div className="truncate">
+                      <span className="font-bold text-slate-900 dark:text-white block truncate">{d.name}</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400">{d.citizens.toLocaleString()} citizens • {d.badge}</span>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold block">{d.points.toLocaleString()} pts</span>
+                    <span className="text-[10px] text-slate-400 font-mono">-{d.co2AvoidedKg.toLocaleString()} kg CO₂</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* TAB 1: UNIVERSITIES LEADERBOARD */}
           {leaderboardTab === 'campuses' && (
@@ -326,16 +501,22 @@ export default function CommunityImpact({ community = {}, user = {} }) {
                       <span className="text-slate-500 dark:text-slate-400 font-medium">
                         {item.students.toLocaleString()} active student volunteers
                       </span>
-                      <button
-                        onClick={() => {
-                          setSelectedUniversityFilter(item.shortName);
-                          setLeaderboardTab('students');
-                        }}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-700 font-bold flex items-center gap-1 hover:underline cursor-pointer"
-                      >
-                        <span>View Students Roster ({item.verifiedRosterCount || item.students})</span>
-                        <span>→</span>
-                      </button>
+                      {isStudentOrCampus ? (
+                        <button
+                          onClick={() => {
+                            setSelectedUniversityFilter(item.shortName);
+                            setLeaderboardTab('students');
+                          }}
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-700 font-bold flex items-center gap-1 hover:underline cursor-pointer"
+                        >
+                          <span>View Students Roster ({item.verifiedRosterCount || item.students})</span>
+                          <span>→</span>
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold font-mono">
+                          Collegiate LiFE League
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
@@ -343,8 +524,8 @@ export default function CommunityImpact({ community = {}, user = {} }) {
             </div>
           )}
 
-          {/* TAB 2: TOP STUDENTS ASSOCIATED TO UNIVERSITY */}
-          {leaderboardTab === 'students' && (
+          {/* TAB 2: TOP STUDENTS ASSOCIATED TO UNIVERSITY (for Students & Leaders) */}
+          {isStudentOrCampus && leaderboardTab === 'students' && (
             <div className="space-y-3">
               {/* University Selector for Student Leaderboard */}
               <div className="flex items-center justify-between gap-2 text-xs">
@@ -430,19 +611,25 @@ export default function CommunityImpact({ community = {}, user = {} }) {
           )}
         </div>
 
-        {/* Right Column: Campus & Student Actions Feed */}
+        {/* Right Column: Actions Feed */}
         <div className="lg:col-span-7 space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
             <div>
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                 <Flame className="w-3.5 h-3.5 text-amber-500" />
-                <span>Campus & Student Actions Feed</span>
+                <span>{isStudentOrCampus ? 'Campus & Student Actions Feed' : 'Citizen Actions Feed'}</span>
               </h3>
-              <p className="text-[10px] text-slate-400">Verified student eco-actions & photographic evidence</p>
+              <p className="text-[10px] text-slate-400">
+                {isStudentOrCampus 
+                  ? 'Verified student eco-actions & photographic evidence'
+                  : 'Citizen reported sustainable practices & photo uploads'}
+              </p>
             </div>
-            <span className="text-[11px] font-mono text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1">
+            <span className={`text-[11px] font-mono font-bold flex items-center gap-1 ${
+              isStudentOrCampus ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'
+            }`}>
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Verified Evidence</span>
+              <span>{isStudentOrCampus ? 'Verified Student Evidence' : 'Peer Validation'}</span>
             </span>
           </div>
 
@@ -450,7 +637,7 @@ export default function CommunityImpact({ community = {}, user = {} }) {
             {feedPosts.map((post) => {
               const hasLiked = post.likedBy?.includes(user.id);
               return (
-                <div key={post.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs hover:border-blue-300 dark:hover:border-blue-700/60 transition-colors">
+                <div key={post.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors">
                   
                   {/* Post Image */}
                   {post.photoUrl && (
@@ -462,7 +649,7 @@ export default function CommunityImpact({ community = {}, user = {} }) {
                       />
                       <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-md text-[10px] font-mono text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                         <Camera className="w-3.5 h-3.5" />
-                        <span>Student Photo Evidence</span>
+                        <span>{isStudentOrCampus ? 'Student Photo Evidence' : 'Citizen Photo Evidence'}</span>
                       </div>
                     </div>
                   )}
@@ -471,17 +658,21 @@ export default function CommunityImpact({ community = {}, user = {} }) {
                   <div className="p-4 sm:p-5">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2.5">
-                        <div className={`w-8 h-8 rounded-xl ${post.avatarColor || 'bg-blue-600'} text-white flex items-center justify-center text-xs font-bold shadow-xs`}>
-                          🎓
+                        <div className={`w-8 h-8 rounded-xl ${post.avatarColor || (isStudentOrCampus ? 'bg-blue-600' : 'bg-emerald-600')} text-white flex items-center justify-center text-xs font-bold shadow-xs`}>
+                          {isStudentOrCampus ? '🎓' : (post.authorName ? post.authorName[0] : '🌱')}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-slate-900 dark:text-white block">{post.authorName}</span>
-                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-900">
+                            <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold border ${
+                              isStudentOrCampus 
+                                ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900'
+                                : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900'
+                            }`}>
                               {post.authorCity}
                             </span>
                           </div>
-                          <span className="text-[10px] text-slate-400">{post.authorDetails || 'Campus Volunteer'} • {post.timestamp}</span>
+                          <span className="text-[10px] text-slate-400">{post.authorDetails || (isStudentOrCampus ? 'Campus Volunteer' : 'Gujarat Resident')}</span>
                         </div>
                       </div>
 
@@ -522,28 +713,34 @@ export default function CommunityImpact({ community = {}, user = {} }) {
       {/* Disclosures note */}
       <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-start gap-2">
         <Info className="w-3.5 h-3.5 text-slate-400 flex-shrink-0 mt-0.5" />
-        <span>{BRANDING.disclaimers.verification} All campus points and $\text{CO}_2$ avoidances are audited under GEDA institutional collegiate guidelines.</span>
+        <span>{BRANDING.disclaimers.verification} All impact benchmarks and CO₂ metrics are audited under authoritative Gujarat Energy Development Agency (GEDA) rules.</span>
       </div>
 
-      {/* Share New Student Action Modal */}
+      {/* Share New Action Modal */}
       {showNewPostModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
           <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-2xl">
             <button
               onClick={() => setShowNewPostModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <span className="text-[10px] font-bold uppercase text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 px-2.5 py-0.5 rounded-full">
-              Student Eco-Feed
+            <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full ${
+              isStudentOrCampus
+                ? 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800'
+                : 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800'
+            }`}>
+              {isStudentOrCampus ? 'Student Eco-Feed' : 'Citizen LiFE Feed'}
             </span>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-2">
-              Share Student Sustainability Practice
+              {isStudentOrCampus ? 'Share Student Sustainability Practice' : 'Share Household Sustainable Action'}
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-              Inspire your university peers by logging your habit with photographic evidence.
+              {isStudentOrCampus 
+                ? 'Inspire your university peers by logging your habit with photographic evidence.'
+                : 'Inspire citizens across Gujarat by logging your residential sustainable habit.'}
             </p>
 
             <form onSubmit={handleCreatePost} className="space-y-3.5 mt-4">
@@ -554,40 +751,58 @@ export default function CommunityImpact({ community = {}, user = {} }) {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Set hostel AC to 26°C with corridor window shut"
+                  placeholder={isStudentOrCampus ? "e.g. Set hostel AC to 26°C with corridor window shut" : "e.g. Switched to 3.2 kW Rooftop Solar under PM Surya Ghar"}
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 font-medium"
+                  className={`w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none font-medium ${
+                    isStudentOrCampus ? 'focus:border-blue-500' : 'focus:border-emerald-500'
+                  }`}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {isStudentOrCampus ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
+                      Student Roll / College ID <span className="text-rose-500 font-bold ml-0.5">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 23BCE094"
+                      value={newRollNo}
+                      onChange={(e) => setNewRollNo(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 font-mono uppercase"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
+                      Hostel / Campus Housing <span className="text-slate-400 font-normal ml-1">(Optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Hall 5 (Sabarmati)"
+                      value={newHostel}
+                      onChange={(e) => setNewHostel(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              ) : (
                 <div>
                   <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
-                    Student Roll / College ID <span className="text-rose-500 font-bold ml-0.5">*</span>
+                    Your Locality & City <span className="text-rose-500 font-bold ml-0.5">*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. 23BCE094"
-                    value={newRollNo}
-                    onChange={(e) => setNewRollNo(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 font-mono uppercase"
+                    placeholder="e.g. Bodakdev, SG Highway, Ahmedabad"
+                    value={newLocality}
+                    onChange={(e) => setNewLocality(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 font-medium"
                   />
                 </div>
-                <div>
-                  <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
-                    Hostel / Campus Housing <span className="text-slate-400 font-normal ml-1">(Optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Hall 5 (Sabarmati)"
-                    value={newHostel}
-                    onChange={(e) => setNewHostel(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
+              )}
 
               <div>
                 <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
@@ -596,14 +811,16 @@ export default function CommunityImpact({ community = {}, user = {} }) {
                 <select
                   value={newTheme}
                   onChange={(e) => setNewTheme(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 cursor-pointer font-medium"
+                  className={`w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer font-medium ${
+                    isStudentOrCampus ? 'focus:border-blue-500' : 'focus:border-emerald-500'
+                  }`}
                 >
-                  <option value="energy">Save Energy (AC 26°C / Standby Loads)</option>
-                  <option value="water">Save Water (Hostel taps & showers)</option>
-                  <option value="food">Zero Food-Waste (Dining Hall / Mess)</option>
-                  <option value="plastic">Reduce Plastic (Reusable Flasks)</option>
-                  <option value="lifestyle">Green Mobility (Campus Bicycle)</option>
-                  <option value="ewaste">E-Waste Recycled (Hostel bin drive)</option>
+                  <option value="energy">Save Energy (AC setpoint / Standby Loads / Rooftop Solar)</option>
+                  <option value="water">Save Water (Rainwater Harvesting / Tap Aerator)</option>
+                  <option value="food">Sustainable Food Systems (Millet Diet / Clean Plate)</option>
+                  <option value="plastic">Say No to Single-Use Plastic (Cloth Tote Bags)</option>
+                  <option value="lifestyle">Healthy Lifestyles (Cycling / EV Commute)</option>
+                  <option value="ewaste">Reduce E-Waste (Cable & Battery Recycling)</option>
                 </select>
               </div>
 
@@ -614,10 +831,12 @@ export default function CommunityImpact({ community = {}, user = {} }) {
                 <textarea
                   rows="3"
                   required
-                  placeholder="Describe your action e.g. Coordinated with hostel wing mates to turn off corridor lights after 11 PM..."
+                  placeholder={isStudentOrCampus ? "Describe your action e.g. Coordinated with hostel wing mates to turn off corridor lights after 11 PM..." : "Describe your household action e.g. Replaced incandescent bulbs with BEE 5-star LEDs and set AC thermostat to 26°C..."}
                   value={newContent}
                   onChange={(e) => setNewContent(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 resize-none font-medium"
+                  className={`w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-900 dark:text-slate-100 focus:outline-none resize-none font-medium ${
+                    isStudentOrCampus ? 'focus:border-blue-500' : 'focus:border-emerald-500'
+                  }`}
                 />
               </div>
 
@@ -630,10 +849,10 @@ export default function CommunityImpact({ community = {}, user = {} }) {
                     <div className="flex items-center justify-between gap-3">
                       <img src={previewUrl} alt="Preview" className="w-12 h-12 rounded-lg object-cover" />
                       <span className="text-xs text-emerald-600 font-semibold">Photo Attached</span>
-                      <button type="button" onClick={() => { setSelectedFile(null); setPreviewUrl(null); }} className="text-xs text-rose-500 underline">Remove</button>
+                      <button type="button" onClick={() => { setSelectedFile(null); setPreviewUrl(null); }} className="text-xs text-rose-500 underline cursor-pointer">Remove</button>
                     </div>
                   ) : (
-                    <label className="cursor-pointer flex items-center justify-center gap-2 text-xs text-slate-500">
+                    <label className="cursor-pointer flex items-center justify-center gap-2 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
                       <Camera className="w-4 h-4" />
                       <span>Upload Evidence Photo</span>
                       <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
@@ -646,14 +865,16 @@ export default function CommunityImpact({ community = {}, user = {} }) {
                 <button
                   type="button"
                   onClick={() => setShowNewPostModal(false)}
-                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isPosting}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5"
+                  className={`px-5 py-2 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 cursor-pointer ${
+                    isStudentOrCampus ? 'bg-blue-600 hover:bg-blue-500' : 'bg-emerald-600 hover:bg-emerald-500'
+                  }`}
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>{isPosting ? 'Posting...' : 'Post Action (+25 pts)'}</span>
