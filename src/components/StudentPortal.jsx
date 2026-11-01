@@ -418,15 +418,14 @@ export default function StudentPortal({ user, onNavigate }) {
                   Department / Branch
                   <span className="text-rose-500 font-bold ml-0.5">*</span>
                 </label>
-                <select
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Computer Science & Engineering"
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                >
-                  {DEPARTMENTS.map(d => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
+                />
               </div>
             </div>
 

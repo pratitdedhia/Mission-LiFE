@@ -788,15 +788,14 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
 
                   <div>
                     <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1 text-[11px]">Department / Branch *</label>
-                    <select
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Computer Science & Engineering"
                       value={studentDepartment}
                       onChange={(e) => setStudentDepartment(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white"
-                    >
-                      {DEPARTMENTS.map((d) => (
-                        <option key={d} value={d}>{d}</option>
-                      ))}
-                    </select>
+                      className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                    />
                   </div>
 
                   <div>
