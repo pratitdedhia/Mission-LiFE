@@ -31,6 +31,7 @@ import {
   matchesUniversity,
   POPULAR_UNIVERSITIES 
 } from '../services/studentVerificationService';
+import StudentProfileModal from './StudentProfileModal';
 import { BRANDING } from '../config/branding';
 
 export default function CommunityImpact({ community = {}, user = {} }) {
@@ -45,6 +46,7 @@ export default function CommunityImpact({ community = {}, user = {} }) {
   const [feedPosts, setFeedPosts] = useState([]);
   const [showNewPostModal, setShowNewPostModal] = useState(false);
   const [verifiedStudents, setVerifiedStudents] = useState([]);
+  const [selectedStudentModal, setSelectedStudentModal] = useState(null);
 
   // New Post Form State
   const [newTitle, setNewTitle] = useState('');
@@ -568,11 +570,13 @@ export default function CommunityImpact({ community = {}, user = {} }) {
                     return (
                       <div
                         key={stu.id}
-                        className={`p-3 rounded-xl flex items-center justify-between text-xs border transition-colors ${
+                        onClick={() => setSelectedStudentModal(stu)}
+                        className={`p-3 rounded-xl flex items-center justify-between text-xs border transition-all cursor-pointer group hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-xs ${
                           isUser
                             ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
                             : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-800 text-slate-800 dark:text-slate-200'
                         }`}
+                        title="Click to view full student environmental dossier"
                       >
                         <div className="flex items-center gap-2.5 overflow-hidden">
                           <span className={`w-6 h-6 rounded-full flex items-center justify-center font-mono font-bold text-[11px] flex-shrink-0 ${
@@ -585,7 +589,9 @@ export default function CommunityImpact({ community = {}, user = {} }) {
                           </span>
                           <div className="truncate">
                             <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-slate-900 dark:text-white truncate">{stu.studentName}</span>
+                              <span className="font-bold text-slate-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                {stu.studentName}
+                              </span>
                               {isUser && <span className="text-[10px] text-emerald-600 font-bold">(You)</span>}
                             </div>
                             <p className="text-[10px] text-slate-400 flex items-center gap-1 truncate">
@@ -598,9 +604,14 @@ export default function CommunityImpact({ community = {}, user = {} }) {
                           </div>
                         </div>
 
-                        <div className="text-right flex-shrink-0">
-                          <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold block">+{stu.totalPoints} pts</span>
-                          <span className="text-[10px] text-slate-400 font-mono">-{stu.co2SavedKg} kg CO₂</span>
+                        <div className="text-right flex-shrink-0 flex items-center gap-3">
+                          <div>
+                            <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold block">+{stu.totalPoints} pts</span>
+                            <span className="text-[10px] text-slate-400 font-mono">-{stu.co2SavedKg} kg CO₂</span>
+                          </div>
+                          <span className="hidden sm:inline text-blue-500 font-bold text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                            →
+                          </span>
                         </div>
                       </div>
                     );
@@ -884,6 +895,14 @@ export default function CommunityImpact({ community = {}, user = {} }) {
           </div>
         </div>
       )}
+
+      {/* COMPREHENSIVE LIVE STUDENT PROFILE & AUDIT MODAL */}
+      <StudentProfileModal
+        student={selectedStudentModal}
+        isOpen={!!selectedStudentModal}
+        onClose={() => setSelectedStudentModal(null)}
+        isLeader={userRole === 'campus_leader'}
+      />
     </div>
   );
 }

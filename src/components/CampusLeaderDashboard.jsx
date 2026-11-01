@@ -34,12 +34,12 @@ import {
   getCampusLeaderSprints,
   broadcastCampusLeaderSprint
 } from '../services/studentVerificationService';
+import StudentProfileModal from './StudentProfileModal';
 
 export default function CampusLeaderDashboard({ user, onCompleteMission }) {
   const [activeSubTab, setActiveSubTab] = useState('sprints'); // 'sprints' | 'verifications' | 'summary'
   const [summaryData, setSummaryData] = useState(() => getCampusStudentSummary(user.campusName || "IIT Gandhinagar"));
   const [selectedStudentModal, setSelectedStudentModal] = useState(null);
-  const [viewingIdPhoto, setViewingIdPhoto] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('all');
 
@@ -63,15 +63,23 @@ export default function CampusLeaderDashboard({ user, onCompleteMission }) {
       confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
       showToast(`Verified and enrolled ${studentName} into the campus squad!`);
       reloadSummary();
+      if (selectedStudentModal?.id === studentId) {
+        setSelectedStudentModal(res.student);
+      }
     }
   };
 
   const handleRejectStudent = (studentId, studentName) => {
     const reason = window.prompt("Enter rejection reason (e.g. ID blurred or mismatched name):", "Unclear ID proof");
     if (reason) {
-      rejectStudent(studentId, reason);
-      showToast(`Rejected submission for ${studentName}.`);
-      reloadSummary();
+      const res = rejectStudent(studentId, reason);
+      if (res.success) {
+        showToast(`Rejected submission for ${studentName}.`);
+        reloadSummary();
+        if (selectedStudentModal?.id === studentId) {
+          setSelectedStudentModal(res.student);
+        }
+      }
     }
   };
 
@@ -393,14 +401,18 @@ export default function CampusLeaderDashboard({ user, onCompleteMission }) {
                 {summaryData.pendingList.map((stu) => (
                   <div 
                     key={stu.id}
-                    className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-blue-300 dark:hover:border-blue-700/60 transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+                    onClick={() => setSelectedStudentModal(stu)}
+                    className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-blue-400 dark:hover:border-blue-600 transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 cursor-pointer group shadow-xs hover:shadow"
                   >
                     <div className="flex items-start gap-4">
                       {/* ID Thumbnail Preview */}
                       <div 
-                        onClick={() => setViewingIdPhoto(stu.idCardPhotoUrl)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedStudentModal(stu);
+                        }}
                         className="w-16 h-16 rounded-xl overflow-hidden border border-slate-300 dark:border-slate-700 relative cursor-pointer group flex-shrink-0 bg-slate-200 dark:bg-slate-800 shadow-xs"
-                        title="Click to zoom student ID proof"
+                        title="Click to view student record and ID proof"
                       >
                         <img src={stu.idCardPhotoUrl} alt="ID card" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
@@ -410,7 +422,9 @@ export default function CampusLeaderDashboard({ user, onCompleteMission }) {
 
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-bold text-slate-900 dark:text-white text-sm">{stu.studentName}</h3>
+                          <h3 className="font-bold text-slate-900 dark:text-white text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                            {stu.studentName}
+                          </h3>
                           <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">
                             {stu.collegeId}
                           </span>
@@ -426,13 +440,13 @@ export default function CampusLeaderDashboard({ user, onCompleteMission }) {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 self-end md:self-auto flex-shrink-0">
+                    <div className="flex items-center gap-2 self-end md:self-auto flex-shrink-0" onClick={e => e.stopPropagation()}>
                       <button
-                        onClick={() => setViewingIdPhoto(stu.idCardPhotoUrl)}
+                        onClick={() => setSelectedStudentModal(stu)}
                         className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 transition-colors flex items-center gap-1 cursor-pointer"
                       >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Inspect ID Card</span>
+                        <Eye className="w-3.5 h-3.5 text-blue-500" />
+                        <span>Inspect & Review ID</span>
                       </button>
 
                       <button
@@ -543,9 +557,13 @@ export default function CampusLeaderDashboard({ user, onCompleteMission }) {
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {filteredStudents.map((stu) => (
-                    <tr key={stu.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                    <tr 
+                      key={stu.id} 
+                      onClick={() => setSelectedStudentModal(stu)}
+                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group"
+                    >
                       <td className="py-3 px-3">
-                        <span className="font-bold text-slate-900 dark:text-white block">{stu.studentName}</span>
+                        <span className="font-bold text-slate-900 dark:text-white block group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{stu.studentName}</span>
                         <span className="text-[10px] text-slate-400">{stu.studentEmail}</span>
                       </td>
                       <td className="py-3 px-3">
@@ -566,12 +584,12 @@ export default function CampusLeaderDashboard({ user, onCompleteMission }) {
                       <td className="py-3 px-3 text-right font-mono text-slate-600 dark:text-slate-300">
                         {stu.co2SavedKg} kg
                       </td>
-                      <td className="py-3 px-3 text-right">
+                      <td className="py-3 px-3 text-right" onClick={e => e.stopPropagation()}>
                         <button
                           onClick={() => setSelectedStudentModal(stu)}
-                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-semibold cursor-pointer"
+                          className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-[11px] font-semibold cursor-pointer border border-blue-200/80 dark:border-blue-800 transition-colors"
                         >
-                          View Log →
+                          View Full Record →
                         </button>
                       </td>
                     </tr>
@@ -592,131 +610,51 @@ export default function CampusLeaderDashboard({ user, onCompleteMission }) {
             </div>
 
             <div className="space-y-2.5">
-              {summaryData.recentActionFeed.map((act, idx) => (
-                <div key={idx} className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0 font-bold">
-                      🎓
+              {summaryData.recentActionFeed.map((act, idx) => {
+                const stuMatch = summaryData.verifiedList.find(s => s.collegeId === act.collegeId || s.studentName === act.studentName);
+                return (
+                  <div 
+                    key={idx} 
+                    onClick={() => stuMatch && setSelectedStudentModal(stuMatch)}
+                    className={`p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 text-xs transition-colors ${
+                      stuMatch ? 'hover:border-blue-300 dark:hover:border-blue-700 cursor-pointer' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0 font-bold">
+                        🎓
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <span>{act.studentName}</span> 
+                          <span className="font-mono text-blue-600 dark:text-blue-400 font-bold text-[11px]">({act.collegeId})</span>
+                        </p>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">{act.action}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{act.department} • {act.residenceType}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-slate-900 dark:text-white">
-                        <span>{act.studentName}</span> <span className="font-mono text-slate-400 font-normal text-[11px]">({act.collegeId})</span>
-                      </p>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">{act.action}</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">{act.department} • {act.residenceType}</p>
-                    </div>
-                  </div>
 
-                  <div className="text-right flex-shrink-0">
-                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-xs block">+{act.points} pts</span>
-                    <span className="text-[10px] text-slate-400 font-mono">-{act.co2Kg} kg CO₂</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 1: STUDENT ID PHOTO ZOOM */}
-      {viewingIdPhoto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-fade-in">
-          <div className="relative max-w-lg w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-2xl">
-            <button
-              onClick={() => setViewingIdPhoto(null)}
-              className="absolute top-4 right-4 p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Institutional Student ID Proof</h3>
-            <div className="w-full h-72 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
-              <img src={viewingIdPhoto} alt="Student ID" className="w-full h-full object-cover" />
-            </div>
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={() => setViewingIdPhoto(null)}
-                className="px-4 py-2 rounded-xl bg-slate-900 text-white dark:bg-slate-800 text-xs font-semibold"
-              >
-                Close Viewer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 2: STUDENT SPECIFIC ACTION LOG MODAL */}
-      {selectedStudentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in">
-          <div className="relative max-w-lg w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-4">
-            <button
-              onClick={() => setSelectedStudentModal(null)}
-              className="absolute top-5 right-5 p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 px-2.5 py-0.5 rounded-full">
-                  Verified Student Action Record
-                </span>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-1.5">
-                {selectedStudentModal.studentName}
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Roll No: <span className="font-mono font-bold text-blue-600">{selectedStudentModal.collegeId}</span> • {selectedStudentModal.department}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
-                <span className="text-slate-400 block text-[10px] font-mono">Total Points Added</span>
-                <span className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 block">
-                  +{selectedStudentModal.totalPoints} pts
-                </span>
-              </div>
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
-                <span className="text-slate-400 block text-[10px] font-mono">Audited CO₂ Avoidance</span>
-                <span className="text-xl font-bold font-mono text-blue-600 dark:text-blue-400 mt-0.5 block">
-                  {selectedStudentModal.co2SavedKg} kg
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">Detailed Habit Execution History:</h4>
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                {(selectedStudentModal.recentActions && selectedStudentModal.recentActions.length > 0 ? selectedStudentModal.recentActions : [
-                  { action: "Set hostel AC to 26°C with ceiling fan assist", date: "Today, 14:10", co2Kg: 1.2, points: 25 },
-                  { action: "Dining mess zero organic food-waste tray", date: "Today, 13:00", co2Kg: 0.8, points: 20 },
-                  { action: "Switched off laptop & desk plug sockets overnight", date: "Yesterday", co2Kg: 0.4, points: 15 }
-                ]).map((act, idx) => (
-                  <div key={idx} className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between text-xs">
-                    <div>
-                      <p className="font-semibold text-slate-800 dark:text-slate-200">{act.action}</p>
-                      <p className="text-[10px] text-slate-400">{act.date} • Verified in Campus Squad Ledger</p>
-                    </div>
                     <div className="text-right flex-shrink-0">
                       <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-xs block">+{act.points} pts</span>
                       <span className="text-[10px] text-slate-400 font-mono">-{act.co2Kg} kg CO₂</span>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="pt-2 flex justify-end">
-              <button
-                onClick={() => setSelectedStudentModal(null)}
-                className="px-4 py-2 rounded-xl bg-slate-900 text-white dark:bg-slate-800 text-xs font-semibold"
-              >
-                Close Record
-              </button>
+                );
+              })}
             </div>
           </div>
         </div>
       )}
+
+      {/* COMPREHENSIVE LIVE STUDENT PROFILE & AUDIT MODAL */}
+      <StudentProfileModal
+        student={selectedStudentModal}
+        isOpen={!!selectedStudentModal}
+        onClose={() => setSelectedStudentModal(null)}
+        isLeader={true}
+        onVerify={handleVerifyStudent}
+        onReject={handleRejectStudent}
+      />
     </div>
   );
 }
