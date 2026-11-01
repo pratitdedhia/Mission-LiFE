@@ -271,3 +271,4 @@ def health_check():
         "model_loaded": yolo_model is not None,
         "supported_appliances": list(APPLIANCE_SPECS.keys())
     }
+
