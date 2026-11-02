@@ -194,5 +194,13 @@ describe('C1 & C2: Authentication Security & Privilege Escalation Prevention', (
       expect(isSessionActive()).toBe(false);
       expect(getStoredUser().role).toBe('citizen');
     });
+
+    it('getDefaultUserProfile is callable and returns a guest citizen profile', async () => {
+      const { getDefaultUserProfile } = await import('../../src/services/catalogService');
+      const profile = getDefaultUserProfile();
+      expect(profile).toBeDefined();
+      expect(profile.role).toBe('citizen');
+      expect(profile.lifeScore).toBe(100);
+    });
   });
 });

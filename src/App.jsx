@@ -34,7 +34,7 @@ function ViewLoader() {
   );
 }
 
-import { getCommunityGoals } from './services/catalogService';
+import { getCommunityGoals, getDefaultUserProfile } from './services/catalogService';
 import { BRANDING } from './config/branding';
 import { isFirebaseConnected } from './firebase';
 import { 
