@@ -137,55 +137,25 @@ export default function ApplianceScanner({ user = {}, onNavigate, onApplianceAdd
             body: formData,
           });
           if (res.ok) {
-            const backendData = await res.json();
-            if (backendData && backendData.appliances_detected_count > 0) {
-              data = backendData;
-            }
+            data = await res.json();
           }
         } catch (fetchErr) {
-          console.warn("Backend vision offline or waking up, falling back to client evaluation:", fetchErr);
+          console.warn("Backend vision offline or waking up:", fetchErr);
         }
       }
 
-      if (!data) {
-        // Visual form-factor evaluation (detects COCO classes and heavy domestic cooling loads)
-        const filename = selectedFile.name.toLowerCase();
-        let detectedKey = "air conditioner"; // Default domestic cooling load for split indoor units
-        if (filename.includes("fridge") || filename.includes("refrigerator")) {
-          detectedKey = "refrigerator";
-        } else if (filename.includes("microwave") || filename.includes("oven")) {
-          detectedKey = "microwave";
-        } else if (filename.includes("tv") || filename.includes("television")) {
-          detectedKey = "tv";
-        } else if (filename.includes("laptop") || filename.includes("computer")) {
-          detectedKey = "laptop";
-        } else if (filename.includes("wash") || filename.includes("wm")) {
-          detectedKey = "washing machine";
-        }
-
-        const item = APPLIANCE_DATABASE[detectedKey] || APPLIANCE_DATABASE["air conditioner"];
-        data = {
+      if (!data || !data.detected_appliances || data.detected_appliances.length === 0) {
+        setScanResult({
           success: true,
-          detection: "heuristic",
-          appliances_detected_count: 1,
-          total_estimated_instant_wattage: item.wattage,
-          estimated_monthly_carbon_kg_co2e: item.co2MonthlyKg,
-          detected_appliances: [
-            {
-              label: item.name,
-              confidence: 0.93,
-              estimated_wattage: item.wattage,
-              daily_hours_typical: item.dailyHours,
-              monthly_co2e_kg: item.co2MonthlyKg,
-              energy_saving_nudge: item.tip
-            }
-          ],
-          mission_life_action: "Set thermostat 1°C higher or turn off at socket when unused."
-        };
-      }
-
-      setScanResult(data);
-      if (data.detected_appliances && data.detected_appliances.length > 0) {
+          detection: "none",
+          appliances_detected_count: 0,
+          detected_appliances: [],
+          total_estimated_instant_wattage: 0,
+          estimated_monthly_carbon_kg_co2e: 0.0,
+          message: "No appliance recognised, pick manually"
+        });
+      } else {
+        setScanResult(data);
         confetti({ particleCount: 40, spread: 50, origin: { y: 0.7 } });
       }
     } catch (err) {

@@ -294,29 +294,33 @@ def get_appliance_specs_map() -> Dict[str, Dict[str, Any]]:
     return specs
 
 
-def get_yolo_model():
-    """Lazy loads the YOLOv8 model weights on the first invocation (thread-safe)."""
-    global _yolo_model
-    with _model_lock:
-        if _yolo_model is None:
-            try:
-                from ultralytics import YOLO
-                custom_weights = os.path.join(os.path.dirname(__file__), "appliance_best.pt")
-                weights_path = os.environ.get("YOLO_WEIGHTS_PATH")
-                if not weights_path:
-                    if os.path.exists(custom_weights):
-                        weights_path = custom_weights
-                    elif os.path.exists("appliance_best.pt"):
-                        weights_path = "appliance_best.pt"
-                    else:
-                        weights_path = "yolov8n.pt"
+_custom_model = None
+_coco_model = None
 
-                logger.info(f"Loading YOLOv8 weights: {weights_path}")
-                _yolo_model = YOLO(weights_path)
-            except Exception as e:
-                logger.info(f"YOLOv8 model lazy loading notice: {e}")
-                _yolo_model = None
-    return _yolo_model
+def get_yolo_models():
+    """Lazy loads both custom-trained appliance model and COCO baseline (thread-safe)."""
+    global _custom_model, _coco_model
+    with _model_lock:
+        try:
+            from ultralytics import YOLO
+            custom_weights = os.path.join(os.path.dirname(__file__), "appliance_best.pt")
+            if _custom_model is None:
+                if os.path.exists(custom_weights):
+                    _custom_model = YOLO(custom_weights)
+                elif os.path.exists("appliance_best.pt"):
+                    _custom_model = YOLO("appliance_best.pt")
+
+            if _coco_model is None:
+                coco_path = os.environ.get("COCO_WEIGHTS_PATH", "yolov8n.pt")
+                _coco_model = YOLO(coco_path)
+        except Exception as e:
+            logger.info(f"YOLOv8 model lazy loading notice: {e}")
+    return _custom_model, _coco_model
+
+def get_yolo_model():
+    """Backward compatibility helper returning primary model."""
+    custom, coco = get_yolo_models()
+    return custom or coco
 
 
 app = FastAPI(
@@ -564,9 +568,11 @@ async def scan_appliance(file: UploadFile = File(...)):
     emission_config = get_remote_or_cached_config("emissionFactors")
     grid_co2_factor = float(emission_config.get("gridCo2PerKwh", 0.71))
 
-    # 5. Lazy loaded YOLO model check
-    yolo = get_yolo_model()
-    if yolo is None:
+    # 5. Dual-Model Evaluation: custom appliance model + standard COCO model
+    custom_model, coco_model = get_yolo_models()
+    models_to_run = [m for m in (custom_model, coco_model) if m is not None]
+
+    if not models_to_run:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Appliance vision model is currently unavailable."
@@ -590,25 +596,28 @@ async def scan_appliance(file: UploadFile = File(...)):
     }
 
     try:
-        results = yolo(image, verbose=False)
-        for r in results:
-            for box in r.boxes:
-                cls_id = int(box.cls[0].item())
-                class_name = yolo.names.get(cls_id, "").lower()
-                conf = float(box.conf[0].item())
+        seen_keys = set()
+        for yolo in models_to_run:
+            results = yolo(image, verbose=False)
+            for r in results:
+                for box in r.boxes:
+                    cls_id = int(box.cls[0].item())
+                    class_name = yolo.names.get(cls_id, "").lower()
+                    conf = float(box.conf[0].item())
 
-                # 1. Direct custom/standard alias mapping
-                mapped_key = CUSTOM_CLASS_MAPPING.get(class_name)
-                appliance_key = None
-                if mapped_key and mapped_key in appliance_specs:
-                    appliance_key = mapped_key
-                else:
-                    for candidate in appliance_specs:
-                        if candidate in class_name or class_name in candidate:
-                            appliance_key = candidate
-                            break
+                    # 1. Direct custom/standard alias mapping
+                    mapped_key = CUSTOM_CLASS_MAPPING.get(class_name)
+                    appliance_key = None
+                    if mapped_key and mapped_key in appliance_specs:
+                        appliance_key = mapped_key
+                    else:
+                        for candidate in appliance_specs:
+                            if candidate in class_name or class_name in candidate:
+                                appliance_key = candidate
+                                break
 
-                if appliance_key and conf >= 0.25:
+                    if appliance_key and conf >= 0.25 and appliance_key not in seen_keys:
+                        seen_keys.add(appliance_key)
                     specs = appliance_specs[appliance_key]
                     x1, y1, x2, y2 = [round(v, 1) for v in box.xyxy[0].tolist()]
 
