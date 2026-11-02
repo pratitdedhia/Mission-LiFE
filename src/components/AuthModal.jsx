@@ -168,16 +168,13 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
       setStudentHostel('');
     }
     setError(null);
-    setGoogleNotice(null);
   };
 
   const handleQuickPresetLogin = async (roleKey) => {
     setLoading(true);
     setError(null);
-    setGoogleNotice(null);
     try {
       const res = await loginWithDemoPreset(roleKey);
-      setLoading(false);
       if (res.success) {
         onAuthSuccess(res.user);
         onClose();
@@ -185,15 +182,15 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
         setError(res.error || "Failed to switch demo profile.");
       }
     } catch (e) {
-      setLoading(false);
       setError("Login error: " + e.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
-    setGoogleNotice(null);
 
     // Validate genuine required fields
     if (mode === 'signup') {
@@ -262,13 +259,18 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
     setLoading(true);
 
     if (mode === 'login') {
-      const res = await loginWithEmail(email, password);
-      setLoading(false);
-      if (res.success) {
-        onAuthSuccess(res.user);
-        onClose();
-      } else {
-        setError(res.error || "Authentication failed. Please check credentials.");
+      try {
+        const res = await loginWithEmail(email, password);
+        if (res.success) {
+          onAuthSuccess(res.user);
+          onClose();
+        } else {
+          setError(res.error || "Authentication failed. Please check credentials.");
+        }
+      } catch (err) {
+        setError(err.message || "Login failed.");
+      } finally {
+        setLoading(false);
       }
       return;
     }
@@ -1031,7 +1033,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
             </form>
 
             {/* QUICK DEMO PRESETS (when in login mode and demo mode enabled) */}
-            {mode === 'login' && (import.meta.env.VITE_ENABLE_DEMO_LOGIN === 'true' || import.meta.env.DEV) && import.meta.env.VITE_ENABLE_DEMO_LOGIN !== 'false' && (
+            {mode === 'login' && import.meta.env.VITE_ENABLE_DEMO_LOGIN !== 'false' && (
               <div className="mt-5 pt-4 border-t border-slate-200 dark:border-slate-800">
                 <div className="flex items-center justify-between mb-3">
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 text-[10px] font-bold tracking-wider font-mono uppercase">

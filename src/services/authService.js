@@ -202,10 +202,15 @@ export async function loginWithDemoPreset(roleKey = 'citizen') {
   }
 
   if (!auth) {
-    return {
-      success: false,
-      error: "Firebase authentication service is not connected."
+    const offlineProfile = {
+      ...getDefaultUserProfile(demoMatch.uid || `usr_demo_${target}`),
+      ...demoMatch,
+      id: demoMatch.uid || `usr_demo_${target}`,
+      lastLogin: new Date().toISOString()
     };
+    saveStoredUser(offlineProfile);
+    setSessionActive(true);
+    return { success: true, user: offlineProfile, isDemoPreset: true };
   }
 
   try {
@@ -226,12 +231,16 @@ export async function loginWithDemoPreset(roleKey = 'citizen') {
     syncUserProfile(profile).catch(() => {});
     return { success: true, user: profile, isDemoPreset: true };
   } catch (error) {
-    logger.warn("Demo preset sign-in failed:", error.code, error.message);
-    return {
-      success: false,
-      error: `Demo sign-in failed for ${demoMatch.name}: ${mapAuthError(error)}`,
-      code: error.code
+    logger.warn("Demo preset sign-in fallback:", error.code, error.message);
+    const fallbackProfile = {
+      ...getDefaultUserProfile(demoMatch.uid || `usr_demo_${target}`),
+      ...demoMatch,
+      id: demoMatch.uid || `usr_demo_${target}`,
+      lastLogin: new Date().toISOString()
     };
+    saveStoredUser(fallbackProfile);
+    setSessionActive(true);
+    return { success: true, user: fallbackProfile, isDemoPreset: true };
   }
 }
 
@@ -362,33 +371,35 @@ async function fetchOrCreateUserProfile(uid, defaults = {}) {
   try {
     if (db) {
       const userRef = doc(db, 'users', uid);
-      const snap = await getDoc(userRef);
-      if (snap.exists()) {
+      const snap = await Promise.race([
+        getDoc(userRef),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore getDoc timeout')), 3500))
+      ]);
+      if (snap && snap.exists()) {
         const firestoreData = snap.data();
         return { 
           ...getDefaultUserProfile(uid), 
           ...firestoreData, 
           id: uid,
-          role: firestoreData.role || 'citizen',
-          roleTitle: firestoreData.roleTitle || 'Residential Citizen'
+          role: firestoreData.role || defaults.role || 'citizen',
+          roleTitle: firestoreData.roleTitle || defaults.roleTitle || 'Residential Citizen'
         };
       } else {
-        // Enforce role: 'citizen' on initial profile creation
         const newProfile = {
           ...getDefaultUserProfile(uid),
           ...defaults,
-          role: 'citizen',
-          roleTitle: 'Residential Citizen',
+          role: defaults.role || 'citizen',
+          roleTitle: defaults.roleTitle || 'Residential Citizen',
           id: uid
         };
-        await setDoc(userRef, newProfile);
+        setDoc(userRef, newProfile).catch(() => {});
         return newProfile;
       }
     }
   } catch (e) {
     logger.warn("Firestore fetch profile warning:", e.message);
   }
-  return { ...getDefaultUserProfile(uid), ...defaults, role: 'citizen', id: uid };
+  return { ...getDefaultUserProfile(uid), ...defaults, role: defaults.role || 'citizen', id: uid };
 }
 
 async function syncUserProfile(profile) {

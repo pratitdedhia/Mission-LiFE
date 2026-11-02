@@ -41,8 +41,9 @@ export function getKolkataTimeInfo(date = new Date()) {
 }
 
 export function resolveLiveNudge(rawNudge, watts, timestamp) {
-  // Always evaluate against current live Asia/Kolkata time
-  const timeInfo = getKolkataTimeInfo(new Date());
+  // Evaluate against provided timestamp (or current live time) in Asia/Kolkata
+  const dateObj = timestamp ? (typeof timestamp === 'number' ? new Date(timestamp > 1e11 ? timestamp : timestamp * 1000) : new Date(timestamp)) : new Date();
+  const timeInfo = getKolkataTimeInfo(dateObj);
   const wattage = Number(watts) || 0;
   const isHighWattage = wattage > 1200;
 

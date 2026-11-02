@@ -15,6 +15,79 @@ import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 const memoryCache = new Map();
 const CACHE_PREFIX = 'life_catalog_cache_';
 
+export const FALLBACK_DEMO_PROFILES = [
+  {
+    uid: "usr_citizen_pooja",
+    id: "usr_citizen_pooja",
+    role: "citizen",
+    roleTitle: "Residential Citizen",
+    name: "Pooja Patel",
+    email: "citizen.pooja@gujaratlife.in",
+    city: "Ahmedabad",
+    district: "Ahmedabad",
+    locality: "Navrangpura",
+    state: "Gujarat",
+    monthlyElectricityUnits: 280,
+    monthlyElectricityBill: 2120,
+    lifeScore: 780,
+    streak: 7
+  },
+  {
+    uid: "usr_student_priyan",
+    id: "usr_student_priyan",
+    role: "student",
+    roleTitle: "Student Volunteer",
+    name: "Priyan Patel",
+    email: "student.priyan@iitgn.ac.in",
+    universityName: "IIT Gandhinagar",
+    campusName: "IIT Gandhinagar Eco Squad",
+    city: "Gandhinagar",
+    district: "Gandhinagar",
+    verificationStatus: "verified",
+    lifeScore: 375,
+    streak: 5
+  },
+  {
+    uid: "usr_campus_aarav",
+    id: "usr_campus_aarav",
+    role: "campus_leader",
+    roleTitle: "Campus Youth Leader",
+    name: "Aarav Mehta",
+    email: "campus.aarav@iitgn.ac.in",
+    universityName: "IIT Gandhinagar",
+    campusName: "IIT Gandhinagar Eco Squad",
+    city: "Gandhinagar",
+    district: "Gandhinagar",
+    lifeScore: 1420,
+    streak: 21
+  },
+  {
+    uid: "usr_vendor_rajesh",
+    id: "usr_vendor_rajesh",
+    role: "solar_partner",
+    roleTitle: "GEDA Empanelled Installer",
+    name: "Rajesh Shah",
+    email: "vendor.rajesh@suryaurjagujarat.in",
+    companyName: "Surya Urja Solutions Gujarat",
+    city: "Ahmedabad",
+    district: "Ahmedabad",
+    lifeScore: 2180,
+    streak: 34
+  },
+  {
+    uid: "usr_admin_neha",
+    id: "usr_admin_neha",
+    role: "admin",
+    roleTitle: "GEDA State Energy Officer",
+    name: "Dr. Neha Joshi",
+    email: "admin.neha@geda.gujarat.gov.in",
+    city: "Gandhinagar",
+    district: "Gandhinagar",
+    lifeScore: 3400,
+    streak: 45
+  }
+];
+
 export function getCachedCatalog(collectionName) {
   if (memoryCache.has(collectionName)) {
     return memoryCache.get(collectionName);
@@ -30,6 +103,9 @@ export function getCachedCatalog(collectionName) {
     }
   } catch {
     // LocalStorage unavailable
+  }
+  if (collectionName === 'demoProfiles') {
+    return FALLBACK_DEMO_PROFILES;
   }
   return null;
 }

@@ -33,11 +33,12 @@ describe('Live Energy Nudge & Peak Hours Window Tests', () => {
   });
 
   it('resolves live wattage 2155W at 3:00 AM IST with neutral message without mentioning peak hours or tariffs', () => {
-    // At current time (3:00 AM IST), 2155W load
+    // Explicitly test at 3:00 AM IST (off-peak window)
+    const threeAmIstTimestamp = Math.floor(new Date('2026-11-02T03:00:00+05:30').getTime() / 1000);
     const result = resolveLiveNudge(
       "⚠️ HIGH LOAD WARNING: 2155W running during Peak Grid Hours (6-10 PM). Defer high-wattage cycles to avoid premium ToD tariffs.",
       2155,
-      Date.now() / 1000
+      threeAmIstTimestamp
     );
 
     // At 3:00 AM, isPeak is false, so it must NOT claim peak hours
