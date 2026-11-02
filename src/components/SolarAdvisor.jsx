@@ -29,13 +29,13 @@ import { useTranslation } from 'react-i18next';
 import { getSubsidyRules } from '../repositories/configRepository';
 import { submitSolarLead } from '../repositories/solarRepository';
 import { calculateSolarFeasibility } from '../../shared/src/calculations/solar';
+import { CO2_GRID_FACTOR_KG_PER_KWH } from '../config/branding';
 import { 
   getStoredLeads, 
   raiseSolarRequest, 
   sendVendorChatMessage, 
   simulateVendorReply, 
-  acceptSolarQuote,
-  EMPANELLED_VENDORS
+  acceptSolarQuote
 } from '../services/solarQuoteService';
 
 export default function SolarAdvisor({ user = {}, onNavigateToDirectory }) {
@@ -93,22 +93,23 @@ export default function SolarAdvisor({ user = {}, onNavigateToDirectory }) {
         {
           monthlyBillInr: billAmount,
           availableRoofAreaSqFt: roofArea,
-          discomTariffPerKwh: 6.50
+          discomTariffPerKwh: (user.monthlyElectricityUnits && user.monthlyElectricityBill ? (user.monthlyElectricityBill / user.monthlyElectricityUnits) : 6.0)
         },
-        subsidyRules
+        subsidyRules,
+        CO2_GRID_FACTOR_KG_PER_KWH
       )
     : {
         recommendedCapacityKw: 2.5,
         requiredRoofAreaSqFt: 250,
         hasEnoughRoofSpace: true,
-        estAnnualGenerationKwh: 3924,
+        estAnnualGenerationKwh: 3900,
         grossSystemCostInr: 137500,
-        pmSuryaGharSubsidyInr: 78000,
+        pmSuryaGharSubsidyInr: (subsidyRules?.maxCentralSubsidyInr || 0),
         netPayableInr: 59500,
-        estimatedAnnualSavingsInr: 25504,
+        estimatedAnnualSavingsInr: 25000,
         simplePaybackPeriodYears: 2.3,
-        lifetime25YrSavingsInr: 637600,
-        lifetimeCo2OffsetTonnes: 74.0,
+        lifetime25YrSavingsInr: 630000,
+        lifetimeCo2OffsetTonnes: 70.0,
         yearByYearSavings: []
       };
 
@@ -301,8 +302,8 @@ export default function SolarAdvisor({ user = {}, onNavigateToDirectory }) {
                   className="w-full accent-emerald-600 cursor-pointer"
                 />
                 <div className="flex justify-between text-[10px] text-slate-400 mt-0.5 font-mono">
-                  <span>₹800/mo</span>
-                  <span>₹15,000/mo</span>
+                  <span>Min: ₹{Number(800).toLocaleString('en-IN')}/mo</span>
+                  <span>Max: ₹{Number(15000).toLocaleString('en-IN')}/mo</span>
                 </div>
               </div>
 

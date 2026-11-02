@@ -28,6 +28,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage', 'firebase/analytics'],
+          i18n: ['i18next', 'react-i18next'],
           vendor: ['react', 'react-dom', 'lucide-react', 'canvas-confetti']
         }
       }

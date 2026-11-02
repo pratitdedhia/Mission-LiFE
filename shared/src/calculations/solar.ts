@@ -3,7 +3,7 @@ import type { SubsidyRules } from '../schemas/config';
 export interface SolarCalculatorInput {
   monthlyBillInr: number;
   availableRoofAreaSqFt: number;
-  discomTariffPerKwh?: number; // defaults to typical Gujarat slab Rs 6.50
+  discomTariffPerKwh: number;
 }
 
 export interface SolarCalculatorResult {
@@ -29,18 +29,19 @@ export interface SolarCalculatorResult {
 /**
  * Pure calculation engine for PM Surya Ghar: Muft Bijli Yojana & GEDA Rooftop Solar.
  * Models 25-year yield with panel degradation and GERC net-metering regulations.
+ * All parameters, subsidy tiers, and emission factors are passed in from configuration.
  */
 export function calculateSolarFeasibility(
   input: SolarCalculatorInput,
   rules: SubsidyRules,
-  gridCo2PerKwh: number = 0.82
+  gridCo2PerKwh: number
 ): SolarCalculatorResult {
-  const tariffPerKwh = input.discomTariffPerKwh || 6.50;
+  const tariffPerKwh = input.discomTariffPerKwh;
   // Estimate monthly units from bill
   const monthlyUnitsKwh = input.monthlyBillInr / tariffPerKwh;
   const dailyUnitsNeeded = monthlyUnitsKwh / 30;
 
-  // 1 kW rooftop solar in Gujarat produces approx 4.3 kWh/day (300 sunny days)
+  // 1 kW rooftop solar in Gujarat produces approx avgGenerationPerKwPerDayKwh (from rules)
   let idealKw = dailyUnitsNeeded / rules.avgGenerationPerKwPerDayKwh;
   // Standard solar capacities are rounded to nearest 0.5 kW (min 1 kW, max 10 kW residential)
   idealKw = Math.max(1, Math.min(10, Math.round(idealKw * 2) / 2));
@@ -58,18 +59,22 @@ export function calculateSolarFeasibility(
   // Cost calculation based on MNRE benchmark
   const grossCost = finalKw * rules.benchmarkCostPerKwInr;
 
-  // Central Subsidy calculation (PM Surya Ghar scheme rules):
-  // 1 kW: Rs 30,000 | 2 kW: Rs 60,000 | 3 kW and above: Rs 78,000 max
+  // Central Subsidy calculation from rules.centralSubsidyTiers:
   let centralSubsidy = 0;
-  if (finalKw <= 1) {
-    centralSubsidy = 30000;
-  } else if (finalKw <= 2) {
-    centralSubsidy = 60000;
-  } else {
-    centralSubsidy = rules.maxCentralSubsidyInr; // 78,000 max
+  if (rules.centralSubsidyTiers && rules.centralSubsidyTiers.length > 0) {
+    // Sort tiers by capacityKw ascending
+    const sortedTiers = [...rules.centralSubsidyTiers].sort((a, b) => a.capacityKw - b.capacityKw);
+    for (const tier of sortedTiers) {
+      if (finalKw >= tier.capacityKw) {
+        centralSubsidy = tier.subsidyAmountInr;
+      }
+    }
+  }
+  if (rules.maxCentralSubsidyInr) {
+    centralSubsidy = Math.min(centralSubsidy, rules.maxCentralSubsidyInr);
   }
 
-  const netPayable = Math.max(0, grossCost - centralSubsidy - rules.stateBonusInr);
+  const netPayable = Math.max(0, grossCost - centralSubsidy - (rules.stateBonusInr || 0));
 
   // Year 1 generation & savings
   const annualGenerationYear1 = finalKw * rules.avgGenerationPerKwPerDayKwh * 365;
@@ -79,7 +84,7 @@ export function calculateSolarFeasibility(
     ? Math.round((netPayable / annualSavingsYear1) * 10) / 10 
     : 0;
 
-  // 25-Year projection with degradation (0.7% annual degradation)
+  // 25-Year projection with degradation
   const yearlyData: SolarCalculatorResult['yearByYearSavings'] = [];
   let cumulative = -netPayable; // start with net capital investment
   let lifetimeGenKwh = 0;
@@ -100,7 +105,7 @@ export function calculateSolarFeasibility(
   }
 
   const lifetime25YrSavings = Math.round(cumulative);
-  // Lifetime CO2 offset = Total kWh produced * CEA grid factor / 1000 kg per tonne
+  // Lifetime CO2 offset = Total kWh produced * grid factor / 1000 kg per tonne
   const lifetimeCo2Tonnes = Math.round((lifetimeGenKwh * gridCo2PerKwh / 1000) * 10) / 10;
 
   return {
@@ -118,4 +123,3 @@ export function calculateSolarFeasibility(
     yearByYearSavings: yearlyData
   };
 }
-

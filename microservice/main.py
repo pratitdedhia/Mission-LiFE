@@ -1,20 +1,34 @@
 """
 Mission LiFE - Appliance Scanner & Hardware IoT Microservice
 FastAPI + OpenCV + YOLOv8 + Smart-Meter Telemetry Bridge + Firestore Persistence
+Hardened device authorization, rate limiting, and defensive input validation.
 """
 
 import io
 import os
+import re
 import json
 import time
+import hmac
+import uuid
+import threading
+import logging
+import urllib.parse
 from datetime import datetime, timezone, timedelta, time as time_obj
 from typing import List, Optional, Dict, Any
-from fastapi import FastAPI, File, UploadFile, HTTPException, status
+from fastapi import FastAPI, File, UploadFile, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import numpy as np
 import cv2
-import requests
+
+# Structured application logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logger = logging.getLogger("mission_life_microservice")
+
+SERVICE_START_TIME = time.time()
+GIT_SHA = os.environ.get("GIT_SHA", "5c5d353")
+ID_REGEX = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 
 try:
     from nudge_engine import evaluate_telemetry_nudge, get_kolkata_tz
@@ -26,37 +40,73 @@ TELEMETRY_LEDGER: List[Dict[str, Any]] = []
 
 # Persistent disk ledger path to survive service restarts
 TELEMETRY_STORE_PATH = os.path.join(os.path.dirname(__file__), "telemetry_store.jsonl")
+_disk_lock = threading.Lock()
+
+# Document collision-safe counter
+_doc_counter = 0
+_doc_counter_lock = threading.Lock()
+
+
+def generate_doc_id(device_id: str, ts: float) -> str:
+    """Generates unique deterministic document ID formatted as {deviceId}_{timestamp_ms}_{counter}."""
+    global _doc_counter
+    with _doc_counter_lock:
+        _doc_counter = (_doc_counter + 1) % 1000000
+        counter = _doc_counter
+    ts_ms = int(ts * 1000)
+    return f"{device_id}_{ts_ms}_{counter:04d}"
+
+
+# -----------------------------------------------------------------------------
+# DYNAMIC CONFIGURATION & CATALOG CACHE (5-minute in-memory cache)
+# -----------------------------------------------------------------------------
+_CONFIG_CACHE: Dict[str, Any] = {}
+_CONFIG_CACHE_EXPIRY: Dict[str, float] = {}
+CONFIG_CACHE_TTL = 300.0  # 5 minutes
+
+# Token bucket rate limiting per device (~1 req / 2s -> 0.5 tokens/sec, capacity 2.0)
+_DEVICE_RATE_BUCKETS: Dict[str, Dict[str, float]] = {}
+_rate_lock = threading.Lock()
+
+# YOLOv8 lazy loaded instance and thread lock
+_yolo_model = None
+_model_lock = threading.Lock()
+
 
 def append_to_persistent_ledger(record: Dict[str, Any]) -> None:
-    """Appends telemetry record to durable disk store so history survives restarts."""
+    """Appends telemetry record to durable disk store so history survives restarts (thread-safe)."""
     try:
-        with open(TELEMETRY_STORE_PATH, "a", encoding="utf-8") as f:
-            f.write(json.dumps(record) + "\n")
+        with _disk_lock:
+            with open(TELEMETRY_STORE_PATH, "a", encoding="utf-8") as f:
+                f.write(json.dumps(record) + "\n")
     except Exception as e:
-        print(f"Persistent disk write warning: {e}")
+        logger.warning(f"Persistent disk write warning: {e}")
+
 
 def load_persistent_ledger(user_id: Optional[str] = None, limit: int = 200) -> List[Dict[str, Any]]:
-    """Loads historical records from disk store."""
+    """Loads historical records from disk store (thread-safe)."""
     records = []
     if not os.path.exists(TELEMETRY_STORE_PATH):
         return [t for t in TELEMETRY_LEDGER if not user_id or t.get("user_id") == user_id][-limit:]
     try:
-        with open(TELEMETRY_STORE_PATH, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    try:
-                        rec = json.loads(line)
-                        if not user_id or rec.get("user_id") == user_id:
-                            records.append(rec)
-                    except Exception:
-                        pass
+        with _disk_lock:
+            with open(TELEMETRY_STORE_PATH, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            rec = json.loads(line)
+                            if not user_id or rec.get("user_id") == user_id:
+                                records.append(rec)
+                        except Exception:
+                            pass
         if not records and TELEMETRY_LEDGER:
             return [t for t in TELEMETRY_LEDGER if not user_id or t.get("user_id") == user_id][-limit:]
         return records[-limit:]
     except Exception as e:
-        print(f"Persistent disk read warning: {e}")
+        logger.warning(f"Persistent disk read warning: {e}")
         return [t for t in TELEMETRY_LEDGER if not user_id or t.get("user_id") == user_id][-limit:]
+
 
 # Optional Firebase Admin SDK initialization for server-side Firestore operations
 try:
@@ -68,13 +118,12 @@ try:
         
         if firebase_creds_json:
             try:
-                # Parse the service account JSON from environment variable
                 cred_dict = json.loads(firebase_creds_json)
                 cred = credentials.Certificate(cred_dict)
                 firebase_admin.initialize_app(cred, {"projectId": project_id})
-                print("Firebase Admin SDK initialized successfully via FIREBASE_CREDENTIALS env var.")
+                logger.info("Firebase Admin SDK initialized successfully via FIREBASE_CREDENTIALS.")
             except Exception as env_err:
-                print(f"Warning: Failed to parse FIREBASE_CREDENTIALS json: {env_err}")
+                logger.warning(f"Failed to parse FIREBASE_CREDENTIALS json: {env_err}")
                 cred = credentials.ApplicationDefault()
                 firebase_admin.initialize_app(cred, {"projectId": project_id})
         else:
@@ -86,16 +135,180 @@ try:
                 
     firestore_client = firestore.client()
 except Exception as e:
-    print(f"Notice: Firebase Admin SDK running in HTTP/local fallback mode: {e}")
+    logger.info(f"Firebase Admin SDK running in HTTP/local fallback mode: {e}")
     firestore_client = None
 
-# Optional Ultralytics import with graceful fallback if model weights are downloading
-try:
-    from ultralytics import YOLO
-    yolo_model = YOLO("yolov8n.pt")
-except Exception as e:
-    print(f"Warning: YOLOv8 model lazy-loading: {e}")
-    yolo_model = None
+
+def get_remote_or_cached_config(doc_name: str) -> Dict[str, Any]:
+    """
+    Fetches configuration document with a 5-minute in-memory cache.
+    Sources from Firestore first, falling back to seed JSON files.
+    """
+    now = time.time()
+    if doc_name in _CONFIG_CACHE and now < _CONFIG_CACHE_EXPIRY.get(doc_name, 0):
+        return _CONFIG_CACHE[doc_name]
+
+    # 1. Try Firestore Admin SDK
+    if firestore_client is not None:
+        try:
+            doc_ref = firestore_client.collection("config").document(doc_name)
+            doc_snap = doc_ref.get()
+            if doc_snap.exists:
+                data = doc_snap.to_dict() or {}
+                _CONFIG_CACHE[doc_name] = data
+                _CONFIG_CACHE_EXPIRY[doc_name] = now + CONFIG_CACHE_TTL
+                return data
+        except Exception as e:
+            logger.warning(f"Firestore fetch failed for config/{doc_name}: {e}")
+
+    # 2. Local seed JSON fallback
+    seed_path = os.path.join(os.path.dirname(__file__), "..", "seed", f"config.{doc_name}.json")
+    if os.path.exists(seed_path):
+        try:
+            with open(seed_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                _CONFIG_CACHE[doc_name] = data
+                _CONFIG_CACHE_EXPIRY[doc_name] = now + CONFIG_CACHE_TTL
+                return data
+        except Exception as e:
+            logger.warning(f"Seed file load failed for config.{doc_name}.json: {e}")
+
+    return {}
+
+
+def get_appliance_catalog() -> List[Dict[str, Any]]:
+    """Loads appliance reference catalog with in-memory caching."""
+    now = time.time()
+    if "applianceCatalog" in _CONFIG_CACHE and now < _CONFIG_CACHE_EXPIRY.get("applianceCatalog", 0):
+        return _CONFIG_CACHE["applianceCatalog"]
+
+    if firestore_client is not None:
+        try:
+            docs = firestore_client.collection("applianceCatalog").stream()
+            items = [d.to_dict() for d in docs]
+            if items:
+                _CONFIG_CACHE["applianceCatalog"] = items
+                _CONFIG_CACHE_EXPIRY["applianceCatalog"] = now + CONFIG_CACHE_TTL
+                return items
+        except Exception as e:
+            logger.warning(f"Firestore stream failed for applianceCatalog: {e}")
+
+    seed_path = os.path.join(os.path.dirname(__file__), "..", "seed", "applianceCatalog.json")
+    if os.path.exists(seed_path):
+        try:
+            with open(seed_path, "r", encoding="utf-8") as f:
+                items = json.load(f)
+                _CONFIG_CACHE["applianceCatalog"] = items
+                _CONFIG_CACHE_EXPIRY["applianceCatalog"] = now + CONFIG_CACHE_TTL
+                return items
+        except Exception as e:
+            logger.warning(f"Seed file load failed for applianceCatalog.json: {e}")
+
+    return []
+
+
+def get_device_doc(device_id: str) -> Optional[Dict[str, Any]]:
+    """Checks registered devices in Firestore or seed/devices.json."""
+    if firestore_client is not None:
+        try:
+            doc = firestore_client.collection("devices").document(device_id).get()
+            if doc.exists:
+                return doc.to_dict()
+        except Exception as e:
+            logger.warning(f"Firestore device check failed for {device_id}: {e}")
+
+    seed_path = os.path.join(os.path.dirname(__file__), "..", "seed", "devices.json")
+    if os.path.exists(seed_path):
+        try:
+            with open(seed_path, "r", encoding="utf-8") as f:
+                devices = json.load(f)
+                for d in devices:
+                    if d.get("id") == device_id:
+                        return d
+        except Exception as e:
+            logger.warning(f"Seed devices check failed: {e}")
+
+    return None
+
+
+def get_device_count() -> int:
+    """Returns the total number of registered devices in allow-list."""
+    if firestore_client is not None:
+        try:
+            coll = firestore_client.collection("devices")
+            count_query = coll.count()
+            results = count_query.get()
+            return int(results[0][0].value)
+        except Exception:
+            pass
+
+    seed_path = os.path.join(os.path.dirname(__file__), "..", "seed", "devices.json")
+    if os.path.exists(seed_path):
+        try:
+            with open(seed_path, "r", encoding="utf-8") as f:
+                devices = json.load(f)
+                return len(devices)
+        except Exception:
+            pass
+    return 1
+
+
+def check_rate_limit(device_id: str) -> bool:
+    """
+    Token bucket rate limit: allows ~1 request per 2 seconds (0.5 tokens/s)
+    with a burst capacity of 2 tokens.
+    """
+    with _rate_lock:
+        now = time.time()
+        bucket = _DEVICE_RATE_BUCKETS.setdefault(device_id, {"tokens": 2.0, "last_updated": now})
+        elapsed = now - bucket["last_updated"]
+        bucket["last_updated"] = now
+        bucket["tokens"] = min(2.0, bucket["tokens"] + elapsed * 0.5)
+
+        if bucket["tokens"] >= 1.0:
+            bucket["tokens"] -= 1.0
+            return True
+        return False
+
+
+def get_appliance_specs_map() -> Dict[str, Dict[str, Any]]:
+    """Maps dynamic catalog items to scanner specifications keyed by type and YOLO class."""
+    catalog = get_appliance_catalog()
+    specs: Dict[str, Dict[str, Any]] = {}
+    for item in catalog:
+        key = (item.get("yoloClass") or item.get("type") or "").lower()
+        type_key = (item.get("type") or "").lower()
+        wattage = item.get("defaultWattage", 500)
+        spec = {
+            "display_name": item.get("name", "Household Appliance"),
+            "wattage_range": (int(wattage * 0.7), int(wattage * 1.4)),
+            "typical_wattage": wattage,
+            "daily_hours": item.get("defaultDailyHours", 4),
+            "duty_cycle": item.get("dutyCycle", 0.5),
+            "tip": item.get("tip", "Switch off at socket when not in use.")
+        }
+        if key:
+            specs[key] = spec
+        if type_key:
+            specs[type_key] = spec
+    return specs
+
+
+def get_yolo_model():
+    """Lazy loads the YOLOv8 model weights on the first invocation (thread-safe)."""
+    global _yolo_model
+    with _model_lock:
+        if _yolo_model is None:
+            try:
+                from ultralytics import YOLO
+                weights_path = os.environ.get("YOLO_WEIGHTS_PATH", "yolov8n.pt")
+                if os.path.exists(weights_path) or weights_path == "yolov8n.pt":
+                    _yolo_model = YOLO(weights_path)
+            except Exception as e:
+                logger.info(f"YOLOv8 model lazy loading notice: {e}")
+                _yolo_model = None
+    return _yolo_model
+
 
 app = FastAPI(
     title="Mission LiFE - ML & IoT Microservice",
@@ -103,78 +316,71 @@ app = FastAPI(
     description="YOLOv8 Appliance Vision Scanner & ESP32 Smart-Meter Hardware Bridge"
 )
 
-# Enable CORS for Next.js and React frontends
+# Restrict CORS to GitHub Pages deployment and local dev origins
+CORS_ORIGINS_ENV = os.environ.get("CORS_ORIGINS", "")
+extra_origins = [o.strip() for o in CORS_ORIGINS_ENV.split(",") if o.strip()]
+ALLOWED_ORIGINS = [
+    "https://pratitdedhia.github.io",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000"
+] + extra_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "X-Device-Key", "X-Device-Api-Key", "Authorization", "X-Request-ID"],
 )
 
-# -----------------------------------------------------------------------------
-# APPLIANCE DOMAIN KNOWLEDGE BASE & ENERGY METRICS
-# -----------------------------------------------------------------------------
-APPLIANCE_SPECS: Dict[str, Dict[str, Any]] = {
-    "refrigerator": {
-        "display_name": "Refrigerator (Frost-Free)",
-        "wattage_range": (150, 300),
-        "typical_wattage": 220,
-        "daily_hours": 24,
-        "duty_cycle": 0.40,  # Compressor runs ~40% of the day
-        "tip": "Maintain internal temperature at 3°C to 5°C and ensure a 2-inch gap behind the coils for ventilation to cut compressor load by 15%."
-    },
-    "air conditioner": {
-        "display_name": "Inverter Air Conditioner",
-        "wattage_range": (900, 2200),
-        "typical_wattage": 1450,
-        "daily_hours": 8,
-        "duty_cycle": 0.70,
-        "tip": "Setting AC thermostat from 18°C to 24°C saves 6% electricity per degree (approx 24-36% overall domestic cooling load reduction)."
-    },
-    "microwave": {
-        "display_name": "Microwave Oven",
-        "wattage_range": (800, 1400),
-        "typical_wattage": 1100,
-        "daily_hours": 0.5,
-        "duty_cycle": 1.0,
-        "tip": "Microwaves consume up to 3 watts in standby mode. Switch off at the wall plug when not in use."
-    },
-    "oven": {
-        "display_name": "Convection Oven",
-        "wattage_range": (1200, 2400),
-        "typical_wattage": 1800,
-        "daily_hours": 0.75,
-        "duty_cycle": 1.0,
-        "tip": "Avoid opening the oven door repeatedly; each opening drops internal temperature by 25°C, demanding extra heating cycles."
-    },
-    "tv": {
-        "display_name": "Smart Television / Display",
-        "wattage_range": (60, 180),
-        "typical_wattage": 110,
-        "daily_hours": 5,
-        "duty_cycle": 1.0,
-        "tip": "Enable ambient light sensor automatic dimming and avoid standby vampire draw."
-    },
-    "washing machine": {
-        "display_name": "Washing Machine",
-        "wattage_range": (400, 1200),
-        "typical_wattage": 650,
-        "daily_hours": 1.0,
-        "duty_cycle": 0.8,
-        "tip": "Wash with cold water (30°C) instead of hot water (60°C); heating water accounts for 85-90% of washing cycle power."
-    },
-    "laptop": {
-        "display_name": "Laptop Computer",
-        "wattage_range": (45, 90),
-        "typical_wattage": 65,
-        "daily_hours": 8,
-        "duty_cycle": 0.6,
-        "tip": "Unplug charger when battery reaches 80% to protect lithium lifespan and eliminate standby phantom draw."
-    }
-}
 
-CO2_GRID_FACTOR_KG_PER_KWH = 0.71  # Standard CEA Indian Grid factor
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Structured request logging with correlated request IDs and timing."""
+    request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())[:8]
+    start_time = time.time()
+    try:
+        response = await call_next(request)
+        process_time = (time.time() - start_time) * 1000
+        response.headers["X-Request-ID"] = request_id
+        logger.info(f"[{request_id}] {request.method} {request.url.path} -> {response.status_code} ({process_time:.1f}ms)")
+        return response
+    except Exception as exc:
+        process_time = (time.time() - start_time) * 1000
+        logger.error(f"[{request_id}] {request.method} {request.url.path} FAILED ({process_time:.1f}ms): {exc}", exc_info=True)
+        raise
+
+
+# -----------------------------------------------------------------------------
+# ROOT & HEALTH ENDPOINTS
+# -----------------------------------------------------------------------------
+@app.get("/")
+def root():
+    """Microservice root index returning metadata and deployment git SHA."""
+    return {
+        "service": "mission-life-microservice",
+        "version": "1.0.0",
+        "git_sha": GIT_SHA,
+        "status": "healthy"
+    }
+
+
+@app.get("/health")
+def health_check():
+    """Health check reporting Firestore connectivity, device allow-list count, and uptime."""
+    uptime = time.time() - SERVICE_START_TIME
+    return {
+        "status": "ok",
+        "service": "mission-life-microservice",
+        "version": "1.0.0",
+        "git_sha": GIT_SHA,
+        "uptime_seconds": round(uptime, 2),
+        "firestore_connected": firestore_client is not None,
+        "device_count": get_device_count(),
+        "buffered_telemetry_count": len(TELEMETRY_LEDGER)
+    }
 
 
 # -----------------------------------------------------------------------------
@@ -182,16 +388,17 @@ CO2_GRID_FACTOR_KG_PER_KWH = 0.71  # Standard CEA Indian Grid factor
 # -----------------------------------------------------------------------------
 class HardwareTelemetry(BaseModel):
     """
-    Pydantic data model matching the exact JSON structure dispatched by the
+    Pydantic data model matching the JSON structure dispatched by the
     Wokwi ESP32 simulator:
-    {"user_id": "user_12345", "device_id": "appliance_ac_01", "current_wattage": 1645}
+    {"user_id": "usr_citizen_pooja", "device_id": "appliance_ac_01", "current_wattage": 1450}
+    Validates user_id and device_id with strict regex to block path injection.
     """
-    user_id: str = Field(..., description="Target User UID", example="user_12345")
-    device_id: str = Field(..., description="Appliance / Smart Meter Sensor ID", example="appliance_ac_01")
-    current_wattage: int = Field(..., ge=0, description="Active Power Consumption in Watts", example=1645)
-    voltage: Optional[float] = Field(230.0, ge=0, le=500, description="RMS Grid Voltage (V)", example=230.0)
-    current: Optional[float] = Field(None, ge=0, le=100, description="Current Draw (A)", example=7.15)
-    frequency: Optional[float] = Field(50.0, description="Grid Frequency (Hz)", example=50.0)
+    user_id: str = Field(..., pattern=r"^[A-Za-z0-9_-]{1,64}$", description="Target User UID")
+    device_id: str = Field(..., pattern=r"^[A-Za-z0-9_-]{1,64}$", description="Appliance / Smart Meter Sensor ID")
+    current_wattage: int = Field(..., ge=0, le=15000, description="Active Power Consumption in Watts (0-15000W)")
+    voltage: Optional[float] = Field(230.0, ge=100.0, le=300.0, description="RMS Grid Voltage (100-300V)")
+    current: Optional[float] = Field(None, ge=0.0, le=65.0, description="Current Draw (0-65A)")
+    frequency: Optional[float] = Field(50.0, ge=45.0, le=55.0, description="Grid Frequency (45-55Hz)")
     timestamp: Optional[int] = Field(default_factory=lambda: int(time.time()), description="Epoch Timestamp")
     source_type: Optional[str] = Field("wokwi_simulated", description="Source classification: wokwi_simulated or meter_measured")
     location: Optional[Dict[str, Any]] = Field(None, description="Optional location fields when authorized")
@@ -232,15 +439,15 @@ async def save_hardware_telemetry_to_firestore(
     source_type: str = "wokwi_simulated",
     location: Optional[Dict[str, Any]] = None,
     nudge_rule: Optional[str] = None,
-    current_time_ist: Optional[str] = None
+    current_time_ist: Optional[str] = None,
+    is_simulated: bool = True
 ) -> bool:
     """
     Persists incoming smart meter telemetry to Firestore and durable disk store under:
       - `users/{user_id}/telemetry/{doc_id}` (Telemetry log)
       - `users/{user_id}/appliances/{device_id}` (Active appliance live wattage)
-    Explicitly tags source_type and is_simulated to isolate simulated potentiometer readings.
+    Uses collision-safe document IDs ({device_id}_{ts_ms}_{counter}).
     """
-    is_simulated = (user_id == "user_12345" or source_type == "wokwi_simulated")
     record = {
         "user_id": user_id,
         "device_id": device_id,
@@ -269,14 +476,13 @@ async def save_hardware_telemetry_to_firestore(
         TELEMETRY_LEDGER.pop(0)
     append_to_persistent_ledger(record)
 
-    # 1. Native Firebase Admin SDK
+    # Native Firebase Admin SDK write only (Unauthenticated REST fallback completely removed)
     if firestore_client is not None:
         try:
-            doc_id = f"{device_id}_{timestamp}"
+            doc_id = generate_doc_id(device_id, timestamp)
             firestore_client.collection("users").document(user_id)\
                 .collection("telemetry").document(doc_id).set(record)
 
-            # Update corresponding appliance telemetry state
             firestore_client.collection("users").document(user_id)\
                 .collection("appliances").document(device_id).set({
                     "device_id": device_id,
@@ -286,31 +492,10 @@ async def save_hardware_telemetry_to_firestore(
                 }, merge=True)
             return True
         except Exception as admin_err:
-            print(f"Firestore Admin SDK write warning: {admin_err}")
+            logger.error(f"Firestore Admin SDK write error for {device_id}: {admin_err}")
+            return False
 
-    # 2. Resilient Firestore REST API Fallback
-    try:
-        project_id = os.environ.get("VITE_FIREBASE_PROJECT_ID", "hackcult-f9a20")
-        url = (
-            f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/"
-            f"users/{user_id}/telemetry"
-        )
-        fields = {
-            "user_id": {"stringValue": user_id},
-            "device_id": {"stringValue": device_id},
-            "current_wattage": {"integerValue": str(current_wattage)},
-            "power_watts": {"doubleValue": power_watts},
-            "is_peak_hours": {"booleanValue": is_peak},
-            "nudge_message": {"stringValue": nudge},
-            "nudge_rule": {"stringValue": nudge_rule or ""},
-            "current_time_ist": {"stringValue": current_time_ist or ""},
-            "timestamp": {"integerValue": str(timestamp)}
-        }
-        resp = requests.post(url, json={"fields": fields}, timeout=2.0)
-        return resp.status_code in (200, 201)
-    except Exception as rest_err:
-        print(f"Firestore REST buffer notice: {rest_err}")
-
+    logger.warning("Firestore Admin SDK not connected; telemetry retained in persistent memory ledger.")
     return False
 
 
@@ -321,17 +506,31 @@ async def save_hardware_telemetry_to_firestore(
 async def scan_appliance(file: UploadFile = File(...)):
     """
     Accepts an uploaded image of a household appliance.
-    Uses OpenCV and YOLOv8 to detect appliances, estimate power consumption,
-    and returns personalized Mission LiFE energy conservation advice.
+    Enforces 5MB size limit, magic byte image validation, and dimension scaling.
+    Uses OpenCV and YOLOv8 to detect appliances, returning transparent results.
     """
-    if not file.content_type.startswith("image/"):
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+
+    # 1. Size check
+    contents = await file.read(MAX_FILE_SIZE + 1)
+    if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Uploaded file must be a valid image (JPEG/PNG/WEBP)."
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Uploaded file exceeds maximum allowed size of 5MB."
         )
 
-    # Read binary bytes into memory
-    contents = await file.read()
+    # 2. Magic byte verification (JPEG, PNG, WebP)
+    is_jpeg = contents.startswith(b"\xff\xd8\xff")
+    is_png = contents.startswith(b"\x89PNG\r\n\x1a\n")
+    is_webp = contents.startswith(b"RIFF") and len(contents) >= 12 and contents[8:12] == b"WEBP"
+
+    if not (is_jpeg or is_png or is_webp):
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Unsupported media type. Only JPEG, PNG, and WebP images are permitted."
+        )
+
+    # 3. Image decoding
     nparr = np.frombuffer(contents, np.uint8)
     image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
@@ -341,39 +540,49 @@ async def scan_appliance(file: UploadFile = File(...)):
             detail="Unable to decode image payload."
         )
 
-    height, width, _ = image.shape
-    detected_appliances = []
+    # 4. Limit decoded dimensions (max 1280px)
+    max_dim = 1280
+    h, w = image.shape[:2]
+    if max(h, w) > max_dim:
+        scale = max_dim / float(max(h, w))
+        image = cv2.resize(image, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+        height, width = image.shape[:2]
+    else:
+        height, width = h, w
 
-    # Run YOLOv8 inference if weights available
-    if yolo_model is not None:
-        results = yolo_model(image, verbose=False)
+    detected_appliances = []
+    appliance_specs = get_appliance_specs_map()
+    emission_config = get_remote_or_cached_config("emissionFactors")
+    grid_co2_factor = float(emission_config.get("gridCo2PerKwh", 0.71))
+
+    # 5. Lazy loaded YOLO model check
+    yolo = get_yolo_model()
+    if yolo is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Appliance vision model is currently unavailable."
+        )
+
+    try:
+        results = yolo(image, verbose=False)
         for r in results:
             for box in r.boxes:
                 cls_id = int(box.cls[0].item())
-                class_name = yolo_model.names.get(cls_id, "").lower()
+                class_name = yolo.names.get(cls_id, "").lower()
                 conf = float(box.conf[0].item())
 
-                # Map COCO classes to appliance specs
                 appliance_key = None
-                if "refrigerator" in class_name:
-                    appliance_key = "refrigerator"
-                elif "microwave" in class_name:
-                    appliance_key = "microwave"
-                elif "oven" in class_name:
-                    appliance_key = "oven"
-                elif "tv" in class_name or "monitor" in class_name:
-                    appliance_key = "tv"
-                elif "laptop" in class_name:
-                    appliance_key = "laptop"
-                elif class_name in APPLIANCE_SPECS:
-                    appliance_key = class_name
+                for candidate in appliance_specs:
+                    if candidate in class_name or class_name in candidate:
+                        appliance_key = candidate
+                        break
 
                 if appliance_key and conf >= 0.25:
-                    specs = APPLIANCE_SPECS[appliance_key]
+                    specs = appliance_specs[appliance_key]
                     x1, y1, x2, y2 = [round(v, 1) for v in box.xyxy[0].tolist()]
 
                     daily_kwh = (specs["typical_wattage"] * specs["daily_hours"] * specs["duty_cycle"]) / 1000.0
-                    monthly_co2_kg = round(daily_kwh * 30 * CO2_GRID_FACTOR_KG_PER_KWH, 2)
+                    monthly_co2_kg = round(daily_kwh * 30 * grid_co2_factor, 2)
 
                     detected_appliances.append({
                         "label": specs["display_name"],
@@ -384,28 +593,32 @@ async def scan_appliance(file: UploadFile = File(...)):
                         "monthly_co2e_kg": monthly_co2_kg,
                         "energy_saving_nudge": specs["tip"]
                     })
+    except Exception as e:
+        logger.error(f"Inference error during scan: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error executing appliance computer vision analysis."
+        )
 
-    # Deterministic fallback if no COCO appliance was detected or model is initialized
     if not detected_appliances:
-        fallback_spec = APPLIANCE_SPECS["refrigerator"]
-        daily_kwh = (fallback_spec["typical_wattage"] * fallback_spec["daily_hours"] * fallback_spec["duty_cycle"]) / 1000.0
-        monthly_co2 = round(daily_kwh * 30 * CO2_GRID_FACTOR_KG_PER_KWH, 2)
-
-        detected_appliances.append({
-            "label": fallback_spec["display_name"],
-            "confidence": 0.89,
-            "bounding_box": {"x1": 50.0, "y1": 50.0, "x2": width - 50.0, "y2": height - 50.0},
-            "estimated_wattage": fallback_spec["typical_wattage"],
-            "daily_hours_typical": fallback_spec["daily_hours"],
-            "monthly_co2e_kg": monthly_co2,
-            "energy_saving_nudge": fallback_spec["tip"]
-        })
+        return {
+            "success": True,
+            "detection": "none",
+            "image_dimensions": {"width": width, "height": height},
+            "appliances_detected_count": 0,
+            "detected_appliances": [],
+            "total_estimated_instant_wattage": 0,
+            "estimated_monthly_carbon_kg_co2e": 0.0,
+            "message": "No appliance recognised, pick manually",
+            "supported_classes": list(appliance_specs.keys())
+        }
 
     total_wattage = sum(a["estimated_wattage"] for a in detected_appliances)
     total_monthly_co2 = sum(a["monthly_co2e_kg"] for a in detected_appliances)
 
     return {
         "success": True,
+        "detection": "detected",
         "image_dimensions": {"width": width, "height": height},
         "appliances_detected_count": len(detected_appliances),
         "detected_appliances": detected_appliances,
@@ -420,40 +633,75 @@ async def scan_appliance(file: UploadFile = File(...)):
 # HARDWARE TELEMETRY BRIDGE (/api/hardware)
 # -----------------------------------------------------------------------------
 @app.post("/api/hardware", response_model=TelemetryResponse)
-async def receive_hardware_telemetry(payload: HardwareTelemetry):
+async def receive_hardware_telemetry(payload: HardwareTelemetry, request: Request):
     """
-    Receives simulated real-time smart-meter telemetry via HTTP POST
+    Receives real-time smart-meter telemetry via HTTP POST
     from the Wokwi ESP32 simulator or physical IoT microcontroller.
-    
-    Accepts exact JSON structure:
-      {"user_id": "user_12345", "device_id": "appliance_ac_01", "current_wattage": 1645}
-      
-    Maps keys to active power calculations, computes Time-of-Day (ToD) tariff impacts,
-    and persists telemetry to Firestore.
+    Enforces device allow-list, token bucket rate limiting (~1 req / 2s),
+    constant-time API key verification, and registry-governed simulation tags.
     """
-    # 1. Map incoming keys to backend active power calculations
+    # 1. Device allow-list check
+    device = get_device_doc(payload.device_id)
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Device '{payload.device_id}' is not registered in the device allow-list."
+        )
+
+    # 2. Token bucket rate limit check (~1 req / 2s per device)
+    if not check_rate_limit(payload.device_id):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Rate limit exceeded for device '{payload.device_id}'. Maximum 1 request per 2 seconds allowed."
+        )
+
+    # 3. Resolve owner and simulated status strictly from device registry
+    # Payload CANNOT unilaterally set is_simulated
+    is_simulated = bool(device.get("simulated", False))
+    owner_uid = device.get("ownerUid") or payload.user_id
+
+    # 4. Security / Header key check (Constant-time comparison)
+    if not is_simulated:
+        client_key = request.headers.get("X-Device-Key") or request.headers.get("X-Device-Api-Key")
+        expected_key = device.get("apiKey") or os.environ.get("DEVICE_API_KEY")
+        if not client_key or not expected_key:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Unauthorized device telemetry: missing X-Device-Key header."
+            )
+        if not hmac.compare_digest(client_key.encode("utf-8"), expected_key.encode("utf-8")):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Unauthorized device telemetry: invalid X-Device-Key header."
+            )
+
+    # 5. Map power calculations from dynamic tariffs config
     power_watts = float(payload.current_wattage)
     voltage = payload.voltage if payload.voltage and payload.voltage > 0 else 230.0
     current = payload.current if payload.current is not None else round(power_watts / voltage, 2)
     apparent_power = voltage * current
     power_factor = min(1.0, round(power_watts / apparent_power, 2)) if apparent_power > 0 else 0.95
 
-    # 2. Calculate approximate cost per hour at standard commercial/residential rate (₹6.50 / kWh)
+    tariffs_config = get_remote_or_cached_config("tariffs")
+    tariff_rate = float(tariffs_config.get("averageTariffInrPerKwh", 6.50))
     kwh_hourly = power_watts / 1000.0
-    hourly_cost_inr = round(kwh_hourly * 6.50, 2)
+    hourly_cost_inr = round(kwh_hourly * tariff_rate, 2)
 
-    # 3. Evaluate live energy nudge strictly in Asia/Kolkata (6:00 PM - 10:00 PM IST)
-    # Never claims peak hours unless current Asia/Kolkata time is within 18:00 <= t < 22:00
-    nudge_eval = evaluate_telemetry_nudge(power_watts=power_watts, raw_timestamp=payload.timestamp)
+    # 6. Evaluate nudge using dynamic nudge rules
+    nudge_config = get_remote_or_cached_config("nudgeRules")
+    nudge_eval = evaluate_telemetry_nudge(
+        power_watts=power_watts,
+        raw_timestamp=payload.timestamp,
+        rules=nudge_config
+    )
     is_peak = nudge_eval["is_peak"]
     nudge = nudge_eval["nudge_message"]
     nudge_rule = nudge_eval["nudge_rule"]
     current_time_ist = nudge_eval["current_time_ist"]
 
-    # 4. Save to Firestore (users/{uid}/telemetry and users/{uid}/appliances/{device_id})
-    is_sim = (payload.user_id == "user_12345" or payload.source_type == "wokwi_simulated")
+    # 7. Save to Firestore under verified owner_uid
     saved = await save_hardware_telemetry_to_firestore(
-        user_id=payload.user_id,
+        user_id=owner_uid,
         device_id=payload.device_id,
         current_wattage=payload.current_wattage,
         power_watts=power_watts,
@@ -464,15 +712,16 @@ async def receive_hardware_telemetry(payload: HardwareTelemetry):
         is_peak=is_peak,
         nudge=nudge,
         timestamp=payload.timestamp or nudge_eval["timestamp_utc"],
-        source_type=payload.source_type or "wokwi_simulated",
+        source_type="wokwi_simulated" if is_simulated else "meter_measured",
         location=payload.location,
         nudge_rule=nudge_rule,
-        current_time_ist=current_time_ist
+        current_time_ist=current_time_ist,
+        is_simulated=is_simulated
     )
 
     return TelemetryResponse(
         status="success",
-        user_id=payload.user_id,
+        user_id=owner_uid,
         device_id=payload.device_id,
         current_wattage=payload.current_wattage,
         power_watts=power_watts,
@@ -483,14 +732,14 @@ async def receive_hardware_telemetry(payload: HardwareTelemetry):
         nudge_rule=nudge_rule,
         current_time_ist=current_time_ist,
         saved_to_firestore=saved,
-        source_type=payload.source_type or "wokwi_simulated",
-        is_simulated=is_sim
+        source_type="wokwi_simulated" if is_simulated else "meter_measured",
+        is_simulated=is_simulated
     )
 
 
 @app.get("/api/hardware/verify-nudge")
 def verify_nudge(
-    power_watts: float = 1645.0,
+    power_watts: float = 1450.0,
     hour_ist: Optional[int] = None,
     minute_ist: Optional[int] = 0,
     second_ist: Optional[int] = 0
@@ -507,7 +756,8 @@ def verify_nudge(
     else:
         raw_ts = datetime.now(timezone.utc).timestamp()
 
-    result = evaluate_telemetry_nudge(power_watts=power_watts, raw_timestamp=raw_ts)
+    nudge_config = get_remote_or_cached_config("nudgeRules")
+    result = evaluate_telemetry_nudge(power_watts=power_watts, raw_timestamp=raw_ts, rules=nudge_config)
     return {
         "status": "success",
         "power_watts": power_watts,
@@ -517,15 +767,16 @@ def verify_nudge(
         "current_time_ist": result["current_time_ist"],
         "base_message": result["base_message"],
         "nudge_message": result["nudge_message"],
-        "boundary_spec": "Peak window: 18:00:00 (6 PM inclusive) to 22:00:00 (10 PM exclusive) Asia/Kolkata"
+        "boundary_spec": f"Peak window: {nudge_config.get('peakStartHour', 18)}:00:00 to {nudge_config.get('peakEndHour', 22)}:00:00 Asia/Kolkata"
     }
 
 
 @app.get("/api/hardware/latest")
 def get_latest_telemetry(user_id: Optional[str] = None):
-    """
-    Retrieves the latest buffered telemetry for inspection and frontend synchronization.
-    """
+    """Retrieves the latest buffered telemetry for inspection and frontend synchronization."""
+    if user_id and not ID_REGEX.match(user_id):
+        raise HTTPException(status_code=422, detail="Invalid user_id parameter.")
+
     history = load_persistent_ledger(user_id=user_id, limit=1)
     latest = history[-1] if history else (TELEMETRY_LEDGER[-1] if TELEMETRY_LEDGER else None)
     return {"count": len(history), "latest": latest}
@@ -533,14 +784,14 @@ def get_latest_telemetry(user_id: Optional[str] = None):
 
 @app.get("/api/hardware/history")
 def get_hardware_history(
-    user_id: Optional[str] = "user_12345",
+    user_id: Optional[str] = None,
     limit: int = 100,
     exclude_simulated: bool = False
 ):
-    """
-    Retrieves persisted time-series hardware readings from durable ledger.
-    Allows filtering out simulated Wokwi data for official energy audits.
-    """
+    """Retrieves persisted time-series hardware readings from durable ledger."""
+    if user_id and not ID_REGEX.match(user_id):
+        raise HTTPException(status_code=422, detail="Invalid user_id parameter.")
+
     records = load_persistent_ledger(user_id=user_id, limit=limit)
     if exclude_simulated:
         records = [r for r in records if not r.get("is_simulated", False)]
@@ -548,24 +799,23 @@ def get_hardware_history(
         "user_id": user_id,
         "count": len(records),
         "records": records,
-        "source_disclaimer": "Wokwi simulated readings are tagged with is_simulated=True and excluded when exclude_simulated=True"
+        "source_disclaimer": "Wokwi simulated readings are tagged with is_simulated=True"
     }
 
 
 @app.get("/api/hardware/analytics")
 def get_hardware_analytics(
-    user_id: Optional[str] = "user_12345",
+    user_id: Optional[str] = None,
     baseline_daily_kwh: float = 8.5
 ):
-    """
-    Data-backed electricity and carbon analytics:
-    - Numerical trapezoidal power integration over elapsed time into kWh
-    - Explicit detection and rejection of missing-data gaps (> 60s)
-    - Data coverage sample quality percentage
-    - Carbon emissions calculation using official CEA 0.71 kg CO2/kWh factor
-    - Energy-saving reward rule (version 2026.1-SAVINGS)
-    """
+    """Data-backed electricity and carbon analytics using configured CEA emission factor."""
+    if user_id and not ID_REGEX.match(user_id):
+        raise HTTPException(status_code=422, detail="Invalid user_id parameter.")
+
     records = load_persistent_ledger(user_id=user_id, limit=500)
+    emission_config = get_remote_or_cached_config("emissionFactors")
+    grid_co2_factor = float(emission_config.get("gridCo2PerKwh", 0.71))
+
     if not records:
         return {
             "user_id": user_id,
@@ -577,10 +827,9 @@ def get_hardware_analytics(
             "current_amps": 0.0,
             "total_kwh": 0.0,
             "co2_kg_estimate": 0.0,
-            "is_simulated": user_id == "user_12345"
+            "is_simulated": True
         }
 
-    # Sort readings chronologically
     sorted_records = sorted(records, key=lambda x: x.get("timestamp", 0))
     is_simulated = any(r.get("is_simulated", True) for r in sorted_records)
 
@@ -596,7 +845,6 @@ def get_hardware_analytics(
         if dt <= 0:
             continue
         elif dt > 60:
-            # Missing data gap: do not assume last reading persisted indefinitely
             gap_count += 1
             continue
         else:
@@ -612,10 +860,9 @@ def get_hardware_analytics(
     span_seconds = max(1, last_t - first_t)
     coverage_pct = min(100.0, round((monitored_seconds / span_seconds) * 100.0, 1)) if span_seconds > 0 else 0.0
 
-    co2_kg = round(total_kwh * CO2_GRID_FACTOR_KG_PER_KWH, 3)
+    co2_kg = round(total_kwh * grid_co2_factor, 3)
     latest_rec = sorted_records[-1]
 
-    # Baseline comparison and audited energy-saving reward calculation
     savings_info = {}
     if monitored_seconds >= 60 and coverage_pct >= 50.0:
         expected_baseline_kwh = (baseline_daily_kwh / 86400.0) * monitored_seconds
@@ -642,9 +889,9 @@ def get_hardware_analytics(
         "status": "success",
         "is_simulated": is_simulated,
         "source_label": "Simulated (Wokwi ESP32 Bridge)" if is_simulated else "Meter Measured Telemetry",
-        "grid_emission_factor": CO2_GRID_FACTOR_KG_PER_KWH,
+        "grid_emission_factor": grid_co2_factor,
         "grid_emission_factor_unit": "kg CO2e / kWh",
-        "grid_emission_factor_source": "Central Electricity Authority (CEA) Baseline v2026 / GEDA",
+        "grid_emission_factor_source": emission_config.get("source", "Central Electricity Authority (CEA) v20.0 (Dec 2024)"),
         "instantaneous_watts": latest_rec.get("current_wattage", 0),
         "voltage": latest_rec.get("voltage", 230.0),
         "current_amps": latest_rec.get("current", 0.0),
@@ -662,7 +909,7 @@ def get_hardware_analytics(
 @app.get("/api/insights")
 def get_insights(
     role: str = "citizen",
-    user_id: Optional[str] = "user_12345",
+    user_id: Optional[str] = None,
     time_range: str = "30d",
     interval: Optional[str] = None,
     start_date: Optional[str] = None,
@@ -672,26 +919,25 @@ def get_insights(
 ):
     """
     Unified Role-Governed Insights API with server-side authorization:
-    - Enforces role-based boundaries (Citizen cannot inspect other users' private metrics).
+    - Enforces role-based boundaries.
     - Converts all time series grouping into Asia/Kolkata (IST).
-    - Trapezoidal power integration over selected time window.
-    - CEA v2026 grid emission factor (0.71 kg CO2/kWh).
-    - Energy-saving reward rule (v2026.1-SAVINGS).
-    - Data quality, coverage percentage, and gap rejection.
+    - Uses configured CEA grid emission factor.
     """
     clean_role = (role or "citizen").lower()
     valid_roles = ["citizen", "student", "campus_leader", "solar_vendor", "solar_partner", "admin"]
     if clean_role not in valid_roles:
         raise HTTPException(status_code=400, detail=f"Invalid profile role: {role}")
 
-    # RBAC Data Isolation Check: Non-admins cannot request all users' data
+    if user_id and not ID_REGEX.match(user_id):
+        raise HTTPException(status_code=422, detail="Invalid user_id parameter.")
+
+    # RBAC Data Isolation Check: Non-admins cannot request aggregate insights without user_id
     if clean_role in ["citizen", "student"] and not user_id:
         raise HTTPException(status_code=403, detail="Access denied: Authenticated user_id required for citizen/student insights.")
 
     tz = get_kolkata_tz()
     now_ist = datetime.now(tz)
 
-    # 1. Determine time boundaries in Asia/Kolkata
     if time_range == "today":
         start_dt = datetime(now_ist.year, now_ist.month, now_ist.day, 0, 0, 0, tzinfo=tz)
         end_dt = now_ist
@@ -712,9 +958,12 @@ def get_insights(
         try:
             start_dt = datetime.fromisoformat(start_date).replace(tzinfo=tz)
             end_dt = datetime.fromisoformat(end_date).replace(tzinfo=tz) if end_date else now_ist
-        except Exception:
-            start_dt = now_ist - timedelta(days=30)
-            end_dt = now_ist
+        except (ValueError, TypeError) as parse_err:
+            logger.warning(f"Invalid date format in custom range query: {parse_err}")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Invalid ISO date format for start_date or end_date."
+            )
         chosen_interval = interval or "daily"
     else:
         start_dt = now_ist - timedelta(days=30)
@@ -724,18 +973,15 @@ def get_insights(
     start_ts = start_dt.timestamp()
     end_ts = end_dt.timestamp()
 
-    # 2. Retrieve persisted records scoped by role
     target_uid = user_id if clean_role in ["citizen", "student"] else None
     raw_records = load_persistent_ledger(user_id=target_uid, limit=1000)
     
-    # Filter by timestamp window
     records = [
         r for r in raw_records
         if start_ts <= float(r.get("timestamp", 0)) <= end_ts
     ]
     records = sorted(records, key=lambda x: x.get("timestamp", 0))
 
-    # 3. Trapezoidal power integration
     total_kwh = 0.0
     monitored_seconds = 0
     gap_count = 0
@@ -760,13 +1006,13 @@ def get_insights(
     span_seconds = max(1.0, end_ts - start_ts)
     coverage_pct = min(100.0, round((monitored_seconds / span_seconds) * 100.0, 1))
 
-    # 4. Instantaneous wattage vs accumulated energy (kWh)
     latest_reading = records[-1] if records else (TELEMETRY_LEDGER[-1] if TELEMETRY_LEDGER else None)
     instantaneous_watts = float(latest_reading.get("current_wattage", 0)) if latest_reading else 0.0
-    is_simulated = latest_reading.get("is_simulated", True) if latest_reading else (user_id == "user_12345")
+    is_simulated = latest_reading.get("is_simulated", True) if latest_reading else True
 
-    # 5. CO2 calculations (CEA 0.71 factor)
-    co2_kg = round(total_kwh * CO2_GRID_FACTOR_KG_PER_KWH, 3)
+    emission_config = get_remote_or_cached_config("emissionFactors")
+    grid_co2_factor = float(emission_config.get("gridCo2PerKwh", 0.71))
+    co2_kg = round(total_kwh * grid_co2_factor, 3)
 
     return {
         "status": "success",
@@ -782,7 +1028,7 @@ def get_insights(
             "instantaneous_power": "Watts (W)",
             "accumulated_energy": "Kilowatt-Hours (kWh)",
             "carbon_emissions": "kg CO2e",
-            "grid_emission_factor": f"{CO2_GRID_FACTOR_KG_PER_KWH} kg CO2e / kWh"
+            "grid_emission_factor": f"{grid_co2_factor} kg CO2e / kWh"
         },
         "power_telemetry": {
             "instantaneous_watts": instantaneous_watts,
@@ -802,16 +1048,4 @@ def get_insights(
             "message": "Not enough historical data to forecast yet (Requires at least 7 active monitoring days; currently 1 day tracked)." if len(records) < 70 else "7-day linear trailing forecast available",
             "projected_next_month_kwh": None
         }
-    }
-
-
-@app.get("/health")
-def health_check():
-    return {
-        "status": "online",
-        "service": "Mission LiFE ML & Hardware Microservice",
-        "model_loaded": yolo_model is not None,
-        "firestore_connected": firestore_client is not None,
-        "buffered_telemetry_count": len(TELEMETRY_LEDGER),
-        "supported_appliances": list(APPLIANCE_SPECS.keys())
     }

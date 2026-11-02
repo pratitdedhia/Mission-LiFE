@@ -1,0 +1,23 @@
+{
+  "id": "subsidyRules",
+  "schemeName": "PM Surya Ghar: Muft Bijli Yojana & Gujarat GEDA Subsidy",
+  "centralSubsidyTiers": [
+    { "capacityKw": 1, "subsidyAmountInr": 30000 },
+    { "capacityKw": 2, "subsidyAmountInr": 60000 },
+    { "capacityKw": 3, "subsidyAmountInr": 78000 }
+  ],
+  "maxCentralSubsidyInr": 78000,
+  "stateBonusInr": 0,
+  "benchmarkCostPerKwInr": 55000,
+  "annualSolarIrradianceGujaratKwhPerM2": 5.4,
+  "avgGenerationPerKwPerDayKwh": 4.3,
+  "annualDegradationPercent": 0.7,
+  "systemLifespanYears": 25,
+  "gridFeedInTariffInrPerKwh": 2.25,
+  "source": "Ministry of New and Renewable Energy (MNRE) PM Surya Ghar Operational Guidelines (Notification dated 13 Feb 2024)",
+  "sourceUrl": "https://pmsuryaghar.gov.in",
+  "year": 2024,
+  "provisional": false,
+  "lastVerified": "2026-10-31T00:00:00Z"
+}
+

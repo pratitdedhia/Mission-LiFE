@@ -1,0 +1,107 @@
+[
+  {
+    "type": "air_conditioner",
+    "name": "Inverter Air Conditioner (1.5 Ton, 5-Star)",
+    "category": "Cooling",
+    "icon": "❄️",
+    "defaultWattage": 1450,
+    "defaultDailyHours": 8,
+    "dutyCycle": 0.70,
+    "monthlyCo2e": 172.5,
+    "tip": "Set thermostat to 24°C–26°C with ceiling fan on low speed to save 24% domestic power.",
+    "targetMissions": ["clean_ac_filter", "ac_warrior"],
+    "yoloClass": "refrigerator"
+  },
+  {
+    "type": "refrigerator",
+    "name": "Frost-Free Refrigerator (260L, 4-Star)",
+    "category": "Refrigeration",
+    "icon": "🧊",
+    "defaultWattage": 220,
+    "defaultDailyHours": 24,
+    "dutyCycle": 0.40,
+    "monthlyCo2e": 45.4,
+    "tip": "Maintain 2-inch clearance behind cooling coils and set temperature to 3°C to 5°C.",
+    "targetMissions": ["fridge_coil_clearance"],
+    "yoloClass": "refrigerator"
+  },
+  {
+    "type": "washing_machine",
+    "name": "Front-Load Washing Machine (7 kg, Inverter)",
+    "category": "Laundry",
+    "icon": "🧺",
+    "defaultWattage": 650,
+    "defaultDailyHours": 1.0,
+    "dutyCycle": 0.80,
+    "monthlyCo2e": 11.1,
+    "tip": "Wash with cold water (30°C); heating water accounts for 85-90% of cycle electricity.",
+    "targetMissions": ["cold_water_wash", "peak_shifter"],
+    "yoloClass": "washing machine"
+  },
+  {
+    "type": "microwave",
+    "name": "Microwave Convection Oven (28L)",
+    "category": "Kitchen",
+    "icon": "♨️",
+    "defaultWattage": 1100,
+    "defaultDailyHours": 0.5,
+    "dutyCycle": 1.0,
+    "monthlyCo2e": 11.7,
+    "tip": "Switch off at wall plug when idle to eliminate 3W continuous phantom standby power.",
+    "targetMissions": ["microwave_phantom_switch"],
+    "yoloClass": "microwave"
+  },
+  {
+    "type": "water_heater_geyser",
+    "name": "Storage Water Geyser (25L, 5-Star)",
+    "category": "Water Heating",
+    "icon": "🚿",
+    "defaultWattage": 2000,
+    "defaultDailyHours": 1.2,
+    "dutyCycle": 0.90,
+    "monthlyCo2e": 58.2,
+    "tip": "Install a 15-minute timer shutoff; never leave heating elements on standby throughout the day.",
+    "targetMissions": ["geyser_timer_shutoff"],
+    "yoloClass": "toaster"
+  },
+  {
+    "type": "television",
+    "name": "Smart 4K UHD LED Television (55\")",
+    "category": "Entertainment",
+    "icon": "📺",
+    "defaultWattage": 110,
+    "defaultDailyHours": 5.0,
+    "dutyCycle": 1.0,
+    "monthlyCo2e": 14.2,
+    "tip": "Lower backlight from 100% to 70% to cut display consumption by 28%.",
+    "targetMissions": ["tv_backlight_eco"],
+    "yoloClass": "tv"
+  },
+  {
+    "type": "ceiling_fan",
+    "name": "BLDC Energy Saver Smart Ceiling Fan",
+    "category": "Circulation",
+    "icon": "🌀",
+    "defaultWattage": 32,
+    "defaultDailyHours": 12.0,
+    "dutyCycle": 1.0,
+    "monthlyCo2e": 6.8,
+    "tip": "Brushless DC motors use 65% less power than standard 75W induction ceiling fans.",
+    "targetMissions": ["bldc_fan_upgrade"],
+    "yoloClass": "fan"
+  },
+  {
+    "type": "induction_cooktop",
+    "name": "Electric Induction Cooktop (2000W)",
+    "category": "Cooking",
+    "icon": "⚡",
+    "defaultWattage": 1800,
+    "defaultDailyHours": 1.5,
+    "dutyCycle": 0.85,
+    "monthlyCo2e": 32.0,
+    "tip": "Match pan base diameter to the induction ring for 84% direct thermal transfer efficiency.",
+    "targetMissions": ["induction_eco_cook"],
+    "yoloClass": "oven"
+  }
+]
+

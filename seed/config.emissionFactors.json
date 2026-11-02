@@ -1,0 +1,19 @@
+{
+  "id": "emissionFactors",
+  "gridCo2PerKwh": 0.71,
+  "lpgCo2PerKg": 2.983,
+  "lpgCylinderWeightKg": 14.2,
+  "petrolCo2PerKm": 0.165,
+  "dieselCo2PerKm": 0.185,
+  "cngCo2PerKm": 0.125,
+  "evCo2PerKm": 0.052,
+  "twoWheelerPetrolCo2PerKm": 0.048,
+  "wasteUnsegregatedCo2PerKg": 0.95,
+  "waterPumpingCo2PerKilolitre": 0.42,
+  "source": "Central Electricity Authority (CEA) CO2 Baseline Database for the Indian Power Sector v20.0 (December 2024), Ministry of Power & MoPNG Fuel Reports",
+  "sourceUrl": "https://cea.nic.in/cdm-co2-baseline-database/",
+  "year": 2024,
+  "provisional": false,
+  "lastVerified": "2026-10-31T00:00:00Z"
+}
+

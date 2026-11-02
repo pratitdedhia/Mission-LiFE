@@ -21,7 +21,6 @@ import {
   TrendingUp,
   X
 } from 'lucide-react';
-import { GRID_HOURS } from '../data/initialData';
 import { BRANDING } from '../config/branding';
 
 export default function Navbar({
@@ -49,9 +48,9 @@ export default function Navbar({
     }
   };
 
-  // Check peak hour
+  // Check peak hour (GERC Standard 18:00 to 22:00 IST)
   const currentHour = new Date().getHours();
-  const isPeakHour = GRID_HOURS.peakHours.includes(currentHour);
+  const isPeakHour = currentHour >= 18 && currentHour < 22;
 
   const navigateToHome = () => {
     if (user?.role === 'solar_vendor') setActiveTab('solar_vendor');

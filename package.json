@@ -7,6 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "seed": "tsx scripts/seed.ts",
+    "test": "vitest run",
+    "test:rules": "vitest run tests/rules",
+    "check:hardcoding": "vitest run tests/unit/noHardcodedData.test.ts",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },
@@ -26,10 +30,16 @@
     "@tailwindcss/vite": "^4.0.0",
     "@types/node": "^26.6.6",
     "@vitejs/plugin-react": "^4.3.4",
+    "cross-env": "^10.1.0",
+    "firebase-admin": "^14.5.0",
     "gh-pages": "^6.3.0",
     "tailwindcss": "^4.0.0",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^6.1.0",
     "vitest": "^5.0.5"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.14.7"
   }
 }

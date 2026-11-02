@@ -1,0 +1,25 @@
+{
+  "id": "scoring",
+  "dailyCap": 300,
+  "baselineDailyKwh": 8.5,
+  "expectedSavingsFactor": 0.12,
+  "streakBonusMultiplier": 0.05,
+  "maxStreakBonus": 0.50,
+  "pointsPerKgCo2": 25,
+  "basePointsPerMission": 50,
+  "photoProofBonus": 25,
+  "levels": [
+    { "level": 1, "minPoints": 0, "title": "Prakriti Aarambhik" },
+    { "level": 2, "minPoints": 200, "title": "Campus Eco Volunteer" },
+    { "level": 3, "minPoints": 500, "title": "Prakriti Mitra" },
+    { "level": 4, "minPoints": 1000, "title": "Urja Rakshak" },
+    { "level": 5, "minPoints": 1800, "title": "Campus Climate Champion" },
+    { "level": 6, "minPoints": 2800, "title": "GEDA Solar Partner" },
+    { "level": 7, "minPoints": 4000, "title": "State Conservation Lead" }
+  ],
+  "source": "GEDA Mission LiFE Gamification Framework Specification v2026.1",
+  "year": 2026,
+  "provisional": false,
+  "lastVerified": "2026-10-31T00:00:00Z"
+}
+

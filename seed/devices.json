@@ -1,0 +1,23 @@
+[
+  {
+    "id": "appliance_ac_01",
+    "simulated": true,
+    "ownerUid": "usr_citizen_pooja",
+    "name": "Living Room Inverter AC (1.5 Ton)",
+    "type": "air_conditioner",
+    "ratedWatts": 1450,
+    "location": "Living Room",
+    "discom": "UGVCL",
+    "district": "Ahmedabad",
+    "createdAt": "2026-10-01T00:00:00Z",
+    "status": "online",
+    "lastTelemetry": {
+      "wattage": 1450,
+      "voltage": 230,
+      "current": 6.3,
+      "powerFactor": 0.95,
+      "timestamp": "2026-11-01T20:00:00Z"
+    }
+  }
+]
+

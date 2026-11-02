@@ -16,145 +16,76 @@ import {
   orderBy,
   updateDoc 
 } from 'firebase/firestore';
+import { getCatalog, getCachedCatalog } from './catalogService';
 
 // Fallback local storage key template
 const INVENTORY_STORAGE_KEY = (uid) => `life_user_appliances_${uid || 'usr_default'}`;
 
 /**
- * Standard Gujarat Appliance Presets Catalog with verified CEA / BEE star metrics
+ * Fetch appliance catalog presets dynamically from Firestore applianceCatalog collection or cache
  */
-export const APPLIANCE_PRESETS = [
+export const APPLIANCE_PRESETS = getCachedCatalog('applianceCatalog') || [
   {
-    type: 'air_conditioner',
-    name: 'Inverter Air Conditioner (1.5 Ton, 5-Star)',
-    category: 'Cooling',
-    icon: '❄️',
+    type: "air_conditioner",
+    name: "Inverter Air Conditioner",
+    category: "Cooling",
+    icon: "❄️",
     defaultWattage: 1450,
     defaultDailyHours: 8,
     dutyCycle: 0.70,
     monthlyCo2e: 172.5,
-    tip: 'Set thermostat to 24°C–26°C with ceiling fan on low speed to save 24% domestic power.',
-    targetMissions: ['clean_ac_filter', 'ac_warrior']
+    tip: "Set thermostat to 24°C–26°C with ceiling fan on low speed."
   },
   {
-    type: 'refrigerator',
-    name: 'Frost-Free Refrigerator (260L, 4-Star)',
-    category: 'Refrigeration',
-    icon: '🧊',
+    type: "refrigerator",
+    name: "Frost-Free Refrigerator",
+    category: "Refrigeration",
+    icon: "🧊",
     defaultWattage: 220,
     defaultDailyHours: 24,
     dutyCycle: 0.40,
     monthlyCo2e: 45.4,
-    tip: 'Maintain 2-inch clearance behind cooling coils and set temperature to 3°C to 5°C.',
-    targetMissions: ['fridge_coil_clearance']
+    tip: "Maintain 2-inch clearance behind cooling coils."
   },
   {
-    type: 'washing_machine',
-    name: 'Front-Load Washing Machine (7 kg, Inverter)',
-    category: 'Laundry',
-    icon: '🧺',
+    type: "washing_machine",
+    name: "Front-Load Washing Machine",
+    category: "Laundry",
+    icon: "🧺",
     defaultWattage: 650,
     defaultDailyHours: 1.0,
     dutyCycle: 0.80,
     monthlyCo2e: 11.1,
-    tip: 'Wash with cold water (30°C); heating water accounts for 85-90% of cycle electricity.',
-    targetMissions: ['cold_water_wash', 'peak_shifter']
+    tip: "Wash with cold water to save power."
   },
   {
-    type: 'microwave',
-    name: 'Microwave Convection Oven (28L)',
-    category: 'Kitchen',
-    icon: '♨️',
+    type: "microwave",
+    name: "Microwave Convection Oven",
+    category: "Kitchen",
+    icon: "♨️",
     defaultWattage: 1100,
     defaultDailyHours: 0.5,
     dutyCycle: 1.0,
     monthlyCo2e: 11.7,
-    tip: 'Switch off at wall plug when idle to eliminate 3W continuous phantom standby power.',
-    targetMissions: ['microwave_phantom_switch']
+    tip: "Switch off at wall plug when idle."
   },
   {
-    type: 'water_heater_geyser',
-    name: 'Storage Water Geyser (25L, 5-Star)',
-    category: 'Water Heating',
-    icon: '🚿',
-    defaultWattage: 2000,
-    defaultDailyHours: 1.2,
-    dutyCycle: 0.90,
-    monthlyCo2e: 58.2,
-    tip: 'Install a 15-minute timer shutoff; never leave heating elements on standby throughout the day.',
-    targetMissions: ['geyser_timer_shutoff']
-  },
-  {
-    type: 'television',
-    name: 'Smart 4K UHD LED Television (55")',
-    category: 'Entertainment',
-    icon: '📺',
+    type: "tv",
+    name: "Smart Television / Display",
+    category: "Entertainment",
+    icon: "📺",
     defaultWattage: 110,
-    defaultDailyHours: 5.0,
+    defaultDailyHours: 5,
     dutyCycle: 1.0,
-    monthlyCo2e: 14.2,
-    tip: 'Lower backlight from 100% to 70% to cut display consumption by 28%.',
-    targetMissions: ['tv_backlight_eco']
-  },
-  {
-    type: 'ceiling_fan',
-    name: 'BLDC Energy Saver Smart Ceiling Fan',
-    category: 'Circulation',
-    icon: '🌀',
-    defaultWattage: 32,
-    defaultDailyHours: 12.0,
-    dutyCycle: 1.0,
-    monthlyCo2e: 6.8,
-    tip: 'Brushless DC motors use 65% less power than standard 75W induction ceiling fans.',
-    targetMissions: ['bldc_fan_upgrade']
-  },
-  {
-    type: 'induction_cooktop',
-    name: 'Electric Induction Cooktop (2000W)',
-    category: 'Cooking',
-    icon: '⚡',
-    defaultWattage: 1800,
-    defaultDailyHours: 1.5,
-    dutyCycle: 0.85,
-    monthlyCo2e: 32.0,
-    tip: 'Match pan base diameter to the induction ring for 84% direct thermal transfer efficiency.',
-    targetMissions: ['induction_eco_cook']
+    monthlyCo2e: 11.7,
+    tip: "Avoid standby vampire draw."
   }
 ];
 
-// Initial seeded inventory for demo/citizen default
-export const SEED_INVENTORY = [
-  {
-    id: 'app_seed_ac',
-    appliance_type: 'air_conditioner',
-    appliance_name: 'Inverter Air Conditioner (1.5 Ton)',
-    category: 'Cooling',
-    wattage: 1450,
-    daily_hours: 8,
-    duty_cycle: 0.70,
-    monthly_co2e: 172.5,
-    room_location: 'Master Bedroom',
-    source: 'yolov8_scan',
-    confidence: 0.94,
-    energy_saving_nudge: 'Set thermostat to 26°C with ceiling fan on low speed.',
-    created_at: new Date(Date.now() - 3 * 86400000).toISOString()
-  },
-  {
-    id: 'app_seed_fridge',
-    appliance_type: 'refrigerator',
-    appliance_name: 'Frost-Free Refrigerator (260L)',
-    category: 'Refrigeration',
-    wattage: 220,
-    daily_hours: 24,
-    duty_cycle: 0.40,
-    monthly_co2e: 45.4,
-    room_location: 'Kitchen',
-    source: 'manual_entry',
-    confidence: 1.0,
-    energy_saving_nudge: 'Maintain 2-inch clearance behind coils for ventilation.',
-    created_at: new Date(Date.now() - 2 * 86400000).toISOString()
-  }
-];
+export async function getAppliancePresets() {
+  const result = await getCatalog('applianceCatalog');
+  return result.data || [];
+}
 
 /**
  * Fetch all appliances from Firestore subcollection `users/{uid}/appliances`
@@ -168,14 +99,9 @@ export async function getAppliances(uid = 'usr_citizen') {
     const raw = localStorage.getItem(localKey);
     if (raw) {
       localData = JSON.parse(raw);
-    } else {
-      // Seed initial sample inventory on first access
-      localData = SEED_INVENTORY;
-      localStorage.setItem(localKey, JSON.stringify(localData));
     }
   } catch (err) {
     console.warn("Local inventory retrieval error:", err);
-    localData = SEED_INVENTORY;
   }
 
   if (!isFirebaseConnected || !db) {
@@ -213,7 +139,8 @@ export async function getAppliances(uid = 'usr_citizen') {
  */
 export async function addAppliance(uid = 'usr_citizen', applianceData) {
   const localKey = INVENTORY_STORAGE_KEY(uid);
-  const newId = applianceData.id || `app_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const randSuffix = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : Date.now().toString(36);
+  const newId = applianceData.id || `app_${Date.now()}_${randSuffix}`;
   
   const record = {
     id: newId,

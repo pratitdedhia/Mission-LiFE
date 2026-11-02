@@ -1,0 +1,25 @@
+[
+  {
+    "id": "reward_torrent_green_discount",
+    "title": "Torrent Power Green Citizen Rebate",
+    "partnerName": "Torrent Power Green Citizen Club",
+    "category": "electricity",
+    "pointsCost": 400,
+    "voucherValueInr": 250,
+    "discountDetails": "Rebate on next domestic electricity bill",
+    "expiryDays": 45,
+    "stockAvailable": 250
+  },
+  {
+    "id": "reward_geda_led_kit",
+    "title": "GEDA LED Efficiency Kit",
+    "partnerName": "GEDA Energy Efficiency Mission",
+    "category": "appliances",
+    "pointsCost": 600,
+    "voucherValueInr": 500,
+    "discountDetails": "Pack of 4 BEE 5-Star 9W LED lamps at district center",
+    "expiryDays": 60,
+    "stockAvailable": 500
+  }
+]
+

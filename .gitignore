@@ -22,6 +22,11 @@ functions/lib/
 .env.local
 .env.*.local
 *.local
+*adminsdk*.json
+serviceAccount*.json
+*-firebase-adminsdk-*.json
+*.key
+*.pem
 
 # Editor directories and files
 .vscode/*
@@ -44,3 +49,6 @@ __pycache__/
 firebase-debug.log*
 firestore-debug.log*
 ui-debug.log*
+
+# Microservice runtime disk ledger
+microservice/telemetry_store.jsonl

@@ -25,7 +25,6 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { BRANDING } from '../config/branding';
-import { DEMO_USERS, LIFE_THEMES } from '../data/initialData';
 
 export default function LandingPage({ 
   onOpenLogin, 
@@ -371,7 +370,7 @@ export default function LandingPage({
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-amber-600" />
-                  <span>PM Surya Ghar CFA Subsidy Engine (₹78k)</span>
+                  <span>PM Surya Ghar CFA Subsidy Engine</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-amber-600" />
@@ -419,7 +418,7 @@ export default function LandingPage({
               </div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Rooftop Solar</h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                PM Surya Ghar Muft Bijli Yojana calculation with up to ₹78,000 CFA subsidy.
+                PM Surya Ghar Muft Bijli Yojana calculation with direct Central CFA subsidy.
               </p>
             </div>
           </div>

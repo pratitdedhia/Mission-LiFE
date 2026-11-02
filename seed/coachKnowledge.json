@@ -1,0 +1,52 @@
+[
+  {
+    "id": "tip_ac_temp",
+    "category": "energy",
+    "keywords": ["ac", "air conditioner", "cooling", "temperature", "thermostat"],
+    "response": "Setting your AC to 24°C–26°C with a ceiling fan at low speed saves approximately 6% electricity per degree increase compared to running at 18°C–20°C. In Gujarat's climate, this reduces peak grid demand and lowers monthly bills significantly.",
+    "source": "Bureau of Energy Efficiency (BEE) & GEDA Guidelines"
+  },
+  {
+    "id": "tip_peak_hours",
+    "category": "tariffs",
+    "keywords": ["peak", "hours", "tod", "tariff", "rate", "evening"],
+    "response": "In Gujarat (GERC tariff schedule), peak grid hours run from 6:00 PM to 10:00 PM (18:00–22:00 IST). Avoid running high-wattage appliances like washing machines, dishwashers, and water heaters during this window. Running them during daytime solar hours or late night saves cost and eases grid stress.",
+    "source": "GERC Tariff Order & Gujarat DISCOM Regulations"
+  },
+  {
+    "id": "tip_solar_subsidy",
+    "category": "solar",
+    "keywords": ["solar", "subsidy", "pm surya ghar", "rooftop", "cfa", "cost"],
+    "response": "Under PM Surya Ghar: Muft Bijli Yojana, residential consumers receive Central Financial Assistance (CFA) of ₹30,000 for 1 kW, ₹60,000 for 2 kW, and up to ₹78,000 for 3 kW and higher. Systems typically generate 4.3 kWh per kW per day in Gujarat, with a payback period of ~3.5 to 4 years.",
+    "source": "MNRE Notification & PM Surya Ghar National Portal"
+  },
+  {
+    "id": "tip_water_saving",
+    "category": "water",
+    "keywords": ["water", "tap", "aerator", "shower", "leak"],
+    "response": "Installing water-saving aerators on kitchen and bathroom taps can reduce water flow by 50% without dropping pressure. Fixing a slow drip saves up to 15,000 liters per year, and reduces municipal energy consumption needed to pump and treat water.",
+    "source": "Mission LiFE Technical Guidance Note"
+  },
+  {
+    "id": "tip_plastic_reduction",
+    "category": "plastic",
+    "keywords": ["plastic", "bag", "single-use", "bottle", "packaging"],
+    "response": "Carrying a reusable cloth tote bag and a stainless steel water bottle eliminates hundreds of single-use plastic items annually. Gujarat generates over 350 tonnes of plastic waste daily; source reduction is the most effective mitigation strategy.",
+    "source": "Gujarat Pollution Control Board (GPCB) Annual Report"
+  },
+  {
+    "id": "tip_waste_composting",
+    "category": "waste",
+    "keywords": ["waste", "segregation", "wet", "dry", "compost", "garbage"],
+    "response": "Segregate wet organic waste from dry recyclables at the source. Composting kitchen scraps at home or via municipal wet-waste collection prevents methane generation in landfills and creates rich organic compost for plants.",
+    "source": "Swachh Bharat Mission (Urban) & Mission LiFE Action Guide"
+  },
+  {
+    "id": "tip_ewaste",
+    "category": "ewaste",
+    "keywords": ["ewaste", "e-waste", "electronics", "phone", "battery", "cables"],
+    "response": "Never dispose of electronic waste, batteries, or charger cables with municipal dry waste. Deposit them at authorized GEDA / CPCB collection centers to ensure toxic heavy metals like lead and cadmium are safely recovered and recycled.",
+    "source": "E-Waste (Management) Rules 2022"
+  }
+]
+

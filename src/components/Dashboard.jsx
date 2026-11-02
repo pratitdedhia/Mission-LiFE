@@ -24,7 +24,7 @@ import {
   X
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { GRID_HOURS } from '../data/initialData';
+import { useConfig } from '../services/configService';
 import { BRANDING } from '../config/branding';
 import BehaviorLoopCard from './BehaviorLoopCard';
 import { getCityWeather } from '../services/weatherService';
@@ -35,6 +35,8 @@ import {
   ENERGY_SAVING_REWARD_RULE 
 } from '../services/analyticsService';
 import { resolveLiveNudge } from '../services/nudgeService';
+import { apiClient, resolveUserMeterId } from '../services/apiClient';
+import { logger } from '../utils/logger';
 
 export default function Dashboard({ 
   user = {}, 
@@ -70,16 +72,25 @@ export default function Dashboard({
   }, [user.id, user.lifeScore, iotWatts]);
 
   useEffect(() => {
-    // Read the latest telemetry sent by the Wokwi ESP32 to the FastAPI service.
-    // Keep this demo ID in sync with userId in the Wokwi sketch.
+    // Read the latest telemetry sent by the IoT smart meter / Wokwi ESP32
     let isMounted = true;
+    let timeoutId = null;
+    let backoffDelay = 6000;
 
     const loadTelemetry = async () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        if (isMounted) {
+          timeoutId = setTimeout(loadTelemetry, 10000);
+        }
+        return;
+      }
+
       try {
-        const response = await fetch(
-          'https://mission-life.onrender.com/api/hardware/latest?user_id=user_12345',
-          { cache: 'no-store' }
-        );
+        const meterId = resolveUserMeterId(user);
+        const response = await apiClient.get('/api/hardware/latest', { user_id: meterId }, {
+          timeoutMs: 5000,
+          cache: 'no-store'
+        });
 
         if (!response.ok) {
           throw new Error('Telemetry API returned HTTP ' + response.status);
@@ -96,6 +107,7 @@ export default function Dashboard({
         if (!isMounted) return;
 
         setIotOnline(isFresh);
+        backoffDelay = 6000;
 
         if (isFresh) {
           const watts = Number(reading.current_wattage) || 0;
@@ -117,21 +129,38 @@ export default function Dashboard({
         }
       } catch (error) {
         if (!isMounted) return;
-        console.error('Could not load Wokwi telemetry:', error);
+        logger.warn('Could not load hardware telemetry:', error.message);
         setIotOnline(false);
         setHardwareNudge(null);
         setNudgeMeta(null);
+        backoffDelay = Math.min(backoffDelay * 1.5, 30 * 1000);
+      } finally {
+        if (isMounted) {
+          timeoutId = setTimeout(loadTelemetry, backoffDelay);
+        }
       }
     };
 
     loadTelemetry();
-    const interval = setInterval(loadTelemetry, 3000);
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        clearTimeout(timeoutId);
+        loadTelemetry();
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
 
     return () => {
       isMounted = false;
-      clearInterval(interval);
+      if (timeoutId) clearTimeout(timeoutId);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
     };
-  }, []);
+  }, [user?.linkedMeterId, user?.meterId, user?.deviceId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -145,14 +174,19 @@ export default function Dashboard({
     return () => { isMounted = false; };
   }, [user.city]);
 
+  const { data: nudgeRules } = useConfig('nudgeRules');
+  const { data: subsidyRules } = useConfig('subsidyRules');
+
   // Determine current grid hour status (IST)
   const currentHour = new Date().getHours();
-  const isPeakHour = GRID_HOURS.peakHours.includes(currentHour);
-  const isOffPeak = GRID_HOURS.offPeakHours.includes(currentHour);
+  const peakStart = nudgeRules?.peakHoursStart ?? 18;
+  const peakEnd = nudgeRules?.peakHoursEnd ?? 22;
+  const isPeakHour = currentHour >= peakStart && currentHour < peakEnd;
+  const isOffPeak = currentHour >= 22 || currentHour < 6;
 
   const progressPercent = Math.min(
     100,
-    Math.round((community.co2SavedKg / community.co2TargetKg) * 100)
+    Math.round((community.co2SavedKg / (community.co2TargetKg || 200000)) * 100)
   );
 
   return (
@@ -263,7 +297,7 @@ export default function Dashboard({
             </div>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
               {isPeakHour 
-                ? 'Standard Gujarat DISCOM peak period. Deferring washing machines, dishwashers, and EV charging until after 10 PM cuts unit tariffs from ₹9.20 to ₹5.40 and avoids high-emission thermal peaker generation.'
+                ? 'Standard Gujarat DISCOM peak period. Deferring heavy loads until after 10 PM cuts unit tariffs and avoids high-emission thermal peaker generation.'
                 : 'Favorable green solar and wind power prevailing on the regional grid. Optimal window to charge electric vehicles and run high-wattage domestic pumps at lower off-peak rates.'}
             </p>
           </div>
@@ -470,7 +504,7 @@ export default function Dashboard({
                 <p className="text-xl font-black text-amber-600 dark:text-amber-400 mt-1 font-mono">
                   {citizenAnalytics?.telemetry?.co2_kg_estimate ?? 0} <span className="text-xs font-normal">kg</span>
                 </p>
-                <p className="text-[10px] text-slate-400 mt-0.5">At 0.71 kg/kWh (CEA Grid factor)</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">At {GRID_EMISSION_FACTOR_METADATA.factor} kg/kWh (CEA Grid factor)</p>
               </div>
 
               <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60">
@@ -506,7 +540,7 @@ export default function Dashboard({
 
             {/* Simulated Data Badge Disclosure */}
             <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 text-[11px] text-amber-800 dark:text-amber-300 flex items-center justify-between">
-              <span>⚠️ <strong>Simulated Telemetry Indicator:</strong> Readings from Wokwi ESP32 (user_12345) are labeled "Simulated" and excluded from official municipal energy audits.</span>
+              <span>⚠️ <strong>Simulated Telemetry Indicator:</strong> Readings from simulated hardware are labeled "Simulated" and excluded from official municipal energy audits.</span>
               <span className="font-mono font-bold uppercase text-[10px] px-2 py-0.5 rounded bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100">Simulated</span>
             </div>
           </div>
@@ -765,7 +799,7 @@ export default function Dashboard({
                 PM Surya Ghar Muft Bijli
               </span>
               <span className="text-xs font-bold text-amber-600 dark:text-amber-400 font-mono">
-                Up to ₹78,000 Central CFA
+                {subsidyRules?.maxCentralSubsidyInr ? `Up to ₹${subsidyRules.maxCentralSubsidyInr.toLocaleString('en-IN')} Central CFA` : 'Central CFA Subsidy'}
               </span>
             </div>
 
@@ -779,11 +813,15 @@ export default function Dashboard({
             <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
               <div className="bg-white/80 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-200/80 dark:border-slate-700">
                 <span className="text-slate-500 text-[11px] block font-medium">Est. Bill Savings</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-mono font-bold text-sm mt-0.5 block">₹24,500 / yr</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-mono font-bold text-sm mt-0.5 block">
+                  ₹{Math.round((user.monthlyElectricityUnits || 250) * 12 * 0.8 * 6).toLocaleString('en-IN')} / yr
+                </span>
               </div>
               <div className="bg-white/80 dark:bg-slate-800/80 p-3 rounded-xl border border-slate-200/80 dark:border-slate-700">
                 <span className="text-slate-500 text-[11px] block font-medium">Central Subsidy</span>
-                <span className="text-amber-600 dark:text-amber-400 font-mono font-bold text-sm mt-0.5 block">₹78,000 CFA</span>
+                <span className="text-amber-600 dark:text-amber-400 font-mono font-bold text-sm mt-0.5 block">
+                  {subsidyRules?.maxCentralSubsidyInr ? `₹${subsidyRules.maxCentralSubsidyInr.toLocaleString('en-IN')} CFA` : 'Eligible CFA'}
+                </span>
               </div>
             </div>
           </div>

@@ -24,19 +24,14 @@ import {
   removeAppliance, 
   calculateInventoryBaseline,
   syncInventoryBaselineToFirestore 
-} from '../../services/applianceService';
+} from '../services/applianceService';
+import { CO2_GRID_FACTOR_KG_PER_KWH } from '../config/branding';
 
-interface ApplianceInventoryProps {
-  user: any;
-  onNavigate?: (tab: string) => void;
-  onUserUpdate?: (updatedUser: any) => void;
-}
-
-export default function ApplianceInventoryPage({ user = {}, onNavigate, onUserUpdate }: ApplianceInventoryProps) {
-  const [appliances, setAppliances] = useState<any[]>([]);
+export default function ApplianceInventoryPage({ user = {}, onNavigate, onUserUpdate }) {
+  const [appliances, setAppliances] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState(null);
 
   // Form State for Manual Entry
   const [selectedPresetType, setSelectedPresetType] = useState('air_conditioner');
@@ -45,7 +40,7 @@ export default function ApplianceInventoryPage({ user = {}, onNavigate, onUserUp
   const [dailyHours, setDailyHours] = useState(8);
   const [roomLocation, setRoomLocation] = useState('Living Room');
   const [monthlyCo2e, setMonthlyCo2e] = useState(172.5);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Load user appliances
@@ -63,13 +58,13 @@ export default function ApplianceInventoryPage({ user = {}, onNavigate, onUserUp
     return () => { isMounted = false; };
   }, [user?.id]);
 
-  const showToast = (msg: string) => {
+  const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3800);
   };
 
   // Handle Preset Selection Change
-  const handlePresetChange = (type: string) => {
+  const handlePresetChange = (type) => {
     setSelectedPresetType(type);
     const preset = APPLIANCE_PRESETS.find(p => p.type === type) || APPLIANCE_PRESETS[0];
     setCustomName(preset.name);
@@ -78,22 +73,21 @@ export default function ApplianceInventoryPage({ user = {}, onNavigate, onUserUp
     setMonthlyCo2e(preset.monthlyCo2e);
   };
 
-  // Recalculate monthly co2e when wattage or hours change
-  const handleWattageChange = (w: number) => {
+  // Recalculate monthly co2e when wattage or hours change using CEA factor (0.71 kg CO2/kWh)
+  const handleWattageChange = (w) => {
     setWattage(w);
-    // Formula: (Wattage * DailyHours * 30 * 0.82 kg/kWh) / 1000
-    const est = Math.round(((w * dailyHours * 30 * 0.82) / 1000) * 10) / 10;
+    const est = Math.round(((w * dailyHours * 30 * CO2_GRID_FACTOR_KG_PER_KWH) / 1000) * 10) / 10;
     setMonthlyCo2e(est);
   };
 
-  const handleHoursChange = (h: number) => {
+  const handleHoursChange = (h) => {
     setDailyHours(h);
-    const est = Math.round(((wattage * h * 30 * 0.82) / 1000) * 10) / 10;
+    const est = Math.round(((wattage * h * 30 * CO2_GRID_FACTOR_KG_PER_KWH) / 1000) * 10) / 10;
     setMonthlyCo2e(est);
   };
 
   // Apply dynamic baseline across user profile
-  const triggerBaselineUpdate = (currentList: any[]) => {
+  const triggerBaselineUpdate = (currentList) => {
     const dynamicBaseline = calculateInventoryBaseline(currentList, user);
     if (onUserUpdate) {
       onUserUpdate({
@@ -109,7 +103,7 @@ export default function ApplianceInventoryPage({ user = {}, onNavigate, onUserUp
   };
 
   // Add Appliance Handler
-  const handleAddAppliance = async (e: React.FormEvent) => {
+  const handleAddAppliance = async (e) => {
     e.preventDefault();
     setFormError(null);
 
@@ -152,7 +146,7 @@ export default function ApplianceInventoryPage({ user = {}, onNavigate, onUserUp
   };
 
   // Remove Appliance Handler
-  const handleRemoveAppliance = async (id: string, name: string) => {
+  const handleRemoveAppliance = async (id, name) => {
     if (!window.confirm(`Are you sure you want to remove "${name}" from your home inventory?`)) {
       return;
     }
@@ -613,4 +607,3 @@ export default function ApplianceInventoryPage({ user = {}, onNavigate, onUserUp
     </div>
   );
 }
-

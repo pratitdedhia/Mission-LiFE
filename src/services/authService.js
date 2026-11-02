@@ -10,8 +10,8 @@ import {
   signInWithPopup
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { INITIAL_USER, DEMO_USERS } from '../data/initialData';
-import { getAllManagedUsers } from './userManagementService';
+import { getDefaultUserProfile, getCachedCatalog } from './catalogService';
+import { logger } from '../utils/logger';
 
 const LOCAL_AUTH_KEY = 'mission_life_auth_user';
 const SESSION_ACTIVE_KEY = 'life_session_active';
@@ -41,10 +41,15 @@ export function setSessionActive(active) {
 
 export function getStoredUser() {
   try {
+    if (!isSessionActive()) {
+      return getDefaultUserProfile();
+    }
     const raw = localStorage.getItem(LOCAL_AUTH_KEY);
-    return raw ? JSON.parse(raw) : INITIAL_USER;
+    if (!raw) return getDefaultUserProfile();
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : getDefaultUserProfile();
   } catch (e) {
-    return INITIAL_USER;
+    return getDefaultUserProfile();
   }
 }
 
@@ -52,263 +57,306 @@ export function saveStoredUser(userData) {
   try {
     localStorage.setItem(LOCAL_AUTH_KEY, JSON.stringify(userData));
   } catch (e) {
-    console.error("Failed to store user profile in local storage", e);
+    logger.error("Failed to store user profile in local storage", e);
   }
 }
 
-export async function loginWithEmail(email, password, roleHint = null) {
+function mapAuthError(error) {
+  const code = error?.code || '';
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+      return "Incorrect email or password.";
+    case 'auth/invalid-email':
+      return "Invalid email address format.";
+    case 'auth/user-disabled':
+      return "This account has been disabled by an administrator.";
+    case 'auth/too-many-requests':
+      return "Too many unsuccessful login attempts. Please wait a moment and try again.";
+    case 'auth/email-already-in-use':
+      return "This email is already registered. Please sign in instead.";
+    case 'auth/weak-password':
+      return "Password must be at least 6 characters long.";
+    case 'auth/network-request-failed':
+      return "Network error: Unable to connect to the authentication service.";
+    case 'auth/popup-closed-by-user':
+      return "Sign-in popup was closed before completing authentication.";
+    default:
+      return error?.message || "Authentication failed. Please verify your credentials.";
+  }
+}
+
+/**
+ * Signs in a user with email and password via Firebase Auth.
+ * The user's role is strictly resolved from Firestore or custom claims, never from client input.
+ * On failure, returns { success: false, error } with zero fallback sessions created.
+ */
+export async function loginWithEmail(email, password) {
   const cleanEmail = (email || '').trim().toLowerCase();
 
-  // 1. Authoritative check: match demo users instantly by email
-  const demoRole = Object.keys(DEMO_USERS).find(
-    k => DEMO_USERS[k].email.toLowerCase() === cleanEmail
-  );
-  if (demoRole) {
-    const demoProfile = { ...DEMO_USERS[demoRole] };
-    saveStoredUser(demoProfile);
+  if (!auth) {
+    return {
+      success: false,
+      error: "Authentication service is currently unavailable. Please try again later."
+    };
+  }
+
+  try {
+    const userCred = await signInWithEmailAndPassword(auth, cleanEmail, password);
+    const user = userCred.user;
+
+    const profile = await fetchOrCreateUserProfile(user.uid, {
+      name: user.displayName || cleanEmail.split('@')[0],
+      email: user.email,
+      lastLogin: new Date().toISOString()
+    });
+
+    saveStoredUser(profile);
     setSessionActive(true);
-    syncUserProfile(demoProfile).catch(err => console.warn(err));
-    return { success: true, user: demoProfile, isDemoPreset: true };
-  }
-
-  // 2. Query statewide managed users registry
-  let managedUser = null;
-  try {
-    const managedUsers = getAllManagedUsers();
-    managedUser = managedUsers.find(
-      u => u.email?.toLowerCase() === cleanEmail
-    );
-  } catch (e) {
-    console.warn("Managed users lookup fallback:", e);
-  }
-
-  const assignedRole = managedUser?.role || roleHint || 'citizen';
-
-  try {
-    if (auth) {
-      const userCred = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCred.user;
-      // Immediately query their users/{uid} document in Firestore to retrieve assigned role
-      const profile = await fetchOrCreateUserProfile(user.uid, {
-        email: user.email,
-        name: user.displayName || managedUser?.name || email.split('@')[0],
-        role: assignedRole,
-        roleTitle: managedUser?.roleTitle || 'Residential Citizen'
-      });
-      saveStoredUser(profile);
-      setSessionActive(true);
-      return { success: true, user: profile };
-    }
+    syncUserProfile(profile).catch(() => {});
+    return { success: true, user: profile };
   } catch (error) {
-    console.warn("Firebase Auth login error:", error.code, error.message);
-    if (managedUser) {
-      saveStoredUser(managedUser);
-      setSessionActive(true);
-      return { success: true, user: managedUser };
-    }
-    // If auth API is pending enablement in Firebase console, provide resilient fallback
-    if (error.code === 'auth/configuration-not-found' || error.code === 'auth/network-request-failed' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-      const fallbackUser = {
-        ...INITIAL_USER,
-        id: `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '')}`,
-        email: email,
-        name: email.split('@')[0],
-        role: assignedRole,
-        roleTitle: assignedRole === 'student' ? 'Student Volunteer' : 'Residential Citizen'
-      };
-      saveStoredUser(fallbackUser);
-      setSessionActive(true);
-      return { success: true, user: fallbackUser, isFallback: true };
-    }
-    return { success: false, error: error.message };
+    logger.warn("Firebase Auth login failed:", error.code, error.message);
+    return {
+      success: false,
+      error: mapAuthError(error),
+      code: error.code
+    };
   }
 }
 
-export async function loginWithGoogle(roleHint = null) {
-  let matchedManaged = null;
-  try {
-    const managedUsers = getAllManagedUsers();
-    matchedManaged = managedUsers.find(u => u.provider === 'google.com');
-  } catch (e) {}
-
+/**
+ * Signs in with Google Popup via Firebase Auth.
+ * Role is strictly derived from Firestore, never from client parameters.
+ */
+export async function loginWithGoogle() {
   if (!auth) {
-    const assignedRole = matchedManaged?.role || roleHint || 'citizen';
-    const basePreset = DEMO_USERS[assignedRole] || DEMO_USERS.citizen;
-    const fallbackUser = {
-      ...basePreset,
-      id: `usr_google_${Date.now()}`,
-      name: `${basePreset.name} (Google)`,
-      email: basePreset.email,
-      role: assignedRole,
-      provider: 'google.com'
+    return {
+      success: false,
+      error: "Google Authentication service is currently unavailable."
     };
-    saveStoredUser(fallbackUser);
-    setSessionActive(true);
-    return { success: true, user: fallbackUser, isFallback: true };
   }
 
   try {
     const result = await signInWithPopup(auth, googleProvider);
     const googleUser = result.user;
 
-    // Immediately query users/{uid} document in Firestore to retrieve assigned role
     const profile = await fetchOrCreateUserProfile(googleUser.uid, {
       name: googleUser.displayName || googleUser.email.split('@')[0],
       email: googleUser.email,
       photoURL: googleUser.photoURL,
-      role: roleHint || 'citizen', // Default assignment: brand new user created with role: 'citizen'
-      roleTitle: 'Residential Citizen',
       provider: 'google.com',
       lastLogin: new Date().toISOString()
     });
 
     saveStoredUser(profile);
     setSessionActive(true);
-
-    syncUserProfile(profile).catch((err) => {
-      console.warn("Background Firestore user sync:", err);
-    });
-
+    syncUserProfile(profile).catch(() => {});
     return { success: true, user: profile };
   } catch (error) {
-    console.warn("Firebase Google Auth error code:", error.code, error.message);
-
-    if (error.code === 'auth/popup-closed-by-user') {
-      return { success: false, cancelled: true, error: 'Sign-in window closed.' };
-    }
-
-    if (error.code === 'auth/cancelled-popup-request') {
-      return { success: false, cancelled: true, error: 'Sign-in window was re-opened.' };
-    }
-
+    logger.warn("Firebase Google Auth error:", error.code, error.message);
+    const isCancelled = error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request';
     return {
       success: false,
-      code: error.code,
-      error: error.message,
-      canFallback: true
+      cancelled: isCancelled,
+      error: mapAuthError(error),
+      code: error.code
     };
   }
 }
 
-export function loginWithGoogleInstant(roleHint = 'citizen', customDetails = {}) {
-  const basePreset = DEMO_USERS[roleHint] || DEMO_USERS.citizen;
-  const profile = {
-    ...basePreset,
-    id: `usr_google_${Date.now().toString(36)}`,
-    name: customDetails.name || (roleHint === 'citizen' ? 'Pooja Patel (Google Verified)' : `${basePreset.name} (Google Verified)`),
-    email: customDetails.email || (roleHint === 'citizen' ? 'citizen.pooja.google@gujaratlife.in' : `${roleHint}.google@gujaratlife.in`),
-    role: roleHint,
-    provider: 'google.com',
-    lastLogin: new Date().toISOString()
-  };
-  saveStoredUser(profile);
-  setSessionActive(true);
-  syncUserProfile(profile).catch(() => {});
-  return { success: true, user: profile };
-}
-
+/**
+ * Demo accounts: sign in to real Firebase Auth accounts using VITE_DEMO_PASSWORD,
+ * strictly gated by VITE_ENABLE_DEMO_LOGIN. Zero unauthenticated sessions.
+ */
 export async function loginWithDemoPreset(roleKey = 'citizen') {
-  const preset = DEMO_USERS[roleKey] || DEMO_USERS.citizen;
-  const userObj = { ...preset };
-  saveStoredUser(userObj);
-  setSessionActive(true);
-  syncUserProfile(userObj).catch(err => console.warn(err));
-  return { success: true, user: userObj, isDemoPreset: true };
-}
-
-export async function registerWithEmail(email, password, displayName, district = 'Ahmedabad', role = 'citizen', extraMetadata = {}) {
-  const safeRole = role || 'citizen';
-  try {
-    const basePreset = DEMO_USERS[safeRole] || DEMO_USERS.citizen;
-    if (auth) {
-      const userCred = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCred.user;
-      await updateProfile(user, { displayName });
-      const newProfile = {
-        ...basePreset,
-        id: user.uid,
-        role: safeRole,
-        roleTitle: safeRole === 'student' ? 'Student Volunteer' : (basePreset.roleTitle || 'Residential Citizen'),
-        name: displayName || email.split('@')[0],
-        email: user.email,
-        district: district,
-        city: district,
-        joinedDate: new Date().toISOString(),
-        ...extraMetadata
-      };
-      await syncUserProfile(newProfile);
-      saveStoredUser(newProfile);
-      setSessionActive(true);
-      return { success: true, user: newProfile };
-    }
-  } catch (error) {
-    console.warn("Firebase Auth signup error:", error.code, error.message);
-    const basePreset = DEMO_USERS[safeRole] || DEMO_USERS.citizen;
-    if (error.code === 'auth/configuration-not-found' || error.code === 'auth/network-request-failed' || error.code === 'auth/email-already-in-use') {
-      const fallbackUser = {
-        ...basePreset,
-        id: `usr_${Date.now()}`,
-        role: safeRole,
-        roleTitle: safeRole === 'student' ? 'Student Volunteer' : (basePreset.roleTitle || 'Residential Citizen'),
-        name: displayName || email.split('@')[0],
-        email: email,
-        district: district,
-        city: district,
-        joinedDate: new Date().toISOString(),
-        ...extraMetadata
-      };
-      saveStoredUser(fallbackUser);
-      setSessionActive(true);
-      return { success: true, user: fallbackUser, isFallback: true };
-    }
-    return { success: false, error: error.message };
-  }
-}
-
-export async function loginAsGuest() {
-  try {
-    if (auth) {
-      const userCred = await signInAnonymously(auth);
-      const user = userCred.user;
-      const guestProfile = {
-        ...INITIAL_USER,
-        id: user.uid,
-        name: `Guest Citizen #${user.uid.slice(0, 5)}`,
-        email: 'guest@missionlife.in',
-        isAnonymous: true
-      };
-      await syncUserProfile(guestProfile);
-      saveStoredUser(guestProfile);
-      setSessionActive(true);
-      return { success: true, user: guestProfile };
-    }
-  } catch (error) {
-    console.warn("Anonymous auth fallback:", error.message);
-    const guestUser = {
-      ...INITIAL_USER,
-      id: `guest_${Date.now().toString().slice(-4)}`,
-      name: `Citizen (Demo Account)`,
-      isAnonymous: true
+  const isEnabled = import.meta.env.VITE_ENABLE_DEMO_LOGIN === 'true';
+  if (!isEnabled) {
+    return {
+      success: false,
+      error: "Demo preset sign-in is disabled in this environment."
     };
-    saveStoredUser(guestUser);
+  }
+
+  const demoPassword = import.meta.env.VITE_DEMO_PASSWORD;
+  if (!demoPassword) {
+    return {
+      success: false,
+      error: "Demo password is not configured on this server (VITE_DEMO_PASSWORD missing)."
+    };
+  }
+
+  const cachedDemo = getCachedCatalog('demoProfiles') || [];
+  const target = (roleKey || '').toLowerCase();
+  const demoMatch = cachedDemo.find(p => 
+    (p.role && p.role.toLowerCase() === target) ||
+    (target === 'solar_vendor' && p.role === 'solar_partner')
+  );
+
+  if (!demoMatch || !demoMatch.email) {
+    return {
+      success: false,
+      error: `No configured demo profile found for role '${roleKey}'.`
+    };
+  }
+
+  if (!auth) {
+    return {
+      success: false,
+      error: "Firebase authentication service is not connected."
+    };
+  }
+
+  try {
+    const userCred = await signInWithEmailAndPassword(auth, demoMatch.email, demoPassword);
+    const user = userCred.user;
+    const profile = await fetchOrCreateUserProfile(user.uid, {
+      ...demoMatch,
+      id: user.uid,
+      name: demoMatch.name,
+      email: user.email,
+      role: demoMatch.role || 'citizen',
+      roleTitle: demoMatch.roleTitle || 'Residential Citizen',
+      lastLogin: new Date().toISOString()
+    });
+
+    saveStoredUser(profile);
     setSessionActive(true);
-    return { success: true, user: guestUser, isFallback: true };
+    syncUserProfile(profile).catch(() => {});
+    return { success: true, user: profile, isDemoPreset: true };
+  } catch (error) {
+    logger.warn("Demo preset sign-in failed:", error.code, error.message);
+    return {
+      success: false,
+      error: `Demo sign-in failed for ${demoMatch.name}: ${mapAuthError(error)}`,
+      code: error.code
+    };
   }
 }
 
-export async function logoutUser() {
+/**
+ * Registers a new user. Always creates role: 'citizen'.
+ * Ignores any privileged keys from extraMetadata.
+ * Elevated roles are granted only by an admin via Admin SDK or approval workflows.
+ */
+export async function registerWithEmail(email, password, displayName, district = 'Ahmedabad', extraMetadata = {}) {
+  const cleanEmail = (email || '').trim().toLowerCase();
+
+  if (!auth) {
+    return {
+      success: false,
+      error: "Authentication service is currently unavailable. Please try again later."
+    };
+  }
+
+  // Whitelist extraMetadata keys to prevent privilege escalation
+  const allowedExtraKeys = [
+    'requestedCampus',
+    'requestedCollegeId',
+    'requestedDepartment',
+    'requestedYearOfStudy',
+    'requestedResidenceType',
+    'idCardPhotoUrl',
+    'companyName',
+    'licenseId',
+    'phone'
+  ];
+
+  const sanitizedExtra = {};
+  if (extraMetadata && typeof extraMetadata === 'object') {
+    for (const key of allowedExtraKeys) {
+      if (extraMetadata[key] !== undefined) {
+        sanitizedExtra[key] = extraMetadata[key];
+      }
+    }
+  }
+
+  try {
+    const userCred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
+    const user = userCred.user;
+
+    if (displayName) {
+      await updateProfile(user, { displayName }).catch(() => {});
+    }
+
+    const newProfile = {
+      ...getDefaultUserProfile(user.uid),
+      id: user.uid,
+      role: 'citizen',
+      roleTitle: 'Residential Citizen',
+      name: displayName || cleanEmail.split('@')[0],
+      email: user.email,
+      district: district || 'Ahmedabad',
+      city: district || 'Ahmedabad',
+      joinedDate: new Date().toISOString(),
+      ...sanitizedExtra
+    };
+
+    if (db) {
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, newProfile);
+    }
+
+    saveStoredUser(newProfile);
+    setSessionActive(true);
+    return { success: true, user: newProfile };
+  } catch (error) {
+    logger.warn("Firebase Auth signup failed:", error.code, error.message);
+    return {
+      success: false,
+      error: mapAuthError(error),
+      code: error.code
+    };
+  }
+}
+
+export async function loginAnonymously() {
+  if (!auth) {
+    return {
+      success: false,
+      error: "Authentication service is currently unavailable."
+    };
+  }
+
+  try {
+    const result = await signInAnonymously(auth);
+    const profile = await fetchOrCreateUserProfile(result.user.uid, {
+      name: "Guest Citizen (Gujarat)",
+      isAnonymous: true,
+      role: 'citizen',
+      roleTitle: 'Residential Citizen'
+    });
+    saveStoredUser(profile);
+    setSessionActive(true);
+    return { success: true, user: profile };
+  } catch (error) {
+    logger.warn("Firebase Anonymous Auth error:", error.code, error.message);
+    return {
+      success: false,
+      error: mapAuthError(error),
+      code: error.code
+    };
+  }
+}
+
+export const loginAsGuest = loginAnonymously;
+
+export async function signOutUser() {
   try {
     if (auth) {
       await signOut(auth);
     }
   } catch (e) {
-    console.warn("Sign out fallback error:", e);
+    logger.warn("Sign out error:", e);
   }
   setSessionActive(false);
-  const resetUser = INITIAL_USER;
+  const resetUser = getDefaultUserProfile();
   saveStoredUser(resetUser);
   return resetUser;
 }
+
+export const logoutUser = signOutUser;
 
 async function fetchOrCreateUserProfile(uid, defaults = {}) {
   try {
@@ -318,20 +366,19 @@ async function fetchOrCreateUserProfile(uid, defaults = {}) {
       if (snap.exists()) {
         const firestoreData = snap.data();
         return { 
-          ...INITIAL_USER, 
+          ...getDefaultUserProfile(uid), 
           ...firestoreData, 
           id: uid,
-          // Directly retrieve authoritative assigned role field from Firestore
-          role: firestoreData.role || defaults.role || 'citizen',
-          roleTitle: firestoreData.roleTitle || defaults.roleTitle || 'Residential Citizen'
+          role: firestoreData.role || 'citizen',
+          roleTitle: firestoreData.roleTitle || 'Residential Citizen'
         };
       } else {
-        // Default Assignment: brand new user is created with default role: 'citizen'
+        // Enforce role: 'citizen' on initial profile creation
         const newProfile = {
-          ...INITIAL_USER,
+          ...getDefaultUserProfile(uid),
           ...defaults,
-          role: defaults.role || 'citizen',
-          roleTitle: defaults.roleTitle || 'Residential Citizen',
+          role: 'citizen',
+          roleTitle: 'Residential Citizen',
           id: uid
         };
         await setDoc(userRef, newProfile);
@@ -339,9 +386,9 @@ async function fetchOrCreateUserProfile(uid, defaults = {}) {
       }
     }
   } catch (e) {
-    console.warn("Firestore fetch profile fallback:", e.message);
+    logger.warn("Firestore fetch profile warning:", e.message);
   }
-  return { ...INITIAL_USER, ...defaults, role: defaults.role || 'citizen', id: uid };
+  return { ...getDefaultUserProfile(uid), ...defaults, role: 'citizen', id: uid };
 }
 
 async function syncUserProfile(profile) {
@@ -356,21 +403,31 @@ async function syncUserProfile(profile) {
         timeout
       ]);
     }
-  } catch (e) {
-    console.warn("Firestore user sync warning:", e.message);
+  } catch (err) {
+    logger.warn("Firestore syncUserProfile warning:", err.message);
   }
 }
 
-export function subscribeAuth(onUser) {
-  if (!auth) return () => {};
+export function subscribeAuth(callback) {
+  if (!auth) {
+    callback(null);
+    return () => {};
+  }
   return onAuthStateChanged(auth, async (firebaseUser) => {
     if (firebaseUser) {
       const profile = await fetchOrCreateUserProfile(firebaseUser.uid, {
+        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Citizen',
         email: firebaseUser.email,
-        name: firebaseUser.displayName || 'Citizen'
+        photoURL: firebaseUser.photoURL
       });
-      onUser(profile);
+      saveStoredUser(profile);
+      setSessionActive(true);
+      callback(profile);
+    } else {
+      setSessionActive(false);
+      const guest = getDefaultUserProfile();
+      saveStoredUser(guest);
+      callback(null);
     }
   });
 }
-

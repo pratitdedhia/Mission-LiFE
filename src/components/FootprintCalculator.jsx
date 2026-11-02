@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { getUserFootprintHistory } from '../services/firestoreService';
-import { BRANDING } from '../config/branding';
+import { BRANDING, CO2_GRID_FACTOR_KG_PER_KWH } from '../config/branding';
 import { getGujaratRegistry, saveCustomLocality } from '../data/gujaratData';
 import { getEmissionFactors } from '../repositories/configRepository';
 import { calculateFootprint } from '../../shared/src/calculations/footprint';
@@ -74,7 +74,7 @@ export default function FootprintCalculator({ user, onSaveProfile }) {
   // Pure Calculation using Official Emission Factors (Zero Hardcoded Math in UI)
   const defaultFactors = {
     id: 'emissionFactors',
-    gridCo2PerKwh: 0.82,
+    gridCo2PerKwh: CO2_GRID_FACTOR_KG_PER_KWH,
     lpgCo2PerKg: 2.983,
     lpgCylinderWeightKg: 14.2,
     petrolCo2PerKm: 0.165,
@@ -84,8 +84,8 @@ export default function FootprintCalculator({ user, onSaveProfile }) {
     twoWheelerPetrolCo2PerKm: 0.048,
     wasteUnsegregatedCo2PerKg: 0.95,
     waterPumpingCo2PerKilolitre: 0.42,
-    source: 'Central Electricity Authority (CEA) v19 & MoPNG Fuel Reports 2024',
-    sourceUrl: 'https://cea.nic.in/cdm-co2-baseline-database-version-19/',
+    source: 'Central Electricity Authority (CEA) Baseline v20.0 (Dec 2024) & MoPNG',
+    sourceUrl: 'https://cea.nic.in',
     lastVerified: '2026-10-31T00:00:00Z'
   };
 
@@ -503,7 +503,7 @@ export default function FootprintCalculator({ user, onSaveProfile }) {
           {/* Transparent Assumptions Footnote */}
           <div className="p-3 bg-[#141518] rounded-xl border border-[#22242a] text-[10px] font-mono text-zinc-500 leading-normal flex items-start gap-2">
             <Info className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0 mt-0.5" />
-            <span>Assumptions: Grid factor = 0.82 kg CO₂/kWh (CEA CO2 Database v19). Petrol = 0.17 kg/km. LPG = 42.5 kg CO₂/cylinder. Benchmark based on Gujarat Urja Vikas Nigam residential consumption patterns.</span>
+            <span>Assumptions: Grid factor = {CO2_GRID_FACTOR_KG_PER_KWH} kg CO₂/kWh (CEA CO2 Database v20.0, Dec 2024). Petrol = 0.17 kg/km. LPG = 42.5 kg CO₂/cylinder. Benchmark based on Gujarat Urja Vikas Nigam residential consumption patterns.</span>
           </div>
         </div>
       </div>

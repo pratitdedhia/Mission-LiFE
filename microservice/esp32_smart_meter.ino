@@ -15,12 +15,14 @@
 // -------------------------------------------------------------------------
 // NETWORK & BACKEND CONFIGURATION
 // -------------------------------------------------------------------------
-const char* WIFI_SSID     = "YOUR_WIFI_SSID";
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
+const char* WIFI_SSID      = "YOUR_WIFI_SSID";
+const char* WIFI_PASSWORD  = "YOUR_WIFI_PASSWORD";
 
-// Target endpoint of the FastAPI Microservice
-const char* TELEMETRY_URL = "http://192.168.1.100:8000/api/hardware";
-const char* DEVICE_ID     = "ESP32_GUJARAT_SMARTMETER_01";
+// Target endpoint of the FastAPI Microservice (Render Production or Localhost)
+const char* TELEMETRY_URL  = "https://mission-life.onrender.com/api/hardware";
+const char* DEVICE_API_KEY = "YOUR_DEVICE_API_KEY";
+const char* DEVICE_ID      = "appliance_ac_01";
+const char* USER_ID        = "usr_citizen_pooja";
 
 // Sample transmission interval (e.g. 5000 ms = 5 seconds)
 const unsigned long SEND_INTERVAL_MS = 5000;
@@ -74,14 +76,17 @@ void loop() {
       HTTPClient http;
       http.begin(TELEMETRY_URL);
       http.addHeader("Content-Type", "application/json");
+      http.addHeader("X-Device-Api-Key", DEVICE_API_KEY);
 
       // Serialize JSON payload conforming to FastAPI Pydantic schema
       StaticJsonDocument<256> doc;
-      doc["user_id"]         = "user_12345";
-      doc["device_id"]       = "appliance_ac_01";
+      doc["user_id"]         = USER_ID;
+      doc["device_id"]       = DEVICE_ID;
       doc["current_wattage"] = (int)powerWatts;
       doc["voltage"]         = voltage;
       doc["current"]         = current;
+      doc["frequency"]       = frequency;
+      doc["source_type"]     = "meter_measured";
       doc["timestamp"]       = (unsigned long)(time(nullptr));
 
       String jsonPayload;

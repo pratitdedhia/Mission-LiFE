@@ -3,13 +3,14 @@
  * Mission LiFE Citizen Engagement Platform
  */
 
-import { DEMO_USERS } from '../data/initialData';
 import { getStudentVerifications } from './studentVerificationService';
+import { getIstDateString } from '../utils/dateUtils';
+import { logger } from '../utils/logger';
 
 const USERS_STORAGE_KEY = 'life_all_managed_users';
 const CURRENT_AUTH_KEY = 'mission_life_auth_user';
 
-export const INITIAL_MANAGED_USERS = [
+export const DEFAULT_MANAGED_USERS = [
   {
     id: "usr_citizen_pooja",
     name: "Pooja Patel",
@@ -266,17 +267,17 @@ export function getAllManagedUsers() {
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
   } catch (e) {
-    console.error("Failed to read managed users:", e);
+    logger.error("Failed to read managed users:", e);
   }
-  saveManagedUsers(INITIAL_MANAGED_USERS);
-  return INITIAL_MANAGED_USERS;
+  saveManagedUsers(DEFAULT_MANAGED_USERS);
+  return DEFAULT_MANAGED_USERS;
 }
 
 export function saveManagedUsers(users) {
   try {
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
   } catch (e) {
-    console.error("Failed to save managed users:", e);
+    logger.error("Failed to save managed users:", e);
   }
 }
 
@@ -333,7 +334,7 @@ export function createManagedUser(userData) {
     co2SavedKg: Number(userData.co2SavedKg) || 0,
     streak: Number(userData.streak) || 0,
     solarStatus: userData.solarStatus || (userData.role === 'solar_vendor' ? 'Empanelled Installer Tier-1' : 'None'),
-    joinedDate: new Date().toISOString().split('T')[0],
+    joinedDate: getIstDateString(),
     lastLogin: "Just Now",
     ...userData
   };

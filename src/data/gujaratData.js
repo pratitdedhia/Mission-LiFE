@@ -5,7 +5,7 @@
 
 const LOCAL_STORAGE_LOCALITIES_KEY = 'life_plus_custom_localities';
 
-export const INITIAL_GUJARAT_REGISTRY = [
+export const DEFAULT_GUJARAT_REGISTRY = [
   {
     city: "Ahmedabad",
     district: "Ahmedabad",
@@ -78,7 +78,7 @@ export function getGujaratRegistry() {
   } catch (e) {
     console.warn("Using default Gujarat localities registry", e);
   }
-  return INITIAL_GUJARAT_REGISTRY;
+  return DEFAULT_GUJARAT_REGISTRY;
 }
 
 export function saveCustomLocality(cityName, newLocality) {

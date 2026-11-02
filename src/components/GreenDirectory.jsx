@@ -16,11 +16,12 @@ import {
   Navigation,
   FileText 
 } from 'lucide-react';
-import { GOVERNMENT_SCHEMES } from '../data/initialData';
+import { useCatalog } from '../services/catalogService';
 import { BRANDING } from '../config/branding';
 import { searchLocalityResources, getGoogleMapsNavigationUrl } from '../services/mapsService';
 
 export default function GreenDirectory({ onNavigateToSolar }) {
+  const { data: schemes } = useCatalog('schemes');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('Ahmedabad');
   const [activeTab, setActiveTab] = useState('vendors'); // 'vendors' | 'schemes'
@@ -268,7 +269,7 @@ export default function GreenDirectory({ onNavigateToSolar }) {
 
       {activeTab === 'schemes' && (
         <div className="space-y-4">
-          {GOVERNMENT_SCHEMES.map((scheme) => (
+          {(schemes || []).map((scheme) => (
             <div key={scheme.id} className="human-card p-6 sm:p-7">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
                 <div>

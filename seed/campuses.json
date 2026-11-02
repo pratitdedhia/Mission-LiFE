@@ -1,0 +1,13 @@
+[
+  { "id": "iitgn", "name": "IIT Gandhinagar", "district": "Gandhinagar", "ecoClub": "IIT Gandhinagar Eco Squad" },
+  { "id": "gu", "name": "Gujarat University", "district": "Ahmedabad", "ecoClub": "GU Green Council" },
+  { "id": "nirma", "name": "Nirma University", "district": "Ahmedabad", "ecoClub": "Nirma Eco Club" },
+  { "id": "pdeu", "name": "Pandit Deendayal Energy University (PDEU)", "district": "Gandhinagar", "ecoClub": "PDEU Solar Energy Society" },
+  { "id": "svnit", "name": "SVNIT Surat", "district": "Surat", "ecoClub": "SVNIT Green Warriors" },
+  { "id": "ldce", "name": "L.D. College of Engineering (LDCE)", "district": "Ahmedabad", "ecoClub": "LDCE Eco Cell" },
+  { "id": "msu", "name": "Maharaja Sayajirao University of Baroda (MSU)", "district": "Vadodara", "ecoClub": "MSU Baroda Sustainability Wing" },
+  { "id": "daiict", "name": "DA-IICT Gandhinagar", "district": "Gandhinagar", "ecoClub": "DA-IICT Green Committee" },
+  { "id": "marwadi", "name": "Marwadi University", "district": "Rajkot", "ecoClub": "Marwadi Climate Club" },
+  { "id": "charusat", "name": "Charotar University of Science and Technology (CHARUSAT)", "district": "Anand", "ecoClub": "CHARUSAT Eco Volunteers" }
+]
+

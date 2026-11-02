@@ -1,0 +1,12 @@
+[
+  { "id": "cse", "name": "Computer Science & Engineering" },
+  { "id": "eee", "name": "Electrical & Electronics Engineering" },
+  { "id": "mech", "name": "Mechanical Engineering" },
+  { "id": "civil", "name": "Civil & Environmental Engineering" },
+  { "id": "chem", "name": "Chemical & Materials Engineering" },
+  { "id": "energy", "name": "Energy & Sustainability Studies" },
+  { "id": "mba", "name": "Commerce & Business Administration (MBA)" },
+  { "id": "sciences", "name": "Sciences & Humanities" },
+  { "id": "biotech", "name": "Biotechnology & Health Sciences" }
+]
+

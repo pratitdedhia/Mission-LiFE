@@ -29,7 +29,6 @@ import {
   Layers,
   BarChart3
 } from 'lucide-react';
-import { DISTRICT_ADMIN_STATS } from '../data/initialData';
 import { BRANDING } from '../config/branding';
 import { 
   getAllManagedUsers, 
@@ -40,30 +39,9 @@ import {
   approveManagedUser 
 } from '../services/userManagementService';
 import { fetchAdminImpactAnalytics } from '../services/analyticsService';
-
-// Comprehensive District Master Data for Scheme Planning
-const GUJARAT_DISTRICTS_DATA = [
-  { id: "ahm", name: "Ahmedabad", households: 8420, solarAdopters: 1280, solarKw: 4200, co2AvoidedTonnes: 48.6, totalPoints: 412000, complianceRate: "91%", discom: "UGVCL / Torrent" },
-  { id: "srt", name: "Surat", households: 6150, solarAdopters: 910, solarKw: 2980, co2AvoidedTonnes: 36.2, totalPoints: 318000, complianceRate: "89%", discom: "DGVCL / Torrent" },
-  { id: "vad", name: "Vadodara", households: 4320, solarAdopters: 640, solarKw: 2120, co2AvoidedTonnes: 24.8, totalPoints: 226000, complianceRate: "86%", discom: "MGVCL" },
-  { id: "rjk", name: "Rajkot", households: 3450, solarAdopters: 420, solarKw: 1480, co2AvoidedTonnes: 18.2, totalPoints: 184000, complianceRate: "83%", discom: "PGVCL" },
-  { id: "gnr", name: "Gandhinagar", households: 2550, solarAdopters: 380, solarKw: 1320, co2AvoidedTonnes: 14.5, totalPoints: 156000, complianceRate: "94%", discom: "UGVCL" },
-  { id: "bhv", name: "Bhavnagar", households: 1890, solarAdopters: 210, solarKw: 780, co2AvoidedTonnes: 9.8, totalPoints: 98000, complianceRate: "80%", discom: "PGVCL" },
-  { id: "jmn", name: "Jamnagar", households: 1420, solarAdopters: 160, solarKw: 560, co2AvoidedTonnes: 7.4, totalPoints: 72000, complianceRate: "78%", discom: "PGVCL" },
-  { id: "jnd", name: "Junagadh", households: 1180, solarAdopters: 130, solarKw: 440, co2AvoidedTonnes: 6.1, totalPoints: 58000, complianceRate: "82%", discom: "PGVCL" },
-  { id: "ktc", name: "Kutch", households: 980, solarAdopters: 95, solarKw: 320, co2AvoidedTonnes: 4.8, totalPoints: 46000, complianceRate: "76%", discom: "PGVCL" },
-  { id: "meh", name: "Mehsana", households: 870, solarAdopters: 85, solarKw: 290, co2AvoidedTonnes: 4.2, totalPoints: 42000, complianceRate: "85%", discom: "UGVCL" }
-];
-
-// Campus Master Data for Youth Climate Planning
-const GUJARAT_CAMPUSES_DATA = [
-  { id: "iitgn", name: "IIT Gandhinagar", city: "Gandhinagar", students: 420, solarKw: 320, co2AvoidedTonnes: 12.4, totalPoints: 84000, complianceRate: "96%", sprintsCompleted: 18 },
-  { id: "svnit", name: "SVNIT Surat", city: "Surat", students: 380, solarKw: 240, co2AvoidedTonnes: 9.8, totalPoints: 71000, complianceRate: "92%", sprintsCompleted: 15 },
-  { id: "msu", name: "MS University Baroda", city: "Vadodara", students: 310, solarKw: 180, co2AvoidedTonnes: 7.9, totalPoints: 59000, complianceRate: "88%", sprintsCompleted: 12 },
-  { id: "pdeu", name: "PDEU Gandhinagar", city: "Gandhinagar", students: 290, solarKw: 210, co2AvoidedTonnes: 8.2, totalPoints: 52000, complianceRate: "90%", sprintsCompleted: 11 },
-  { id: "nirma", name: "Nirma University", city: "Ahmedabad", students: 260, solarKw: 150, co2AvoidedTonnes: 6.7, totalPoints: 48000, complianceRate: "85%", sprintsCompleted: 9 },
-  { id: "gu", name: "Gujarat University", city: "Ahmedabad", students: 240, solarKw: 120, co2AvoidedTonnes: 5.9, totalPoints: 44000, complianceRate: "82%", sprintsCompleted: 8 }
-];
+import { DEFAULT_GUJARAT_REGISTRY } from '../data/gujaratData';
+import { downloadCsv } from '../utils/csv';
+import { logger } from '../utils/logger';
 
 export default function AdminDashboard({ community = {}, user = {}, activeTab = 'admin', setActiveTab }) {
   // Navigation View: 'overview' | 'impact' | 'users' | 'solar'
@@ -116,7 +94,7 @@ export default function AdminDashboard({ community = {}, user = {}, activeTab = 
         setIsLoadingAnalytics(false);
       }
     }).catch(err => {
-      console.warn("Analytics fetch error:", err);
+      logger.warn("Analytics fetch error:", err);
       if (isMounted) setIsLoadingAnalytics(false);
     });
 
@@ -228,8 +206,9 @@ export default function AdminDashboard({ community = {}, user = {}, activeTab = 
   });
 
   // Dynamic Macro Stats derived from central database analytics
-  const activeDistrictsList = analyticsData?.districts?.length ? analyticsData.districts : GUJARAT_DISTRICTS_DATA;
-  const activeCampusesList = analyticsData?.campuses?.length ? analyticsData.campuses : GUJARAT_CAMPUSES_DATA;
+  const [includeDemoData, setIncludeDemoData] = useState(false);
+  const activeDistrictsList = analyticsData?.districts || [];
+  const activeCampusesList = analyticsData?.campuses || [];
 
   const totalSolarAdopters = analyticsData?.statewide?.totalSolarLeads ?? activeDistrictsList.reduce((acc, d) => acc + (d.solarAdopters || d.solarLeadsCount || 0), 0);
   const totalSolarKw = analyticsData?.statewide?.totalSolarKw ?? activeDistrictsList.reduce((acc, d) => acc + (d.solarKw || 0), 0);
@@ -237,18 +216,51 @@ export default function AdminDashboard({ community = {}, user = {}, activeTab = 
   const totalDistrictPoints = analyticsData?.statewide?.totalPoints ?? activeDistrictsList.reduce((acc, d) => acc + (d.totalPoints || 0), 0);
 
   const handleExportStateReport = () => {
-    const csvContent = "data:text/csv;charset=utf-8," +
-      "Region/Entity,Type,Registered_Participants,Solar_Requests,Solar_Capacity_kW,CO2_Mitigated_Tonnes,LiFE_Points,Data_Source\n" +
-      activeDistrictsList.map(d => `${d.name},District,${d.citizensCount || d.households || 0},${d.solarLeadsCount || d.solarAdopters || 0},${d.solarKw || 0},${d.co2AvoidedTonnes || 0},${d.totalPoints || 0},GEDA_Central_Firestore`).join("\n") + "\n" +
-      activeCampusesList.map(c => `${c.name},Campus,${c.verifiedStudentsCount || c.students || 0},${Math.round((c.solarKw || 0)/3)},${c.solarKw || 0},${c.co2AvoidedTonnes || 0},${c.totalPoints || 0},GEDA_Verified_Student_Ledger`).join("\n");
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `GEDA_Mission_LiFE_Audited_Analytics_${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const districtsToExport = includeDemoData 
+      ? activeDistrictsList 
+      : activeDistrictsList.filter(d => !d.demo && !d.isDemo);
+    const campusesToExport = includeDemoData 
+      ? activeCampusesList 
+      : activeCampusesList.filter(c => !c.demo && !c.isDemo);
+
+    const headers = [
+      "Region/Entity",
+      "Type",
+      "Registered_Participants",
+      "Solar_Requests",
+      "Solar_Capacity_kW",
+      "CO2_Mitigated_Tonnes",
+      "LiFE_Points",
+      "Data_Source",
+      "Audit_Status"
+    ];
+
+    const rows = [
+      ...districtsToExport.map(d => [
+        d.name,
+        "District",
+        d.citizensCount || d.households || 0,
+        d.solarLeadsCount || d.solarAdopters || 0,
+        d.solarKw || 0,
+        d.co2AvoidedTonnes || 0,
+        d.totalPoints || 0,
+        d.demo || d.isDemo ? "Seed_Demo_Catalog" : "GEDA_Central_Firestore",
+        d.demo || d.isDemo ? "Demo data (Non-Audited)" : "Audited"
+      ]),
+      ...campusesToExport.map(c => [
+        c.name,
+        "Campus",
+        c.verifiedStudentsCount || c.students || 0,
+        Math.round((c.solarKw || 0) / 3),
+        c.solarKw || 0,
+        c.co2AvoidedTonnes || 0,
+        c.totalPoints || 0,
+        c.demo || c.isDemo ? "Seed_Demo_Catalog" : "GEDA_Verified_Student_Ledger",
+        c.demo || c.isDemo ? "Demo data (Non-Audited)" : "Audited"
+      ])
+    ];
+
+    downloadCsv(`GEDA_Mission_LiFE_Audited_Analytics_${Date.now()}`, headers, rows);
   };
 
   return (
@@ -274,13 +286,24 @@ export default function AdminDashboard({ community = {}, user = {}, activeTab = 
             </p>
           </div>
 
-          <button
-            onClick={handleExportStateReport}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer transition-colors self-start whitespace-nowrap"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>Export Scheme Planning CSV</span>
-          </button>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 self-start">
+            <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={includeDemoData}
+                onChange={(e) => setIncludeDemoData(e.target.checked)}
+                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              <span>Include demo data</span>
+            </label>
+            <button
+              onClick={handleExportStateReport}
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer transition-colors whitespace-nowrap"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Export Scheme Planning CSV</span>
+            </button>
+          </div>
         </div>
 
         {/* Macro KPI Strip */}
@@ -711,39 +734,62 @@ export default function AdminDashboard({ community = {}, user = {}, activeTab = 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-                  {(scopeFilter === 'campus' ? activeCampusesList : activeDistrictsList).map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                      <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                        {scopeFilter === 'campus' ? <GraduationCap className="w-4 h-4 text-blue-500" /> : <MapPin className="w-4 h-4 text-emerald-500" />}
-                        <span>{item.name}</span>
-                      </td>
-                      <td className="py-3 px-4 font-mono font-medium">
-                        {(item.verifiedStudentsCount || item.citizensCount || item.students || item.households || 0).toLocaleString('en-IN')}
-                      </td>
-                      <td className="py-3 px-4 font-mono text-amber-600 dark:text-amber-400 font-bold">
-                        {item.solarKw ? `${item.solarKw} kW` : `${item.solarLeadsCount || item.solarAdopters || 0} Requests`}
-                      </td>
-                      <td className="py-3 px-4 font-mono text-emerald-600 dark:text-emerald-400 font-bold">{item.co2AvoidedTonnes || 0} tonnes</td>
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white">{(item.totalPoints || 0).toLocaleString()}</td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                            <div 
-                              className="bg-emerald-600 h-full rounded-full" 
-                              style={{ width: item.complianceRate || "85%" }}
-                            />
+                  {(() => {
+                    const currentList = scopeFilter === 'campus' ? activeCampusesList : activeDistrictsList;
+                    if (!currentList || currentList.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan="7" className="py-8 text-center text-slate-500 dark:text-slate-400">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                              <Info className="w-6 h-6 text-slate-400" />
+                              <span className="font-semibold text-sm">No {scopeFilter === 'campus' ? 'campus' : 'district'} records aggregated yet</span>
+                              <span className="text-xs text-slate-400">Audited benchmarks are generated from verified user actions and registered IoT meters.</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
+                    return currentList.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                        <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                          {scopeFilter === 'campus' ? <GraduationCap className="w-4 h-4 text-blue-500" /> : <MapPin className="w-4 h-4 text-emerald-500" />}
+                          <span>{item.name}</span>
+                        </td>
+                        <td className="py-3 px-4 font-mono font-medium">
+                          {(item.verifiedStudentsCount || item.citizensCount || item.students || item.households || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td className="py-3 px-4 font-mono text-amber-600 dark:text-amber-400 font-bold">
+                          {item.solarKw ? `${item.solarKw} kW` : `${item.solarLeadsCount || item.solarAdopters || 0} Requests`}
+                        </td>
+                        <td className="py-3 px-4 font-mono text-emerald-600 dark:text-emerald-400 font-bold">{item.co2AvoidedTonnes || 0} tonnes</td>
+                        <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white">{(item.totalPoints || 0).toLocaleString()}</td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                              <div 
+                                className="bg-emerald-600 h-full rounded-full" 
+                                style={{ width: item.complianceRate || "85%" }}
+                              />
+                            </div>
+                            <span className="font-mono text-[11px]">{item.complianceRate || "85%"}</span>
                           </div>
-                          <span className="font-mono text-[11px]">{item.complianceRate || "85%"}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-semibold">
-                          <ShieldCheck className="w-3 h-3" />
-                          <span>Audited</span>
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          {item.demo || item.isDemo ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-semibold">
+                              <AlertTriangle className="w-3 h-3" />
+                              <span>Demo data</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-semibold">
+                              <ShieldCheck className="w-3 h-3" />
+                              <span>Audited</span>
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -989,35 +1035,50 @@ export default function AdminDashboard({ community = {}, user = {}, activeTab = 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-                  {GUJARAT_DISTRICTS_DATA.slice(0, 7).map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                      <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                        <MapPin className="w-3.5 h-3.5 text-emerald-500" />
-                        <span>{item.name}</span>
-                      </td>
-                      <td className="py-3 px-4 font-mono">{item.households.toLocaleString('en-IN')}</td>
-                      <td className="py-3 px-4 font-mono text-amber-600 font-bold">{item.solarAdopters} homes</td>
-                      <td className="py-3 px-4 font-mono text-amber-600">{item.solarKw.toLocaleString('en-IN')} kW</td>
-                      <td className="py-3 px-4 font-mono text-emerald-600 dark:text-emerald-400 font-semibold">{item.co2AvoidedTonnes} tonnes</td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                            <div 
-                              className="bg-emerald-600 h-full rounded-full" 
-                              style={{ width: item.complianceRate }}
-                            />
-                          </div>
-                          <span className="font-mono text-[11px]">{item.complianceRate}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                          <ShieldCheck className="w-3 h-3" />
-                          <span>Tracking</span>
-                        </span>
+                  {activeDistrictsList.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="py-6 text-center text-slate-500 dark:text-slate-400">
+                        No district benchmarks recorded yet. Data is generated dynamically from verified actions and IoT meters.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    activeDistrictsList.slice(0, 7).map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                        <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                          <MapPin className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>{item.name}</span>
+                        </td>
+                        <td className="py-3 px-4 font-mono font-medium">{(item.citizensCount || item.households || 0).toLocaleString('en-IN')}</td>
+                        <td className="py-3 px-4 font-mono text-amber-600 font-bold">{item.solarLeadsCount || item.solarAdopters || 0} homes</td>
+                        <td className="py-3 px-4 font-mono text-amber-600">{(item.solarKw || 0).toLocaleString('en-IN')} kW</td>
+                        <td className="py-3 px-4 font-mono text-emerald-600 dark:text-emerald-400 font-semibold">{item.co2AvoidedTonnes || 0} tonnes</td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                              <div 
+                                className="bg-emerald-600 h-full rounded-full" 
+                                style={{ width: item.complianceRate || "85%" }}
+                              />
+                            </div>
+                            <span className="font-mono text-[11px]">{item.complianceRate || "85%"}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          {item.demo || item.isDemo ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-semibold">
+                              <AlertTriangle className="w-3 h-3" />
+                              <span>Demo data</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-semibold">
+                              <ShieldCheck className="w-3 h-3" />
+                              <span>Audited</span>
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1045,7 +1106,7 @@ export default function AdminDashboard({ community = {}, user = {}, activeTab = 
               </div>
 
               <span className="text-xs font-semibold px-3 py-1 rounded-xl bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300">
-                ₹26.68 Cr DBT Disbursed
+                DBT Subsidy Disbursed
               </span>
             </div>
 
@@ -1148,8 +1209,8 @@ export default function AdminDashboard({ community = {}, user = {}, activeTab = 
                     onChange={(e) => setNewUserDistrict(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 cursor-pointer"
                   >
-                    {GUJARAT_DISTRICTS_DATA.map(d => (
-                      <option key={d.id} value={d.name}>{d.name}</option>
+                    {DEFAULT_GUJARAT_REGISTRY.map(d => (
+                      <option key={d.district} value={d.district}>{d.district}</option>
                     ))}
                   </select>
                 </div>

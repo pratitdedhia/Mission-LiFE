@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { DEMO_USERS } from '../../src/data/initialData';
+import demoProfiles from '../../seed/demoProfiles.json';
+
+const testProfiles = {
+  admin: demoProfiles.find(p => p.role === 'admin'),
+  solar_vendor: demoProfiles.find(p => p.role === 'solar_partner'),
+  campus_leader: demoProfiles.find(p => p.role === 'campus_leader'),
+  student: demoProfiles.find(p => p.role === 'student'),
+  citizen: demoProfiles.find(p => p.role === 'citizen')
+};
 
 describe('Automatic RBAC Routing & Default Assignment', () => {
   // Test helper replicating App.jsx routing logic
@@ -47,11 +55,11 @@ describe('Automatic RBAC Routing & Default Assignment', () => {
   });
 
   it('verifies demo users map to authoritative roles matching portal destinations', () => {
-    expect(resolveTargetPortal(DEMO_USERS.admin)).toBe('admin');
-    expect(resolveTargetPortal(DEMO_USERS.solar_vendor)).toBe('solar_vendor');
-    expect(resolveTargetPortal(DEMO_USERS.campus_leader)).toBe('campus_leader');
-    expect(resolveTargetPortal(DEMO_USERS.student)).toBe('student_portal');
-    expect(resolveTargetPortal(DEMO_USERS.citizen)).toBe('dashboard');
+    expect(resolveTargetPortal(testProfiles.admin)).toBe('admin');
+    expect(resolveTargetPortal(testProfiles.solar_vendor)).toBe('solar_vendor');
+    expect(resolveTargetPortal(testProfiles.campus_leader)).toBe('campus_leader');
+    expect(resolveTargetPortal(testProfiles.student)).toBe('student_portal');
+    expect(resolveTargetPortal(testProfiles.citizen)).toBe('dashboard');
   });
 });
 

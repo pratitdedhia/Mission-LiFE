@@ -1,0 +1,17 @@
+{
+  "id": "nudgeRules",
+  "timezone": "Asia/Kolkata",
+  "highLoadThresholdWatts": 1200,
+  "peakStartHour": 18,
+  "peakEndHour": 22,
+  "peakInclusiveStart": "18:00:00",
+  "peakExclusiveEnd": "22:00:00",
+  "peakNudgeTemplate": "⚠️ HIGH LOAD WARNING: {{wattage}}W running during Peak Grid Hours (6-10 PM). Defer high-wattage cycles to avoid premium ToD tariffs.",
+  "offPeakNudgeTemplate": "⚡ High electricity usage detected ({{wattage}}W). Switch off idle appliances to conserve energy.",
+  "efficientNudgeTemplate": "🟢 Efficient Grid Draw ({{wattage}}W). Optimal consumption profile.",
+  "source": "GERC Multi-Year Tariff (MYT) Time of Day Regulations & GEDA Energy Conservation Directive",
+  "year": 2024,
+  "provisional": false,
+  "lastVerified": "2026-10-31T00:00:00Z"
+}
+

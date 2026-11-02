@@ -1,0 +1,10 @@
+{
+  "id": "forecast",
+  "minHistoryDays": 7,
+  "insufficientDataMessage": "Not enough historical data to forecast yet (minimum 7 days required)",
+  "source": "GEDA Analytics Audit Protocol v1.0",
+  "year": 2026,
+  "provisional": false,
+  "lastVerified": "2026-10-31T00:00:00Z"
+}
+

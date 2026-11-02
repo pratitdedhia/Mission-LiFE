@@ -34,7 +34,7 @@ export const DEPARTMENTS = [
   "Biotechnology & Health Sciences"
 ];
 
-const INITIAL_VERIFICATIONS = [
+const FALLBACK_STUDENT_COHORT = [
   {
     id: "stu_ver_1",
     studentId: "usr_student_priyan",
@@ -190,13 +190,13 @@ export function getStudentVerifications() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_VERIFICATIONS));
-      return INITIAL_VERIFICATIONS;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(FALLBACK_STUDENT_COHORT));
+      return FALLBACK_STUDENT_COHORT;
     }
     return JSON.parse(raw);
   } catch (e) {
     console.error("Failed to load student verifications:", e);
-    return INITIAL_VERIFICATIONS;
+    return FALLBACK_STUDENT_COHORT;
   }
 }
 

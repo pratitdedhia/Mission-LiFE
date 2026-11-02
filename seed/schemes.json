@@ -1,0 +1,36 @@
+[
+  {
+    "id": "pm_surya_ghar",
+    "title": "PM Surya Ghar: Muft Bijli Yojana",
+    "authority": "Ministry of New and Renewable Energy (MNRE) & GEDA",
+    "tagline": "Free electricity up to 300 units/month for 1 Crore households",
+    "subsidyDetails": "₹30,000 for 1 kW, ₹60,000 for 2 kW, and ₹78,000 for 3 kW and above.",
+    "eligibility": "Indian citizen, valid electricity connection in own name, suitable shadow-free rooftop.",
+    "portalUrl": "https://pmsuryaghar.gov.in",
+    "applicableDistricts": ["All Gujarat Districts"],
+    "maxSubsidyInr": 78000
+  },
+  {
+    "id": "geda_surya_gujarat",
+    "title": "Surya Gujarat Residential Solar Scheme",
+    "authority": "Gujarat Energy Development Agency (GEDA)",
+    "tagline": "State-level facilitation & expedited net-metering grid connection",
+    "subsidyDetails": "Seamless integration with DISCOM net-meters (UGVCL, MGVCL, PGVCL, DGVCL, Torrent Power).",
+    "eligibility": "Residential consumers across all Gujarat districts.",
+    "portalUrl": "https://geda.gujarat.gov.in",
+    "applicableDistricts": ["All Gujarat Districts"],
+    "maxSubsidyInr": 78000
+  },
+  {
+    "id": "tod_tariff",
+    "title": "Time-of-Day (ToD) Energy Conservation Incentive",
+    "authority": "Gujarat Electricity Regulatory Commission (GERC)",
+    "tagline": "Financial discount for consumption during daytime solar hours",
+    "subsidyDetails": "Off-peak rebate on standard tariff; surcharge on peak grid hours (6 PM - 10 PM).",
+    "eligibility": "Smart meter enabled domestic and commercial consumers.",
+    "portalUrl": "https://gercin.org",
+    "applicableDistricts": ["All Gujarat Districts"],
+    "maxSubsidyInr": 0
+  }
+]
+

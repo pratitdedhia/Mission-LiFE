@@ -30,14 +30,16 @@ import {
   CO2_GRID_FACTOR_KG_PER_KWH, 
   ENERGY_SAVING_REWARD_RULE 
 } from '../services/analyticsService';
-import { INITIAL_GUJARAT_REGISTRY } from '../data/gujaratData';
+import { DEFAULT_GUJARAT_REGISTRY } from '../data/gujaratData';
+import { downloadCsv } from '../utils/csv';
+import { logger } from '../utils/logger';
 
 export default function InsightsView({ user = {}, onNavigate }) {
   const userRole = (user.role || 'citizen').toLowerCase();
 
   // Filters State
   const [timeRange, setTimeRange] = useState('30d'); // 'today' | '7d' | '30d' | '12m' | 'custom'
-  const [interval, setInterval] = useState('daily'); // 'hourly' | 'daily' | 'weekly' | 'monthly'
+  const [granularity, setGranularity] = useState('daily'); // 'hourly' | 'daily' | 'weekly' | 'monthly'
   const [district, setDistrict] = useState('all');
   const [locality, setLocality] = useState('all');
   const [specificFilter, setSpecificFilter] = useState('all');
@@ -53,9 +55,9 @@ export default function InsightsView({ user = {}, onNavigate }) {
 
   // Auto-sync interval when timeRange changes
   useEffect(() => {
-    if (timeRange === 'today') setInterval('hourly');
-    else if (timeRange === '7d' || timeRange === '30d') setInterval('daily');
-    else if (timeRange === '12m') setInterval('monthly');
+    if (timeRange === 'today') setGranularity('hourly');
+    else if (timeRange === '7d' || timeRange === '30d') setGranularity('daily');
+    else if (timeRange === '12m') setGranularity('monthly');
   }, [timeRange]);
 
   // Load Insights Data
@@ -67,7 +69,7 @@ export default function InsightsView({ user = {}, onNavigate }) {
     fetchUnifiedInsights({
       user,
       timeRange,
-      interval,
+      interval: granularity,
       district,
       locality,
       specificFilter,
@@ -82,40 +84,31 @@ export default function InsightsView({ user = {}, onNavigate }) {
       })
       .catch(err => {
         if (isMounted) {
-          console.error("Failed to fetch insights:", err);
+          logger.error("Failed to fetch insights:", err);
           setError("Failed to load insights. Please check network connection.");
           setLoading(false);
         }
       });
 
     return () => { isMounted = false; };
-  }, [user.id, user.role, timeRange, interval, district, locality, specificFilter, customStart, customEnd]);
+  }, [user.id, user.role, timeRange, granularity, district, locality, specificFilter, customStart, customEnd]);
 
   // CSV Export Handler
   const handleExportCsv = () => {
     if (!insightsData || !insightsData.timeSeries) return;
-    const rows = [
-      ["Period", "Energy (kWh)", "CO2 Emissions (kg)", "Points Earned", "Peak Period"],
-      ...insightsData.timeSeries.map(p => [
-        p.period || p.label,
-        p.energyKwh || 0,
-        p.co2Kg || 0,
-        p.points || 0,
-        p.isPeak ? "YES (6-10 PM)" : "NO"
-      ])
-    ];
-    const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Mission_LiFE_${userRole}_insights_${timeRange}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const headers = ["Period", "Energy (kWh)", "CO2 Emissions (kg)", "Points Earned", "Peak Period"];
+    const rows = insightsData.timeSeries.map(p => [
+      p.period || p.label,
+      p.energyKwh || 0,
+      p.co2Kg || 0,
+      p.points || 0,
+      p.isPeak ? "YES (6-10 PM)" : "NO"
+    ]);
+    downloadCsv(`Mission_LiFE_${userRole}_insights_${timeRange}`, headers, rows);
   };
 
   // Distinct districts from Gujarat registry
-  const availableDistricts = Array.from(new Set(INITIAL_GUJARAT_REGISTRY.map(r => r.district))).sort();
+  const availableDistricts = Array.from(new Set(DEFAULT_GUJARAT_REGISTRY.map(r => r.district))).sort();
 
   // Role metadata mapping
   const roleMeta = {
@@ -145,7 +138,7 @@ export default function InsightsView({ user = {}, onNavigate }) {
                   {roleMeta.title}
                 </h1>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Data-backed sustainability intelligence • Official CEA 0.71 Factor • Asia/Kolkata Reporting
+                  Data-backed sustainability intelligence • Official CEA {CO2_GRID_FACTOR_KG_PER_KWH} Factor • Asia/Kolkata Reporting
                 </p>
               </div>
             </div>
@@ -177,9 +170,9 @@ export default function InsightsView({ user = {}, onNavigate }) {
             <span>•</span>
             <span><strong>Energy:</strong> Kilowatt-Hours (kWh)</span>
             <span>•</span>
-            <span><strong>Grid Carbon:</strong> 0.71 kg CO₂e/kWh (CEA Baseline v2026)</span>
+            <span><strong>Grid Carbon:</strong> {CO2_GRID_FACTOR_KG_PER_KWH} kg CO₂e/kWh (CEA Baseline v2026)</span>
             <span>•</span>
-            <span><strong>Baseline:</strong> 8.5 kWh/day (Rule v2026.1-SAVINGS)</span>
+            <span><strong>Baseline:</strong> {ENERGY_SAVING_REWARD_RULE.baselineDailyKwh} kWh/day (Rule {ENERGY_SAVING_REWARD_RULE.version})</span>
           </div>
           {insightsData?.telemetry?.is_simulated && (
             <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-800 dark:text-amber-300 font-semibold border border-amber-300/40 dark:border-amber-700/40">
@@ -238,8 +231,8 @@ export default function InsightsView({ user = {}, onNavigate }) {
               Aggregation Interval
             </label>
             <select
-              value={interval}
-              onChange={e => setInterval(e.target.value)}
+              value={granularity}
+              onChange={e => setGranularity(e.target.value)}
               className="w-full px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20"
             >
               <option value="hourly">Hourly (Peak/Off-Peak Slices)</option>
@@ -364,7 +357,7 @@ export default function InsightsView({ user = {}, onNavigate }) {
           </div>
         </div>
 
-        {/* Card 3: Energy Saved vs 8.5 kWh/day Baseline */}
+        {/* Card 3: Energy Saved vs Baseline */}
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -588,7 +581,7 @@ export default function InsightsView({ user = {}, onNavigate }) {
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-            <span>Interval: <strong className="text-slate-700 dark:text-slate-300 capitalize">{interval}</strong></span>
+            <span>Interval: <strong className="text-slate-700 dark:text-slate-300 capitalize">{granularity}</strong></span>
             <span>Total Points Mapped: <strong className="text-slate-700 dark:text-slate-300 font-mono">{insightsData?.timeSeries?.length || 0}</strong></span>
           </div>
         </div>
@@ -714,7 +707,7 @@ export default function InsightsView({ user = {}, onNavigate }) {
               <p className="text-lg font-bold text-slate-800 dark:text-white mt-1">
                 {insightsData.forecast.projectedCo2Kg} kg CO₂
               </p>
-              <span className="text-[10px] text-slate-400">CEA 0.71 Factor</span>
+              <span className="text-[10px] text-slate-400">CEA {CO2_GRID_FACTOR_KG_PER_KWH} Factor</span>
             </div>
             <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
               <span className="text-[11px] text-slate-400">Estimated Off-Peak Savings:</span>

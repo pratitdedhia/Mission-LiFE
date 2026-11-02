@@ -27,6 +27,8 @@ import {
   submitStudentVerification 
 } from '../services/studentVerificationService';
 import { resolveLiveNudge } from '../services/nudgeService';
+import { apiClient, resolveUserMeterId } from '../services/apiClient';
+import { logger } from '../utils/logger';
 
 export default function StudentPortal({ user, onNavigate }) {
   const [verification, setVerification] = useState(null);
@@ -55,13 +57,23 @@ export default function StudentPortal({ user, onNavigate }) {
   // Poll live hardware telemetry from Wokwi ESP32 microservice
   useEffect(() => {
     let isMounted = true;
+    let timeoutId = null;
+    let backoffDelay = 6000;
 
     const loadTelemetry = async () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        if (isMounted) {
+          timeoutId = setTimeout(loadTelemetry, 10000);
+        }
+        return;
+      }
+
       try {
-        const response = await fetch(
-          'https://mission-life.onrender.com/api/hardware/latest?user_id=user_12345',
-          { cache: 'no-store' }
-        );
+        const meterId = resolveUserMeterId(user);
+        const response = await apiClient.get('/api/hardware/latest', { user_id: meterId }, {
+          timeoutMs: 5000,
+          cache: 'no-store'
+        });
 
         if (!response.ok) {
           throw new Error('Telemetry API returned HTTP ' + response.status);
@@ -78,6 +90,7 @@ export default function StudentPortal({ user, onNavigate }) {
         if (!isMounted) return;
 
         setMeterOnline(isFresh);
+        backoffDelay = 6000;
 
         if (isFresh) {
           const watts = Number(reading.current_wattage) || 0;
@@ -110,23 +123,41 @@ export default function StudentPortal({ user, onNavigate }) {
         }
       } catch (error) {
         if (!isMounted) return;
+        logger.warn('Could not load student meter telemetry:', error.message);
         setMeterOnline(false);
         setMeterWatts(0);
         setMeterVolts(230);
         setMeterAmps(0);
         setMeterNudge(null);
         setMeterNudgeMeta(null);
+        backoffDelay = Math.min(backoffDelay * 1.5, 30 * 1000);
+      } finally {
+        if (isMounted) {
+          timeoutId = setTimeout(loadTelemetry, backoffDelay);
+        }
       }
     };
 
     loadTelemetry();
-    const interval = setInterval(loadTelemetry, 3000);
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        clearTimeout(timeoutId);
+        loadTelemetry();
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
 
     return () => {
       isMounted = false;
-      clearInterval(interval);
+      if (timeoutId) clearTimeout(timeoutId);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
     };
-  }, []);
+  }, [user?.linkedMeterId, user?.meterId, user?.deviceId]);
 
   const showNotification = (msg) => {
     setNotification(msg);

@@ -136,10 +136,11 @@ Respond in language: ${language}.`;
   }
 }
 
+import { getCachedCatalog, getCoachKnowledge } from './catalogService';
+
 /**
  * Deterministic GEDA Energy Intelligence Engine
- * Provides certified, zero-latency recommendations calibrated to Gujarat tariffs,
- * DISCOM rules, and Mission LiFE parameters when the cloud AI provider is unavailable.
+ * Provides rule-based recommendations from coachKnowledge reference collection.
  */
 export class DeterministicGEDAEngine extends AdaptationProvider {
   async initialize() {
@@ -148,59 +149,52 @@ export class DeterministicGEDAEngine extends AdaptationProvider {
 
   async generateRecommendation(user, promptContext = {}) {
     const question = (promptContext.question || "").toLowerCase();
-
-    // 1. Solar & Subsidy Inquiry
-    if (question.includes("solar") || question.includes("rooftop") || question.includes("subsidy") || question.includes("sun")) {
-      const units = user.monthlyElectricityUnits || 280;
-      const kwNeeded = Math.max(1, Math.round((units / 120) * 10) / 10);
-      const subsidy = kwNeeded >= 3 ? 78000 : Math.round(kwNeeded * 26000);
-      const annualSavings = Math.round(kwNeeded * 1400 * 7.5);
-
-      return {
-        text: `Based on your monthly consumption of **${units} kWh**, a **${kwNeeded} kW Rooftop Solar system** is ideal for your home.
-
-Key Projections:
-• **PM Surya Ghar Subsidy**: You qualify for **₹${subsidy.toLocaleString('en-IN')}** in Central Financial Assistance.
-• **Annual Power Bill Savings**: Approx **₹${annualSavings.toLocaleString('en-IN')} / year**.
-• **Clean Energy Generated**: ~${Math.round(kwNeeded * 1400)} units annually.
-• **CO₂ Mitigated**: ~${(kwNeeded * 1.15).toFixed(1)} tonnes / year.
-
-Use the Solar Advisor tab to inspect exact roof area feasibility and request a certified GEDA installer callback.`,
-        provider: "GEDA Deterministic Engine (Offline / Local Model)",
-        isLive: false,
-        confidence: 1.0,
-        actionTitle: "Open Solar Advisor",
-        actionTab: "solar"
-      };
+    
+    // Retrieve knowledge base from coachKnowledge collection / cache
+    let knowledgeBase = getCachedCatalog('coachKnowledge') || [];
+    if (!knowledgeBase || knowledgeBase.length === 0) {
+      try {
+        const res = await getCoachKnowledge();
+        knowledgeBase = res.data || [];
+      } catch (e) {
+        knowledgeBase = [];
+      }
     }
 
-    // 2. Electricity bill, AC, and peak hour inquiries
-    if (question.includes("bill") || question.includes("electricity") || question.includes("power") || question.includes("peak") || question.includes("ac")) {
-      const acSavings = Math.round((user.acUsageHours || 6) * 0.18 * 30 * 7.5);
-      return {
-        text: `Your current electricity bill is approx **₹${user.monthlyElectricityBill || 2120}/month** (${user.monthlyElectricityUnits || 280} kWh).
+    // Keyword matching against knowledgeBase
+    let matched = null;
+    if (question && knowledgeBase.length > 0) {
+      for (const item of knowledgeBase) {
+        const keys = item.keywords || [];
+        if (keys.some(k => question.includes(k.toLowerCase()))) {
+          matched = item;
+          break;
+        }
+      }
+    }
 
-**High-Impact Actions to Cut Bill by 25-35%:**
-1. **Calibrate AC to 26°C**: Setting your AC at 26°C instead of 21°C saves ~₹${acSavings}/month and ${Math.round((user.acUsageHours || 6) * 0.4 * 30)} kg CO₂.
-2. **Shift to Off-Peak Hours (11 PM - 6 AM)**: Run washing machines, dishwashers, and EV charging during green off-peak hours under Gujarat's ToD tariff to cut unit cost from ₹9.20 to ₹5.40.
-3. **Cut Phantom Standby Loads**: Turn off switches at the wall for entertainment consoles and microwave ovens.`,
-        provider: "GEDA Deterministic Engine (Offline / Local Model)",
+    if (matched) {
+      return {
+        text: matched.response,
+        provider: "Rule-Based Eco Coach (coachKnowledge retrieval)",
         isLive: false,
         confidence: 1.0,
-        actionTitle: "Log AC Eco-Set Mission",
+        source: matched.source || "GEDA Guidelines",
+        actionTitle: "Explore LiFE Actions",
         actionTab: "missions"
       };
     }
 
-    // 3. Default contextual sustainability nudge
-    return {
-      text: `Hello ${user.name || 'Citizen'}! Your current carbon footprint is **${user.monthlyFootprintKg || 428} kg CO₂e / month** (${user.footprintDeltaPercent || -12}% improvement).
+    // Default general tip from knowledgeBase or contextual fallback
+    const defaultTip = knowledgeBase[0]?.response || "Switch off appliances at the wall plug when not in use and maintain air conditioners at 26°C with ceiling fans to save power.";
 
-**Your Top 3 Recommended Actions Today:**
-1. **Energy**: Maintain AC at 26°C and switch off idle electronics to conserve ~1.1 kg CO₂ today.
-2. **Mobility**: For trips under 3 km, switch to cycling or public transit.
-3. **Community Sprint**: Check the active *Gujarat 200,000 kg CO₂ Avoided* campaign in the Community tab and log today's micro-tasks!`,
-      provider: "GEDA Deterministic Engine (Offline / Local Model)",
+    return {
+      text: `Hello ${user?.name || 'Citizen'}! Here is today's verified habit recommendation:
+
+${defaultTip}
+
+Check the Daily Challenges tab to accept micro-tasks and track your CO₂ mitigation.`,
+      provider: "Rule-Based Eco Coach (coachKnowledge retrieval)",
       isLive: false,
       confidence: 1.0,
       actionTitle: "View Daily Missions",

@@ -1,0 +1,124 @@
+{
+  "id": "tariffs",
+  "defaultDiscom": "UGVCL",
+  "averageTariffInrPerKwh": 6.50,
+  "baseRateInrPerKwh": 6.20,
+  "discoms": [
+    {
+      "discomId": "UGVCL",
+      "name": "Uttar Gujarat Vij Company Limited",
+      "coverageDistricts": ["Ahmedabad", "Gandhinagar", "Mehsana", "Patan", "Banaskantha", "Sabarkantha", "Aravalli"],
+      "residentialSlabs": [
+        { "maxUnits": 50, "ratePerKwh": 3.20 },
+        { "maxUnits": 100, "ratePerKwh": 3.90 },
+        { "maxUnits": 250, "ratePerKwh": 4.90 },
+        { "maxUnits": 99999, "ratePerKwh": 6.20 }
+      ],
+      "fixedMonthlyCharges": 40,
+      "peakHours": [18, 19, 20, 21],
+      "peakRateMultiplier": 1.25,
+      "offPeakHours": [22, 23, 0, 1, 2, 3, 4, 5],
+      "offPeakRateDiscount": 0.15,
+      "peakRateInr": 9.20,
+      "offPeakRateInr": 5.40,
+      "source": "Gujarat Electricity Regulatory Commission (GERC) Tariff Order Case No. 2291/2024",
+      "sourceUrl": "https://gercin.org",
+      "year": 2024,
+      "provisional": false,
+      "lastVerified": "2026-10-31T00:00:00Z"
+    },
+    {
+      "discomId": "TORRENT_POWER",
+      "name": "Torrent Power Limited (Ahmedabad / Gandhinagar / Surat)",
+      "coverageDistricts": ["Ahmedabad_Urban", "Gandhinagar_Urban", "Surat_City"],
+      "residentialSlabs": [
+        { "maxUnits": 50, "ratePerKwh": 3.40 },
+        { "maxUnits": 100, "ratePerKwh": 4.10 },
+        { "maxUnits": 250, "ratePerKwh": 5.10 },
+        { "maxUnits": 99999, "ratePerKwh": 6.50 }
+      ],
+      "fixedMonthlyCharges": 45,
+      "peakHours": [18, 19, 20, 21],
+      "peakRateMultiplier": 1.25,
+      "offPeakHours": [22, 23, 0, 1, 2, 3, 4, 5],
+      "offPeakRateDiscount": 0.15,
+      "peakRateInr": 9.50,
+      "offPeakRateInr": 5.60,
+      "source": "GERC Tariff Order for Torrent Power Ahmedabad & Surat 2024-25",
+      "sourceUrl": "https://gercin.org",
+      "year": 2024,
+      "provisional": false,
+      "lastVerified": "2026-10-31T00:00:00Z"
+    },
+    {
+      "discomId": "DGVCL",
+      "name": "Dakshin Gujarat Vij Company Limited",
+      "coverageDistricts": ["Surat", "Bharuch", "Narmada", "Tapi", "Navsari", "Valsad", "Dang"],
+      "residentialSlabs": [
+        { "maxUnits": 50, "ratePerKwh": 3.20 },
+        { "maxUnits": 100, "ratePerKwh": 3.90 },
+        { "maxUnits": 250, "ratePerKwh": 4.90 },
+        { "maxUnits": 99999, "ratePerKwh": 6.20 }
+      ],
+      "fixedMonthlyCharges": 40,
+      "peakHours": [18, 19, 20, 21],
+      "peakRateMultiplier": 1.25,
+      "offPeakHours": [22, 23, 0, 1, 2, 3, 4, 5],
+      "offPeakRateDiscount": 0.15,
+      "peakRateInr": 9.20,
+      "offPeakRateInr": 5.40,
+      "source": "GERC Tariff Order Case No. 2292/2024",
+      "sourceUrl": "https://gercin.org",
+      "year": 2024,
+      "provisional": false,
+      "lastVerified": "2026-10-31T00:00:00Z"
+    },
+    {
+      "discomId": "MGVCL",
+      "name": "Madhya Gujarat Vij Company Limited",
+      "coverageDistricts": ["Vadodara", "Anand", "Kheda", "Panchmahal", "Dahod", "Mahisagar", "Chhota Udepur"],
+      "residentialSlabs": [
+        { "maxUnits": 50, "ratePerKwh": 3.20 },
+        { "maxUnits": 100, "ratePerKwh": 3.90 },
+        { "maxUnits": 250, "ratePerKwh": 4.90 },
+        { "maxUnits": 99999, "ratePerKwh": 6.20 }
+      ],
+      "fixedMonthlyCharges": 40,
+      "peakHours": [18, 19, 20, 21],
+      "peakRateMultiplier": 1.25,
+      "offPeakHours": [22, 23, 0, 1, 2, 3, 4, 5],
+      "offPeakRateDiscount": 0.15,
+      "peakRateInr": 9.20,
+      "offPeakRateInr": 5.40,
+      "source": "GERC Tariff Order Case No. 2293/2024",
+      "sourceUrl": "https://gercin.org",
+      "year": 2024,
+      "provisional": false,
+      "lastVerified": "2026-10-31T00:00:00Z"
+    },
+    {
+      "discomId": "PGVCL",
+      "name": "Paschim Gujarat Vij Company Limited",
+      "coverageDistricts": ["Rajkot", "Jamnagar", "Bhavnagar", "Junagadh", "Porbandar", "Amreli", "Surendranagar", "Kutch", "Morbi", "Devbhumi Dwarka", "Gir Somnath", "Botad"],
+      "residentialSlabs": [
+        { "maxUnits": 50, "ratePerKwh": 3.20 },
+        { "maxUnits": 100, "ratePerKwh": 3.90 },
+        { "maxUnits": 250, "ratePerKwh": 4.90 },
+        { "maxUnits": 99999, "ratePerKwh": 6.20 }
+      ],
+      "fixedMonthlyCharges": 40,
+      "peakHours": [18, 19, 20, 21],
+      "peakRateMultiplier": 1.25,
+      "offPeakHours": [22, 23, 0, 1, 2, 3, 4, 5],
+      "offPeakRateDiscount": 0.15,
+      "peakRateInr": 9.20,
+      "offPeakRateInr": 5.40,
+      "source": "GERC Tariff Order Case No. 2294/2024",
+      "sourceUrl": "https://gercin.org",
+      "year": 2024,
+      "provisional": false,
+      "lastVerified": "2026-10-31T00:00:00Z"
+    }
+  ]
+}
+

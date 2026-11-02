@@ -8,7 +8,7 @@ import type { EmissionFactors, SubsidyRules, DiscomTariff } from '../../shared/s
 
 const mockEmissionFactors: EmissionFactors = {
   id: 'emissionFactors',
-  gridCo2PerKwh: 0.82,
+  gridCo2PerKwh: 0.71,
   lpgCo2PerKg: 2.983,
   lpgCylinderWeightKg: 14.2,
   petrolCo2PerKm: 0.165,
@@ -18,7 +18,7 @@ const mockEmissionFactors: EmissionFactors = {
   twoWheelerPetrolCo2PerKm: 0.048,
   wasteUnsegregatedCo2PerKg: 0.95,
   waterPumpingCo2PerKilolitre: 0.42,
-  source: 'CEA v19',
+  source: 'CEA v20.0 (Dec 2024)',
   sourceUrl: 'https://cea.nic.in',
   lastVerified: '2026-10-31T00:00:00Z'
 };
@@ -78,9 +78,9 @@ describe('Footprint Calculation Engine', () => {
       mockEmissionFactors
     );
 
-    // 280 kWh * 0.82 = 229.6 kg
-    expect(result.breakdown.electricity).toBe(229.6);
-    expect(result.monthlyTotalCo2Kg).toBeGreaterThan(250);
+    // 280 kWh * 0.71 = 198.8 kg
+    expect(result.breakdown.electricity).toBe(198.8);
+    expect(result.monthlyTotalCo2Kg).toBeGreaterThan(200);
     expect(result.treesEquivalentToOffset).toBeGreaterThan(100);
   });
 });
@@ -90,9 +90,11 @@ describe('Rooftop Solar Feasibility Engine', () => {
     const result = calculateSolarFeasibility(
       {
         monthlyBillInr: 2500,
-        availableRoofAreaSqFt: 350
+        availableRoofAreaSqFt: 350,
+        discomTariffPerKwh: mockTariff.residentialSlabs[3].ratePerKwh
       },
-      mockSubsidyRules
+      mockSubsidyRules,
+      mockEmissionFactors.gridCo2PerKwh
     );
 
     expect(result.recommendedCapacityKw).toBeGreaterThanOrEqual(1.5);
@@ -107,14 +109,18 @@ describe('Gujarat DISCOM ToD Tariff Simulator', () => {
   it('flags peak hour penalty between 6 PM and 10 PM IST', () => {
     const peakSim = simulatePeakShift(
       { appliancePowerWatts: 1500, durationHours: 2, scheduledHour: 19 }, // 7 PM
-      mockTariff
+      mockTariff,
+      mockTariff.residentialSlabs[3].ratePerKwh,
+      mockEmissionFactors.gridCo2PerKwh
     );
     expect(peakSim.isPeakHour).toBe(true);
     expect(peakSim.savingsIfShiftedToOffPeakInr).toBeGreaterThan(0);
 
     const offPeakSim = simulatePeakShift(
       { appliancePowerWatts: 1500, durationHours: 2, scheduledHour: 23 }, // 11 PM
-      mockTariff
+      mockTariff,
+      mockTariff.residentialSlabs[3].ratePerKwh,
+      mockEmissionFactors.gridCo2PerKwh
     );
     expect(offPeakSim.isPeakHour).toBe(false);
     expect(offPeakSim.isOffPeakHour).toBe(true);

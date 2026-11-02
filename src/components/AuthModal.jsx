@@ -27,10 +27,9 @@ import {
   loginWithEmail, 
   registerWithEmail, 
   loginWithDemoPreset,
-  loginWithGoogle,
-  loginWithGoogleInstant 
+  loginWithGoogle
 } from '../services/authService';
-import { DEMO_USERS, GUJARAT_DISTRICTS } from '../data/initialData';
+import { GUJARAT_DISTRICT_NAMES, getCachedCatalog } from '../services/catalogService';
 import { BRANDING } from '../config/branding';
 import { POPULAR_UNIVERSITIES, DEPARTMENTS, submitStudentVerification } from '../services/studentVerificationService';
 import { createManagedUser } from '../services/userManagementService';
@@ -104,8 +103,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
   }, [isOpen, initialMode]);
 
   const [selectedRole, setSelectedRole] = useState('citizen');
-  const [email, setEmail] = useState(DEMO_USERS.citizen.email);
-  const [password, setPassword] = useState(DEMO_USERS.citizen.password);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [displayName, setDisplayName] = useState('');
@@ -138,7 +137,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [googleNotice, setGoogleNotice] = useState(null);
   const [submittedApproval, setSubmittedApproval] = useState(null);
 
   const handleStudentIdUpload = (e) => {
@@ -152,12 +150,16 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
     }
   };
 
-  // When selected role changes in login mode, prefill demo credentials for convenience
+  // When selected role changes in login mode, prefill demo email
   const handleRoleSelect = (roleId) => {
     setSelectedRole(roleId);
-    if (mode === 'login' && DEMO_USERS[roleId]) {
-      setEmail(DEMO_USERS[roleId].email);
-      setPassword(DEMO_USERS[roleId].password);
+    if (mode === 'login') {
+      const demoAccounts = getCachedCatalog('demoProfiles') || [];
+      const match = demoAccounts.find(p => p.role === roleId || (roleId === 'solar_vendor' && p.role === 'solar_partner'));
+      if (match) {
+        setEmail(match.email);
+        setPassword(import.meta.env.VITE_DEMO_PASSWORD || '');
+      }
     } else if (mode === 'signup') {
       setEmail('');
       setPassword('');
@@ -323,7 +325,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
       };
     }
 
-    const res = await registerWithEmail(email, password, displayName, district, selectedRole, extraMetadata);
+    const res = await registerWithEmail(email, password, displayName, district, extraMetadata);
 
     if (res.success) {
       // Record in student ledger if student
@@ -381,9 +383,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
-    setGoogleNotice(null);
 
-    const res = await loginWithGoogle(mode === 'signup' ? selectedRole : null);
+    const res = await loginWithGoogle();
     setLoading(false);
 
     if (res.success) {
@@ -394,22 +395,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
 
     if (res.cancelled) return;
 
-    const roleLabel = currentRoleObj.label;
-    setGoogleNotice({
-      title: 'Google Sign-In Notice',
-      message: res.error || 'Authentication provider connection unavailable. You can proceed instantly in verified mode below.',
-      actionLabel: mode === 'signup' 
-        ? `Continue as Google ${roleLabel} (Instant Mode)`
-        : `Continue with Google (Instant Mode)`
-    });
-  };
-
-  const handleInstantGoogleAccess = () => {
-    const res = loginWithGoogleInstant(mode === 'signup' ? selectedRole : 'citizen');
-    if (res.success) {
-      onAuthSuccess(res.user);
-      onClose();
-    }
+    setError(res.error || 'Google Sign-In failed. Please try again.');
   };
 
   if (!isOpen) return null;
@@ -584,21 +570,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
               </div>
             )}
 
-            {/* Google Notice Box if popup blocked */}
-            {googleNotice && (
-              <div className="p-3.5 mb-4 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/80 text-xs space-y-2">
-                <p className="font-bold text-amber-800 dark:text-amber-200">{googleNotice.title}</p>
-                <p className="text-[11px] text-slate-600 dark:text-slate-300">{googleNotice.message}</p>
-                <button
-                  type="button"
-                  onClick={handleInstantGoogleAccess}
-                  className="w-full py-2 bg-emerald-800 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
-                >
-                  {googleNotice.actionLabel}
-                </button>
-              </div>
-            )}
-
             {/* GOOGLE ONE-CLICK AUTH (for Citizen or instant roles) */}
             {mode === 'login' && (
               <div className="mb-4">
@@ -690,7 +661,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                   {mode === 'login' && (
                     <button
                       type="button"
-                      onClick={() => alert("Demo Password: Password123!\nYou can also click any of the 5 quick demo preset pills below for instant login.")}
+                      onClick={() => alert("Please use the demo presets below or sign in with your registered account credentials.")}
                       className="text-[10px] text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
                     >
                       Forgot password?
@@ -730,7 +701,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                       onChange={(e) => setDistrict(e.target.value)}
                       className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
                     >
-                      {GUJARAT_DISTRICTS.map((dist) => (
+                      {GUJARAT_DISTRICT_NAMES.map((dist) => (
                         <option key={dist} value={dist}>{dist}</option>
                       ))}
                     </select>
@@ -1059,14 +1030,15 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
               </button>
             </form>
 
-            {/* QUICK DEMO PRESETS (when in login mode) */}
-            {mode === 'login' && (
+            {/* QUICK DEMO PRESETS (when in login mode and demo mode enabled) */}
+            {mode === 'login' && (import.meta.env.VITE_ENABLE_DEMO_LOGIN === 'true' || import.meta.env.DEV) && import.meta.env.VITE_ENABLE_DEMO_LOGIN !== 'false' && (
               <div className="mt-5 pt-4 border-t border-slate-200 dark:border-slate-800">
-                <div className="flex justify-center mb-3">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-[10px] font-bold tracking-wider font-mono uppercase">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 text-[10px] font-bold tracking-wider font-mono uppercase">
                     <Sparkles className="w-3 h-3 text-amber-500" />
-                    <span>⚡ Quick Demo Login Presets:</span>
+                    <span>Demo Mode Enabled</span>
                   </div>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">1-Click Evaluation Presets</span>
                 </div>
 
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">

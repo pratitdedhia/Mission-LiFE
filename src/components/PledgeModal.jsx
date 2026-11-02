@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { X, Award, Download, CheckCircle, ShieldCheck, Printer } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { BRANDING } from '../config/branding';
+import { getIstDateString } from '../utils/dateUtils';
 
 export default function PledgeModal({ isOpen, onClose, user, onPledgeSigned }) {
   const [pledged, setPledged] = useState(user.pledgeSigned || false);
@@ -18,8 +19,8 @@ export default function PledgeModal({ isOpen, onClose, user, onPledgeSigned }) {
     if (onPledgeSigned) {
       onPledgeSigned({
         pledgeSigned: true,
-        pledgeDate: new Date().toISOString().split('T')[0],
-        certificateId: `GEDA-LIFE-2026-${(user.district || 'GUJ').slice(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`
+        pledgeDate: getIstDateString(),
+        certificateId: `GEDA-LIFE-2026-${(user.district || 'GUJ').slice(0, 3).toUpperCase()}-${(typeof crypto !== 'undefined' && crypto.getRandomValues ? (crypto.getRandomValues(new Uint32Array(1))[0] % 9000 + 1000) : (Date.now() % 9000 + 1000))}`
       });
     }
   };
@@ -88,7 +89,7 @@ export default function PledgeModal({ isOpen, onClose, user, onPledgeSigned }) {
 
     // Footer Info
     const certId = user.certificateId || `GEDA-LIFE-2026-AHM-8821`;
-    const dateStr = user.pledgeDate || new Date().toISOString().split('T')[0];
+    const dateStr = user.pledgeDate || getIstDateString();
 
     ctx.textAlign = 'left';
     ctx.font = '600 14px monospace';
@@ -112,7 +113,7 @@ export default function PledgeModal({ isOpen, onClose, user, onPledgeSigned }) {
   };
 
   const certId = user.certificateId || `GEDA-LIFE-2026-AHM-8821`;
-  const dateStr = user.pledgeDate || new Date().toISOString().split('T')[0];
+  const dateStr = user.pledgeDate || getIstDateString();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">

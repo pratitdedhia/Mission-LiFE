@@ -10,27 +10,41 @@ service firebase.storage {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isValidImage() {
-      return request.resource.size < 5 * 1024 * 1024 // 5 MB max
-        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+    function isAdmin() {
+      return isAuthenticated() && (request.auth.token.role == 'admin');
     }
 
-    // Bill uploads for OCR
+    function isCampusLeader() {
+      return isAuthenticated() && (request.auth.token.role == 'campus_leader' || isAdmin());
+    }
+
+    function isValidUpload() {
+      return request.resource.size < 5 * 1024 * 1024 // 5 MB max
+        && (request.resource.contentType.matches('image/(jpeg|png|webp)') || request.resource.contentType == 'application/pdf');
+    }
+
+    // Bill uploads for energy audits
     match /bills/{userId}/{fileName} {
-      allow read: if isOwner(userId) || request.auth.token.role == 'admin';
-      allow write: if isOwner(userId) && isValidImage();
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) && isValidUpload();
     }
 
     // Task proof photographic evidence
     match /task_proofs/{userId}/{fileName} {
       allow read: if isAuthenticated();
-      allow write: if isOwner(userId) && isValidImage();
+      allow write: if isOwner(userId) && isValidUpload();
     }
 
-    // Public avatars and certificates
+    // Student ID verification cards
+    match /student_ids/{userId}/{fileName} {
+      allow read: if isOwner(userId) || isCampusLeader();
+      allow write: if isOwner(userId) && isValidUpload();
+    }
+
+    // Public assets, badges, and certificates
     match /public/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth.token.role == 'admin';
+      allow write: if isAdmin();
     }
   }
 }

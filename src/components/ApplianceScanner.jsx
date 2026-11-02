@@ -49,6 +49,22 @@ const APPLIANCE_DATABASE = {
     dutyCycle: 0.8,
     co2MonthlyKg: 11.1,
     tip: "Wash with cold water (30°C) instead of hot water (60°C); heating water accounts for 85-90% of washing cycle power."
+  },
+  tv: {
+    name: "Smart Television (55-inch LED)",
+    wattage: 110,
+    dailyHours: 5.0,
+    dutyCycle: 1.0,
+    co2MonthlyKg: 11.7,
+    tip: "Enable ambient light sensor automatic dimming and switch off wall socket to prevent standby vampire draw."
+  },
+  laptop: {
+    name: "Laptop Computer",
+    wattage: 65,
+    dailyHours: 8.0,
+    dutyCycle: 0.6,
+    co2MonthlyKg: 6.6,
+    tip: "Unplug charger once battery reaches 80% to eliminate phantom charging draw and preserve lithium cell longevity."
   }
 };
 
@@ -76,6 +92,30 @@ export default function ApplianceScanner({ user = {}, onNavigate, onApplianceAdd
     }
   };
 
+  const handleManualSelect = (key) => {
+    const item = APPLIANCE_DATABASE[key];
+    if (!item) return;
+    setScanResult({
+      success: true,
+      detection: "manual",
+      appliances_detected_count: 1,
+      total_estimated_instant_wattage: item.wattage,
+      estimated_monthly_carbon_kg_co2e: item.co2MonthlyKg,
+      detected_appliances: [
+        {
+          label: item.name,
+          confidence: 1.0,
+          estimated_wattage: item.wattage,
+          daily_hours_typical: item.dailyHours,
+          monthly_co2e_kg: item.co2MonthlyKg,
+          energy_saving_nudge: item.tip
+        }
+      ],
+      mission_life_action: "Set thermostat 1°C higher or turn off at socket when unused."
+    });
+    confetti({ particleCount: 40, spread: 50, origin: { y: 0.7 } });
+  };
+
   const handleRunScan = async () => {
     if (!selectedFile) return;
     setLoading(true);
@@ -100,57 +140,71 @@ export default function ApplianceScanner({ user = {}, onNavigate, onApplianceAdd
       }
 
       if (!data) {
-        // Instant edge vision heuristic matching YOLOv8 COCO appliance classes
+        // Honest local evaluation: check if filename explicitly names a supported COCO class
         const filename = selectedFile.name.toLowerCase();
-        let detected = APPLIANCE_DATABASE["air conditioner"];
+        let detectedKey = null;
         if (filename.includes("fridge") || filename.includes("refrigerator")) {
-          detected = APPLIANCE_DATABASE["refrigerator"];
-        } else if (filename.includes("microwave") || filename.includes("oven")) {
-          detected = APPLIANCE_DATABASE["microwave"];
+          detectedKey = "refrigerator";
+        } else if (filename.includes("microwave")) {
+          detectedKey = "microwave";
+        } else if (filename.includes("tv") || filename.includes("television")) {
+          detectedKey = "tv";
+        } else if (filename.includes("laptop")) {
+          detectedKey = "laptop";
         } else if (filename.includes("wash") || filename.includes("wm")) {
-          detected = APPLIANCE_DATABASE["washing machine"];
+          detectedKey = "washing machine";
+        } else if (filename.includes("ac") || filename.includes("conditioner")) {
+          detectedKey = "air conditioner";
         }
 
-        data = {
-          success: true,
-          appliances_detected_count: 1,
-          total_estimated_instant_wattage: detected.wattage,
-          estimated_monthly_carbon_kg_co2e: detected.co2MonthlyKg,
-          detected_appliances: [
-            {
-              label: detected.name,
-              confidence: 0.94,
-              estimated_wattage: detected.wattage,
-              monthly_co2e_kg: detected.co2MonthlyKg,
-              energy_saving_nudge: detected.tip
-            }
-          ],
-          mission_life_action: "Set thermostat 1°C higher or turn off at socket when unused."
-        };
+        if (detectedKey && APPLIANCE_DATABASE[detectedKey]) {
+          const item = APPLIANCE_DATABASE[detectedKey];
+          data = {
+            success: true,
+            detection: "heuristic",
+            appliances_detected_count: 1,
+            total_estimated_instant_wattage: item.wattage,
+            estimated_monthly_carbon_kg_co2e: item.co2MonthlyKg,
+            detected_appliances: [
+              {
+                label: item.name,
+                confidence: 0.91,
+                estimated_wattage: item.wattage,
+                daily_hours_typical: item.dailyHours,
+                monthly_co2e_kg: item.co2MonthlyKg,
+                energy_saving_nudge: item.tip
+              }
+            ],
+            mission_life_action: "Set thermostat 1°C higher or turn off at socket when unused."
+          };
+        } else {
+          data = {
+            success: true,
+            detection: "none",
+            appliances_detected_count: 0,
+            detected_appliances: [],
+            total_estimated_instant_wattage: 0,
+            estimated_monthly_carbon_kg_co2e: 0.0,
+            message: "No appliance recognised, pick manually"
+          };
+        }
       }
 
       setScanResult(data);
-      confetti({ particleCount: 40, spread: 50, origin: { y: 0.7 } });
+      if (data.detected_appliances && data.detected_appliances.length > 0) {
+        confetti({ particleCount: 40, spread: 50, origin: { y: 0.7 } });
+      }
     } catch (err) {
       console.warn("Vision scan processing:", err);
-      const detected = APPLIANCE_DATABASE["air conditioner"];
       setScanResult({
         success: true,
-        appliances_detected_count: 1,
-        total_estimated_instant_wattage: detected.wattage,
-        estimated_monthly_carbon_kg_co2e: detected.co2MonthlyKg,
-        detected_appliances: [
-          {
-            label: detected.name,
-            confidence: 0.92,
-            estimated_wattage: detected.wattage,
-            monthly_co2e_kg: detected.co2MonthlyKg,
-            energy_saving_nudge: detected.tip
-          }
-        ],
-        mission_life_action: "Set thermostat 1°C higher or turn off at socket when unused."
+        detection: "none",
+        appliances_detected_count: 0,
+        detected_appliances: [],
+        total_estimated_instant_wattage: 0,
+        estimated_monthly_carbon_kg_co2e: 0.0,
+        message: "No appliance recognised, pick manually"
       });
-      confetti({ particleCount: 40, spread: 50, origin: { y: 0.7 } });
     } finally {
       setLoading(false);
     }
@@ -276,8 +330,41 @@ export default function ApplianceScanner({ user = {}, onNavigate, onApplianceAdd
         </div>
       )}
 
+      {/* Honest Fallback when Vision finds no appliance */}
+      {scanResult && (scanResult.detection === 'none' || scanResult.appliances_detected_count === 0) && (
+        <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xs space-y-4 animate-fade-in text-left">
+          <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+            <div>
+              <span className="font-bold text-sm block">No appliance recognised, pick manually</span>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                Pre-trained YOLOv8 COCO weights detect <strong>refrigerators, microwaves, ovens, TVs, and laptops</strong>. Heavy residential cooling & heating loads (e.g. ACs, geysers) are not in base COCO. Select your appliance below to continue:
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
+            {Object.entries(APPLIANCE_DATABASE).map(([key, item]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => handleManualSelect(key)}
+                className="p-3 text-left rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/30 transition-all cursor-pointer group"
+              >
+                <span className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-emerald-300 block truncate">
+                  {item.name}
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5 block">
+                  ~{item.wattage} W • {item.dailyHours}h/day
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Detection Results */}
-      {scanResult && (
+      {scanResult && scanResult.appliances_detected_count > 0 && (
         <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xs space-y-4 animate-fade-in">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <span className="text-xs font-bold text-slate-900 dark:text-white">Detected Appliance Telemetry</span>

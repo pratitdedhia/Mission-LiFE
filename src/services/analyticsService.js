@@ -12,11 +12,15 @@ import { collection, getDocs, query, where, orderBy, limit } from 'firebase/fire
 import { getStudentVerifications } from './studentVerificationService';
 import { getAllManagedUsers } from './userManagementService';
 import { getStoredLeads } from './solarQuoteService';
+import { apiClient } from './apiClient';
+import { logger } from '../utils/logger';
+
+import { CO2_GRID_FACTOR_KG_PER_KWH as BRAND_GRID_FACTOR, DEFAULT_BASELINE_DAILY_KWH } from '../config/branding';
 
 // Official Grid Emission Factor (CEA Baseline v2026 / GEDA)
-export const CO2_GRID_FACTOR_KG_PER_KWH = 0.71;
+export const CO2_GRID_FACTOR_KG_PER_KWH = BRAND_GRID_FACTOR;
 export const GRID_EMISSION_FACTOR_METADATA = {
-  factor: 0.71,
+  factor: BRAND_GRID_FACTOR,
   unit: "kg CO2e / kWh",
   source: "Central Electricity Authority (CEA) CO2 Baseline Database v2026 / GEDA",
   estimateLabel: "Estimated Indirect Grid Emissions"
@@ -27,8 +31,8 @@ export const ENERGY_SAVING_REWARD_RULE = {
   version: "2026.1-SAVINGS",
   pointsPerKwhSaved: 10,
   maxDailyRewardPoints: 50,
-  baselineDailyKwh: 8.5, // Standard urban Gujarat household benchmark
-  co2GridFactorKgPerKwh: 0.71,
+  baselineDailyKwh: DEFAULT_BASELINE_DAILY_KWH, // Standard urban Gujarat household benchmark
+  co2GridFactorKgPerKwh: BRAND_GRID_FACTOR,
   factorSource: "Central Electricity Authority (CEA) Baseline v2026 / GEDA"
 };
 
@@ -95,10 +99,11 @@ export function calculateKwhFromTelemetry(readings = [], maxGapSeconds = 60) {
  * Fetches real hardware telemetry and calculates power and carbon statistics.
  * Explicitly isolates and flags Wokwi potentiometer readings as simulated.
  */
-export async function fetchTelemetryAnalytics(userId = 'user_12345') {
-  const isSimulated = userId === 'user_12345';
+export async function fetchTelemetryAnalytics(userId = 'appliance_ac_01') {
+  const isSimulated = userId === 'appliance_ac_01' || !String(userId).startsWith('usr_') || String(userId).includes('sim');
   try {
-    const res = await fetch(`https://mission-life.onrender.com/api/hardware/analytics?user_id=${userId}`, {
+    const res = await apiClient.get('/api/hardware/analytics', { user_id: userId }, {
+      timeoutMs: 4000,
       cache: 'no-store'
     });
     if (res.ok) {
@@ -158,7 +163,7 @@ export async function fetchUserVerifiedActions(userId) {
       const snap = await getDocs(q);
       snap.forEach(d => actions.push({ id: d.id, ...d.data() }));
     } catch (err) {
-      console.warn("Firestore verifiedActions read notice:", err.message);
+      logger.warn("Firestore verifiedActions read notice:", err.message);
     }
   }
 
@@ -740,7 +745,7 @@ export async function fetchUnifiedInsights({
     horizon: "Next 30 Days",
     projectedKwh: Number((totalPeriodKwh * 1.05).toFixed(1)),
     projectedCo2Kg: Number((totalPeriodKwh * 1.05 * CO2_GRID_FACTOR_KG_PER_KWH).toFixed(1)),
-    expectedSavingsInr: Math.round((totalPeriodKwh * 0.12) * 6.50),
+    expectedSavingsInr: Math.round((totalPeriodKwh * 0.12) * 6),
     dataCoverageDays: activeDays
   } : {
     status: "insufficient_history",

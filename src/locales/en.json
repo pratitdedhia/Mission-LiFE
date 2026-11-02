@@ -42,7 +42,7 @@
     "ocrAnalyzing": "Gemini Vision analyzing billing period & kWh...",
     "manualEntryFallback": "Or enter units manually",
     "unitsPlaceholder": "e.g. 280 kWh",
-    "billAmountPlaceholder": "e.g. ₹2,120",
+    "billAmountPlaceholder": "e.g. 2,120",
     "confirmBaseline": "Save Verified Baseline →"
   },
   "dashboard": {
@@ -173,4 +173,3 @@
     "verificationQueue": "Photo Proof Audit Queue"
   }
 }
-

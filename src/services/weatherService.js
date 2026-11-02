@@ -94,7 +94,7 @@ function formatOpenWeatherData(data, city) {
   if (temp >= 35) {
     acNudge = `High ambient heat (${temp}°C) in ${city}. Set AC to 26°C with ceiling fan to cut power load by 36% during grid peak hours!`;
   } else if (temp >= 28) {
-    acNudge = `Warm day (${temp}°C). Setting AC to 26°C maintains comfort while saving ~₹450/month on electricity.`;
+    acNudge = `Warm day (${temp}°C). Setting AC to 26°C maintains comfort while cutting domestic power consumption by up to 24%.`;
   }
 
   return {

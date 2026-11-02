@@ -18,12 +18,13 @@ export interface PeakShiftSimulationResult {
 
 /**
  * Evaluates domestic peak load shifting benefits against Gujarat DISCOM ToD tariff orders.
+ * All tariff rates and grid CO2 factors are passed in from configuration.
  */
 export function simulatePeakShift(
   input: PeakShiftSimulationInput,
   tariff: DiscomTariff,
-  baseTariffRate: number = 6.20,
-  gridCo2Factor: number = 0.82
+  baseTariffRate: number,
+  gridCo2Factor: number
 ): PeakShiftSimulationResult {
   const unitsKwh = (input.appliancePowerWatts * input.durationHours) / 1000;
   const isPeak = tariff.peakHours.includes(input.scheduledHour);
@@ -45,8 +46,9 @@ export function simulatePeakShift(
   const offPeakCost = unitsKwh * offPeakRate;
 
   const savingsIfShifted = isPeak ? Math.max(0, Math.round((actualCost - offPeakCost) * 100) / 100) : 0;
-  // Shifting away from thermal peaker plants saves ~0.15 kg CO2 per unit deferral
-  const co2Avoided = isPeak ? Math.round(unitsKwh * 0.15 * 100) / 100 : 0;
+  // Shifting away from thermal peaker plants saves proportional to grid emission factor
+  const peakerOffsetFactor = gridCo2Factor * 0.2; // approx 20% cleaner on off-peak mix
+  const co2Avoided = isPeak ? Math.round(unitsKwh * peakerOffsetFactor * 100) / 100 : 0;
 
   let recommendation = 'tariffs.normal';
   if (isPeak) {
@@ -65,4 +67,3 @@ export function simulatePeakShift(
     recommendationKey: recommendation
   };
 }
-

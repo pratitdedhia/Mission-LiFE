@@ -10,18 +10,48 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isAdmin() {
-      return isAuthenticated() && request.auth.token.role == 'admin';
+    // Role-Based Access Control: Check custom token claim first;
+    // fall back to reading user profile document in Firestore if token claim is not present.
+    function getUserRole() {
+      return request.auth.token.role != null
+        ? request.auth.token.role
+        : (exists(/databases/$(database)/documents/users/$(request.auth.uid))
+            ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+            : 'citizen');
     }
 
-    // Config reference collections: Read-only for authenticated citizens, write only by Admin SDK
+    function getUserCampus() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.campus
+        : '';
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'admin';
+    }
+
+    function isCampusLeader() {
+      return isAuthenticated() && (getUserRole() == 'campus_leader' || isAdmin());
+    }
+
+    function isSolarPartner() {
+      return isAuthenticated() && (getUserRole() == 'solar_partner' || getUserRole() == 'solar_vendor' || isAdmin());
+    }
+
+    // -------------------------------------------------------------------------
+    // REFERENCE & CONFIGURATION CATALOGS (Public read, Admin-only write)
+    // -------------------------------------------------------------------------
     match /config/{configDoc} {
       allow read: if true;
-      allow write: if false;
+      allow write: if false; // Server Admin SDK only
     }
 
-    // Reference task and badge catalogs
     match /tasks/{taskId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /themes/{themeId} {
       allow read: if true;
       allow write: if isAdmin();
     }
@@ -46,12 +76,70 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // User Profile: Can update own name, phone, district; cannot self-grant points, badges or admin role
+    match /campuses/{campusId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /departments/{deptId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /schemes/{schemeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /applianceCatalog/{catalogId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /coachKnowledge/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /registry/{regId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /campusSprints/{sprintId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /communityGoals/{goalId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // HARDWARE IOT DEVICES (Registered allow-list)
+    // -------------------------------------------------------------------------
+    match /devices/{deviceId} {
+      allow read: if isAuthenticated() && (
+        resource.data.ownerUid == request.auth.uid ||
+        resource.data.simulated == true ||
+        isAdmin()
+      );
+      allow write: if isAuthenticated() && (
+        request.resource.data.ownerUid == request.auth.uid ||
+        isAdmin()
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // USER PROFILES & SUBCOLLECTIONS
+    // -------------------------------------------------------------------------
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isOwner(userId) && request.resource.data.role == 'citizen';
-      allow update: if isOwner(userId) 
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'points', 'streak', 'badges']);
+      allow update: if (isOwner(userId) 
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'points', 'streak', 'badges', 'lifeScore']))
+        || isAdmin();
       allow delete: if isAdmin();
 
       // User Telemetry Subcollection
@@ -63,6 +151,12 @@ service cloud.firestore {
       match /appliances/{docId} {
         allow read, write: if isOwner(userId) || isAdmin();
       }
+    }
+
+    // Public Profiles (Sanitized display profiles for leaderboards and social feed)
+    match /publicProfiles/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId) || isAdmin();
     }
 
     // Household Profiles
@@ -107,33 +201,62 @@ service cloud.firestore {
       allow write: if false; // Cloud Functions only
     }
 
-    // Verified Mission Actions Log
+    // Verified Mission Actions Log: Field-level validation to prevent arbitrary client point inflation
     match /verifiedActions/{actionId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid &&
+        actionId == request.auth.uid + '_' + request.resource.data.missionId + '_' + request.resource.data.dateKey &&
+        request.resource.data.awardedPoints is number &&
+        request.resource.data.awardedPoints >= 0 &&
+        request.resource.data.awardedPoints <= 100 &&
+        request.resource.data.co2KgSaved is number &&
+        request.resource.data.co2KgSaved >= 0 &&
+        request.resource.data.co2KgSaved <= 50 &&
+        request.resource.data.missionId is string &&
+        request.resource.data.missionId.size() > 0 &&
+        request.resource.data.keys().hasOnly([
+          'userId', 'missionId', 'actionDate', 'dateKey', 'awardedPoints', 
+          'streakBonusMultiplier', 'hasPhotoProof', 'photoProofUrl', 
+          'co2KgSaved', 'category', 'userCity', 'verifiedBy', 'createdAt', 
+          'serverTimestamp'
+        ]);
       allow update, delete: if isAdmin();
     }
 
-    // Student ID Verifications & Campus Contribution
+    // Student ID Verifications & Campus Contribution:
+    // Create restricted to the student owner; status verification restricted to Campus Leader of same campus or Admin
     match /studentVerifications/{verificationId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
+      allow create: if isAuthenticated() && (
+        request.resource.data.studentId == request.auth.uid ||
+        request.resource.data.userId == request.auth.uid
+      );
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        (getUserRole() == 'campus_leader' 
+          && (!exists(/databases/$(database)/documents/users/$(request.auth.uid)) || resource.data.campus == getUserCampus())
+          && request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'verificationStatus', 'verifiedAt', 'verifiedBy', 'notes'])) ||
+        (
+          (resource.data.studentId == request.auth.uid || resource.data.userId == request.auth.uid) &&
+          resource.data.status == 'pending' &&
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'verificationStatus', 'verifiedBy', 'verifiedAt'])
+        )
+      );
       allow delete: if isAdmin();
     }
 
-    // Solar Leads & Lifecycle Tracking
+    // Solar Leads & Lifecycle Tracking:
+    // Consistent authorization across solar_partner and legacy solar_vendor roles
     match /solarLeads/{leadId} {
       allow create: if isAuthenticated();
       allow read: if isAuthenticated() && (
         resource.data.userId == request.auth.uid || 
-        request.auth.token.role == 'solar_vendor' || 
-        isAdmin()
+        isSolarPartner()
       );
       allow update: if isAuthenticated() && (
         resource.data.userId == request.auth.uid || 
-        request.auth.token.role == 'solar_vendor' || 
-        isAdmin()
+        isSolarPartner()
       );
       allow delete: if isAdmin();
     }

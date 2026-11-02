@@ -1,0 +1,10 @@
+[
+  { "id": "energy", "name": "Save Energy", "icon": "Zap", "color": "amber", "displayOrder": 1 },
+  { "id": "water", "name": "Save Water", "icon": "Droplets", "color": "cyan", "displayOrder": 2 },
+  { "id": "plastic", "name": "Reduce Single-Use Plastic", "icon": "ShoppingBag", "color": "rose", "displayOrder": 3 },
+  { "id": "food", "name": "Sustainable Food Habits", "icon": "Apple", "color": "emerald", "displayOrder": 4 },
+  { "id": "waste", "name": "Waste Reduction & Segregation", "icon": "Recycle", "color": "teal", "displayOrder": 5 },
+  { "id": "lifestyle", "name": "Healthy & Green Lifestyle", "icon": "Bike", "color": "indigo", "displayOrder": 6 },
+  { "id": "ewaste", "name": "E-Waste Management", "icon": "Cpu", "color": "purple", "displayOrder": 7 }
+]
+

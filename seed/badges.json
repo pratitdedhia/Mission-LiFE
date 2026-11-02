@@ -1,0 +1,9 @@
+[
+  { "id": "prakriti_mitra", "name": "Prakriti Mitra", "icon": "🌱", "description": "Completed onboarding & took the Mission LiFE pledge.", "tier": "Bronze", "pointsRequired": 100 },
+  { "id": "energy_saver", "name": "Urja Rakshak", "icon": "⚡", "description": "Completed 5 energy conservation micro-tasks.", "tier": "Silver", "pointsRequired": 250 },
+  { "id": "jal_rakshak", "name": "Jal Samrakshak", "icon": "💧", "description": "Saved over 500 liters of domestic water.", "tier": "Silver", "pointsRequired": 400 },
+  { "id": "zero_waste", "name": "Zero Waste Hero", "icon": "♻️", "description": "Logged 7 days of 100% kitchen waste segregation.", "tier": "Gold", "pointsRequired": 600 },
+  { "id": "solar_enthusiast", "name": "Solar Champion", "icon": "☀️", "description": "Ran a rooftop solar feasibility assessment.", "tier": "Gold", "pointsRequired": 800 },
+  { "id": "life_ambassador", "name": "LiFE Ambassador", "icon": "🏆", "description": "Achieved 1,000+ LiFE score with consistent streak.", "tier": "Platinum", "pointsRequired": 1000 }
+]
+

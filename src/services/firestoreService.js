@@ -13,14 +13,6 @@ import {
   limit,
   addDoc
 } from 'firebase/firestore';
-import { 
-  INITIAL_USER, 
-  INITIAL_COMMUNITY, 
-  INITIAL_LEADERBOARD, 
-  INITIAL_MISSIONS,
-  INITIAL_FEED_POSTS,
-  VENDORS_DIRECTORY
-} from '../data/initialData';
 
 // Local storage backup keys for offline/fallback resilience
 const FEED_STORAGE_KEY = 'life_community_feed_posts';
@@ -28,176 +20,140 @@ const FOOTPRINT_HISTORY_KEY = 'life_footprint_history_';
 const INQUIRIES_STORAGE_KEY = 'life_solar_inquiries';
 
 /**
- * Initializes default global records in Firestore if they do not yet exist
+ * Ensures offline feed cache is initialized
  */
 export async function syncInitialData() {
-  if (!isFirebaseConnected || !db) return;
-  try {
-    const commRef = doc(db, 'communityStats', 'global');
-    const commSnap = await getDoc(commRef);
-    if (!commSnap.exists()) {
-      await setDoc(commRef, INITIAL_COMMUNITY);
-    }
+  // Database seeding is now authoritative via npm run seed.
+  // Client only reads from Firestore or offline cache.
+}
 
-    // Seed feed if empty
-    const feedSnap = await getDocs(query(collection(db, 'feedPosts'), limit(2)));
-    if (feedSnap.empty) {
-      for (const post of INITIAL_FEED_POSTS) {
-        await setDoc(doc(db, 'feedPosts', post.id), {
-          ...post,
-          createdAt: new Date().toISOString()
-        });
-      }
+export function getUserFootprintHistory(userId) {
+  if (!userId) return [];
+  try {
+    const key = `${FOOTPRINT_HISTORY_KEY}${userId}`;
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+    if (raw) {
+      const history = JSON.parse(raw);
+      if (Array.isArray(history)) return history;
     }
-  } catch (err) {
-    console.warn("Firestore sync non-fatal fallback:", err.message);
+  } catch (e) {
+    console.error("Local footprint history read error:", e);
   }
+  return [];
 }
 
 /**
  * Saves footprint calculation and logs to history
  */
 export async function saveUserFootprint(userId, updatedData) {
-  // Always update local history
-  const historyKey = FOOTPRINT_HISTORY_KEY + userId;
+  if (!userId) return;
+
+  // Local storage history log
   try {
-    const existingRaw = localStorage.getItem(historyKey);
-    const history = existingRaw ? JSON.parse(existingRaw) : [
-      {
-        timestamp: new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString(),
-        monthlyFootprintKg: (updatedData.monthlyFootprintKg || 428) + 38,
-        label: "Last Month"
-      }
-    ];
-    history.push({
-      timestamp: new Date().toISOString(),
-      monthlyFootprintKg: updatedData.monthlyFootprintKg,
-      breakdown: updatedData.breakdown,
-      label: "Current"
+    const key = `${FOOTPRINT_HISTORY_KEY}${userId}`;
+    const history = JSON.parse(localStorage.getItem(key) || '[]');
+    history.unshift({
+      ...updatedData,
+      timestamp: new Date().toISOString()
     });
-    localStorage.setItem(historyKey, JSON.stringify(history.slice(-6)));
+    localStorage.setItem(key, JSON.stringify(history.slice(0, 30)));
   } catch (e) {
-    console.error("Local history save error", e);
+    console.error("Local footprint history write error:", e);
   }
 
-  if (!isFirebaseConnected || !db) return { success: true, localOnly: true };
-
-  try {
-    const userRef = doc(db, 'users', userId);
-    await setDoc(userRef, updatedData, { merge: true });
-
-    // Save historical audit log
-    const logId = `${userId}_${Date.now()}`;
-    await setDoc(doc(db, 'footprints', logId), {
-      userId,
-      timestamp: new Date().toISOString(),
-      ...updatedData
-    });
-    return { success: true };
-  } catch (err) {
-    console.warn("Firestore footprint save fallback:", err.message);
-    return { success: true, localOnly: true };
-  }
-}
-
-/**
- * Get footprint history for visual comparison over time
- */
-export async function getUserFootprintHistory(userId) {
-  const historyKey = FOOTPRINT_HISTORY_KEY + userId;
-  try {
-    const local = localStorage.getItem(historyKey);
-    if (local) return JSON.parse(local);
-  } catch (e) {}
-
-  return [
-    { label: "Baseline (Sep)", monthlyFootprintKg: 495, date: "2026-09-01" },
-    { label: "Previous (Oct)", monthlyFootprintKg: 452, date: "2026-10-01" },
-    { label: "Current (Now)", monthlyFootprintKg: 428, date: "2026-10-31" }
-  ];
-}
-
-/**
- * Records a completed mission with optional photo proof
- */
-export async function recordMissionCompleted(userId, missionId, points, co2Kg, proofData = null) {
-  // Update local storage feed or action logs
-  if (proofData?.url) {
-    const newPost = {
-      id: `post_${Date.now()}`,
-      authorName: proofData.userName || "Citizen",
-      authorCity: proofData.userCity || "Ahmedabad",
-      avatarColor: "bg-emerald-600",
-      theme: proofData.theme || "energy",
-      title: proofData.title || "Completed Mission LiFE Action",
-      content: proofData.notes || `Successfully completed verified sustainability micro-task. Avoided ${co2Kg} kg CO₂!`,
-      co2SavedKg: co2Kg,
-      points: points,
-      likes: 1,
-      likedBy: [userId],
-      timestamp: "Just now",
-      photoUrl: proofData.url,
-      verified: true
-    };
-    saveLocalFeedPost(newPost);
-  }
-
-  if (!isFirebaseConnected || !db) return { success: true, localOnly: true };
+  if (!isFirebaseConnected || !db) return;
 
   try {
     const userRef = doc(db, 'users', userId);
     await updateDoc(userRef, {
-      lifeScore: increment(points),
-      scoreTodayDelta: increment(points),
-      streak: increment(1)
+      monthlyFootprintKg: updatedData.monthlyFootprintKg,
+      footprintDeltaPercent: updatedData.footprintDeltaPercent,
+      breakdown: updatedData.breakdown,
+      lastCalculationDate: new Date().toISOString()
     });
-
-    const commRef = doc(db, 'communityStats', 'global');
-    await updateDoc(commRef, {
-      actionsCompleted: increment(1),
-      co2SavedKg: increment(Math.round(co2Kg))
-    });
-
-    // Record verified action document
-    await addDoc(collection(db, 'verifiedActions'), {
-      userId,
-      missionId,
-      points,
-      co2Kg,
-      proofUrl: proofData?.url || null,
-      proofNote: proofData?.notes || null,
-      timestamp: new Date().toISOString()
-    });
-
-    return { success: true };
   } catch (err) {
-    console.warn("Firestore mission record fallback:", err.message);
-    return { success: true, localOnly: true };
+    console.warn("Firestore saveUserFootprint fallback:", err.message);
   }
 }
 
 /**
- * Community Social Feed Management
+ * Records a verified daily challenge completion
+ */
+export async function recordMissionCompleted(userId, mission, proofData = null) {
+  if (!userId || !mission) return;
+
+  const actionRecord = {
+    userId,
+    taskId: mission.id,
+    missionTitle: mission.title,
+    theme: mission.theme,
+    points: mission.points,
+    co2Kg: mission.co2Kg,
+    proofUrl: proofData?.photoUrl || null,
+    notes: proofData?.notes || null,
+    status: proofData?.photoUrl ? 'verified' : 'self_reported',
+    timestamp: new Date().toISOString()
+  };
+
+  if (!isFirebaseConnected || !db) {
+    return actionRecord;
+  }
+
+  try {
+    // 1. Add action log
+    const actionsRef = collection(db, 'verifiedActions');
+    await addDoc(actionsRef, actionRecord);
+
+    // 2. Increment user total points and streak
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, {
+      lifeScore: increment(mission.points),
+      scoreTodayDelta: increment(mission.points)
+    });
+
+    // 3. Update community impact document
+    const commRef = doc(db, 'communityGoals', 'gujarat_state_goal_2026');
+    await updateDoc(commRef, {
+      actionsCompleted: increment(1),
+      co2SavedKg: increment(mission.co2Kg)
+    }).catch(() => {});
+
+  } catch (err) {
+    console.warn("Firestore recordMissionCompleted fallback:", err.message);
+  }
+
+  return actionRecord;
+}
+
+/**
+ * Fetches latest social action feed posts from Firestore or local cache
  */
 export async function getCommunityFeed() {
   if (isFirebaseConnected && db) {
     try {
-      const q = query(collection(db, 'feedPosts'), orderBy('createdAt', 'desc'), limit(15));
+      const q = query(
+        collection(db, 'feedPosts'),
+        orderBy('createdAt', 'desc'),
+        limit(20)
+      );
       const snap = await getDocs(q);
       if (!snap.empty) {
-        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const posts = [];
+        snap.forEach(d => posts.push({ id: d.id, ...d.data() }));
+        localStorage.setItem(FEED_STORAGE_KEY, JSON.stringify(posts));
+        return posts;
       }
     } catch (err) {
       console.warn("Firestore getCommunityFeed fallback:", err.message);
     }
   }
 
-  // Fallback to local storage or defaults
+  // Fallback to local storage
   try {
     const local = localStorage.getItem(FEED_STORAGE_KEY);
     if (local) return JSON.parse(local);
   } catch (e) {}
-  return INITIAL_FEED_POSTS;
+  return [];
 }
 
 export async function createFeedPost(postData) {
@@ -234,14 +190,13 @@ function saveLocalFeedPost(post) {
 function getLocalFeed() {
   try {
     const raw = localStorage.getItem(FEED_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : INITIAL_FEED_POSTS;
+    return raw ? JSON.parse(raw) : [];
   } catch (e) {
-    return INITIAL_FEED_POSTS;
+    return [];
   }
 }
 
 export async function likeFeedPost(postId, userId) {
-  // Update local
   try {
     const feed = getLocalFeed();
     const target = feed.find(p => p.id === postId);
@@ -249,7 +204,7 @@ export async function likeFeedPost(postId, userId) {
       const hasLiked = target.likedBy?.includes(userId);
       target.likes = hasLiked ? target.likes - 1 : target.likes + 1;
       target.likedBy = hasLiked 
-        ? target.likedBy.filter(id => id !== userId) 
+        ? target.likedBy.filter(id => id !== userId)
         : [...(target.likedBy || []), userId];
       localStorage.setItem(FEED_STORAGE_KEY, JSON.stringify(feed));
     }
@@ -262,43 +217,40 @@ export async function likeFeedPost(postId, userId) {
         likes: increment(1)
       });
     } catch (err) {
-      console.warn("Firestore like fallback:", err.message);
+      console.warn("Firestore likeFeedPost fallback:", err.message);
     }
   }
 }
 
 /**
- * Solar Feasibility Inquiry submission
+ * Creates solar rooftop quotation request
  */
-export async function submitSolarInquiry(inquiryData) {
-  const refCode = `GEDA-SOLAR-${Math.floor(100000 + Math.random() * 900000)}`;
-  const record = {
+export async function createSolarInquiry(inquiryData) {
+  const randNum = typeof crypto !== 'undefined' && crypto.getRandomValues ? (crypto.getRandomValues(new Uint32Array(1))[0] % 900000 + 100000) : (Date.now() % 900000 + 100000);
+  const refCode = `GEDA-SOLAR-${randNum}`;
+  const newInquiry = {
     ...inquiryData,
     referenceCode: refCode,
-    status: "Pending GEDA Empanelled Vendor Callback",
+    status: 'Site Survey Pending',
     createdAt: new Date().toISOString()
   };
 
   try {
     const existing = JSON.parse(localStorage.getItem(INQUIRIES_STORAGE_KEY) || '[]');
-    existing.unshift(record);
+    existing.unshift(newInquiry);
     localStorage.setItem(INQUIRIES_STORAGE_KEY, JSON.stringify(existing));
-  } catch (e) {}
+  } catch (e) {
+    console.error("Local solar inquiry storage error:", e);
+  }
 
   if (isFirebaseConnected && db) {
     try {
-      await addDoc(collection(db, 'solarInquiries'), record);
+      const docRef = await addDoc(collection(db, 'solarLeads'), newInquiry);
+      newInquiry.id = docRef.id;
     } catch (err) {
-      console.warn("Firestore solar inquiry fallback:", err.message);
+      console.warn("Firestore createSolarInquiry fallback:", err.message);
     }
   }
 
-  return { success: true, referenceCode: refCode };
-}
-
-/**
- * Vendors Directory
- */
-export async function getVendorsDirectory() {
-  return VENDORS_DIRECTORY;
+  return newInquiry;
 }

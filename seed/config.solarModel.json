@@ -1,0 +1,24 @@
+{
+  "id": "solarModel",
+  "costPerKwInr": 55000,
+  "costTiers": [
+    { "capacityKw": 1, "totalCostInr": 55000 },
+    { "capacityKw": 2, "totalCostInr": 110000 },
+    { "capacityKw": 3, "totalCostInr": 165000 },
+    { "capacityKw": 4, "totalCostInr": 220000 },
+    { "capacityKw": 5, "totalCostInr": 275000 }
+  ],
+  "benchmarkCostPerKwInr": 55000,
+  "annualIrradianceKwhPerM2": 5.4,
+  "dailyGenerationPerKwKwh": 4.3,
+  "sqFtPerKw": 100,
+  "annualDegradationPercent": 0.7,
+  "systemLifespanYears": 25,
+  "gridFeedInRateInrPerKwh": 2.25,
+  "source": "Gujarat Renewable Energy Policy 2023-2028 & GEDA Empanelment Benchmark Pricing",
+  "sourceUrl": "https://geda.gujarat.gov.in",
+  "year": 2024,
+  "provisional": false,
+  "lastVerified": "2026-10-31T00:00:00Z"
+}
+

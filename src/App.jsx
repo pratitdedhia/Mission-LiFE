@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
-import Dashboard from './components/Dashboard';
 import FootprintCalculator from './components/FootprintCalculator';
 import DailyMissions from './components/DailyMissions';
 import CommunityImpact from './components/CommunityImpact';
@@ -9,19 +8,33 @@ import SolarAdvisor from './components/SolarAdvisor';
 import GreenDirectory from './components/GreenDirectory';
 import AICoach from './components/AICoach';
 import ApplianceScanner from './components/ApplianceScanner';
-import ApplianceInventoryPage from './app/inventory/page';
-import AdminDashboard from './components/AdminDashboard';
-import SolarVendorDashboard from './components/SolarVendorDashboard';
-import CampusLeaderDashboard from './components/CampusLeaderDashboard';
-import StudentPortal from './components/StudentPortal';
-import InsightsView from './components/InsightsView';
 import ErrorBoundary from './components/ErrorBoundary';
 import LandingPage from './components/LandingPage';
 import AuthModal from './components/AuthModal';
 import PledgeModal from './components/PledgeModal';
 import OnboardingModal from './components/OnboardingModal';
 
-import { INITIAL_USER, INITIAL_COMMUNITY } from './data/initialData';
+// Route-level code-splitting for dashboards and secondary views
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const ApplianceInventoryPage = lazy(() => import('./components/ApplianceInventoryPage'));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
+const SolarVendorDashboard = lazy(() => import('./components/SolarVendorDashboard'));
+const CampusLeaderDashboard = lazy(() => import('./components/CampusLeaderDashboard'));
+const StudentPortal = lazy(() => import('./components/StudentPortal'));
+const InsightsView = lazy(() => import('./components/InsightsView'));
+
+function ViewLoader() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[350px] p-8 text-center space-y-3 animate-fade-in">
+      <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+      <span className="text-xs font-mono text-slate-500 uppercase tracking-wider">
+        Loading View...
+      </span>
+    </div>
+  );
+}
+
+import { getCommunityGoals } from './services/catalogService';
 import { BRANDING } from './config/branding';
 import { isFirebaseConnected } from './firebase';
 import { 
@@ -50,10 +63,20 @@ export default function App() {
   const [community, setCommunity] = useState(() => {
     try {
       const saved = localStorage.getItem('life_community');
-      return saved ? JSON.parse(saved) : INITIAL_COMMUNITY;
-    } catch (e) {
-      return INITIAL_COMMUNITY;
-    }
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      citizensCount: 0,
+      actionsCompleted: 0,
+      energySavedGWh: 0,
+      co2SavedKg: 0,
+      co2TargetKg: 200000,
+      waterSavedLitres: "0L",
+      plasticAvoidedKg: 0,
+      activeCampaign: "Gujarat Mission LiFE Sprint 2026",
+      participatingDistricts: 33,
+      verifiedInstallations: 0
+    };
   });
 
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -117,7 +140,10 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = subscribeAuth((remoteProfile) => {
       if (remoteProfile) {
-        setUser(prev => ({ ...prev, ...remoteProfile }));
+        setUser(remoteProfile);
+      } else {
+        // Not authenticated in Firebase: reset to guest citizen, never trust untrusted localStorage elevated roles
+        setUser(getDefaultUserProfile());
       }
     });
     return () => unsubscribe();
@@ -200,8 +226,8 @@ export default function App() {
     const verifiedCo2 = authResult.co2KgSaved;
     const newCompleted = [...(user.completedMissions || []), missionId];
     const newActive = (user.activeMissions || []).filter(id => id !== missionId);
-    const newScore = user.lifeScore + awardedPoints;
-    const newStreak = user.streak + 1;
+    const newScore = (user.lifeScore || 0) + awardedPoints;
+    const newStreak = authResult.newStreak ?? authResult.streak ?? user.streak ?? 1;
 
     setUser(prev => ({
       ...prev,
@@ -291,6 +317,8 @@ export default function App() {
     const res = await loginWithDemoPreset(roleKey);
     if (res.success) {
       handleAuthSuccess(res.user);
+    } else {
+      showToast(res.error || "Demo authentication failed.");
     }
   };
 
@@ -370,7 +398,8 @@ export default function App() {
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
           <ErrorBoundary key={activeTab}>
-          {activeTab === 'dashboard' && (
+            <Suspense fallback={<ViewLoader />}>
+              {activeTab === 'dashboard' && (
             <Dashboard
               user={user}
               community={community}
@@ -510,6 +539,7 @@ export default function App() {
               onNavigate={setActiveTab}
             />
           )}
+            </Suspense>
           </ErrorBoundary>
         </main>
       </div>

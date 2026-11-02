@@ -32,12 +32,12 @@ import {
   X
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { INITIAL_SOLAR_INQUIRIES } from '../data/initialData';
+import { useConfig } from '../services/configService';
 import { 
   getStoredLeads, 
-  sendVendorChatMessage, 
-  EMPANELLED_VENDORS 
+  sendVendorChatMessage
 } from '../services/solarQuoteService';
+import { getIstTomorrowString } from '../utils/dateUtils';
 
 const STATUS_CONFIG = {
   "Site Survey Pending": {
@@ -63,6 +63,7 @@ const STATUS_CONFIG = {
 };
 
 export default function SolarVendorDashboard({ user = {}, activeTab = 'solar_vendor', setActiveTab }) {
+  const { data: subsidyRules } = useConfig('subsidyRules');
   // Determine internal sub-tab based on activeTab
   const [internalView, setInternalView] = useState(() => {
     if (activeTab === 'vendor_chat') return 'chat';
@@ -92,9 +93,9 @@ export default function SolarVendorDashboard({ user = {}, activeTab = 'solar_ven
   const [inquiries, setInquiries] = useState(() => {
     try {
       const saved = localStorage.getItem('life_solar_inquiries');
-      return saved ? JSON.parse(saved) : INITIAL_SOLAR_INQUIRIES;
+      return saved ? JSON.parse(saved) : [];
     } catch (e) {
-      return INITIAL_SOLAR_INQUIRIES;
+      return [];
     }
   });
 
@@ -110,7 +111,7 @@ export default function SolarVendorDashboard({ user = {}, activeTab = 'solar_ven
   const [quoteTab, setQuoteTab] = useState('preset'); // 'preset' | 'pdf'
   const [quoteCapacityKw, setQuoteCapacityKw] = useState(3.2);
   const [quoteGrossCost, setQuoteGrossCost] = useState(198400);
-  const [quoteSubsidy, setQuoteSubsidy] = useState(78000);
+  const [quoteSubsidy, setQuoteSubsidy] = useState(0);
   const [quoteNetPayable, setQuoteNetPayable] = useState(120400);
   const [quoteAnnualKwh, setQuoteAnnualKwh] = useState(4960);
   const [quoteAnnualSavings, setQuoteAnnualSavings] = useState(32240);
@@ -190,20 +191,30 @@ export default function SolarVendorDashboard({ user = {}, activeTab = 'solar_ven
   };
 
   // Open the customized quotation modal with intelligent lead presets
+  const calculateTierSubsidy = (kw) => {
+    if (!subsidyRules?.centralSubsidyTiers) return 0;
+    let sub = 0;
+    const sorted = [...subsidyRules.centralSubsidyTiers].sort((a, b) => a.capacityKw - b.capacityKw);
+    for (const t of sorted) {
+      if (kw >= t.capacityKw) sub = t.subsidyAmountInr;
+    }
+    return Math.min(sub, subsidyRules.maxCentralSubsidyInr || sub);
+  };
+
   const handleOpenQuoteModal = (inq) => {
     setActiveInquiryModal(inq);
     setActionType('quote');
     const cap = parseFloat(inq.recommendedKw) || 3.2;
     setQuoteCapacityKw(cap);
-    const gross = inq.grossBenchmarkCost || Math.round(cap * 62000);
+    const gross = inq.grossBenchmarkCost || Math.round(cap * (subsidyRules?.benchmarkCostPerKwInr || 55000));
     setQuoteGrossCost(gross);
-    const sub = inq.cfaSubsidyEstimated || (cap <= 2 ? Math.round(cap * 30000) : 78000);
+    const sub = inq.cfaSubsidyEstimated || calculateTierSubsidy(cap);
     setQuoteSubsidy(sub);
     const net = Math.max(0, gross - sub);
     setQuoteNetPayable(net);
     const kwh = Math.round(cap * 1550);
     setQuoteAnnualKwh(kwh);
-    const savings = Math.round(kwh * 6.5);
+    const savings = Math.round(kwh * 6);
     setQuoteAnnualSavings(savings);
     setQuotePaybackYears(savings > 0 ? (net / savings).toFixed(1) : '2.5');
     setQuotePanelBrand("Waaree Bi-Facial TOPCon 550W Mono Perc (ALMM Listed)");
@@ -219,15 +230,15 @@ export default function SolarVendorDashboard({ user = {}, activeTab = 'solar_ven
   const handleCapacityChange = (val) => {
     const kw = parseFloat(val) || 0;
     setQuoteCapacityKw(kw);
-    const gross = Math.round(kw * 62000);
+    const gross = Math.round(kw * (subsidyRules?.benchmarkCostPerKwInr || 55000));
     setQuoteGrossCost(gross);
-    const sub = kw <= 2 ? Math.round(kw * 30000) : 78000;
+    const sub = calculateTierSubsidy(kw);
     setQuoteSubsidy(sub);
     const net = Math.max(0, gross - sub);
     setQuoteNetPayable(net);
     const kwh = Math.round(kw * 1550);
     setQuoteAnnualKwh(kwh);
-    const savings = Math.round(kwh * 6.5);
+    const savings = Math.round(kwh * 6);
     setQuoteAnnualSavings(savings);
     setQuotePaybackYears(savings > 0 ? (net / savings).toFixed(1) : '2.5');
   };
@@ -292,7 +303,7 @@ export default function SolarVendorDashboard({ user = {}, activeTab = 'solar_ven
         return;
       }
       if (!quoteGrossCost || Number(quoteGrossCost) <= 0) {
-        showToast("Please enter a valid gross benchmark cost (> ₹0).");
+        showToast("Please enter a valid gross benchmark cost (> 0).");
         return;
       }
       if (Number(quoteSubsidy) < 0) {
@@ -630,7 +641,7 @@ ${quoteNotes ? `• Notes: "${quoteNotes}"` : ''}`;
                     {/* Subsidy note */}
                     <div className="p-2.5 bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/40 rounded-xl text-xs flex items-center justify-between mb-3">
                       <span className="text-emerald-800 dark:text-emerald-300 font-medium">PM Surya Ghar Subsidy:</span>
-                      <span className="font-bold text-emerald-700 dark:text-emerald-400 font-mono">₹{(inq.cfaSubsidyEstimated || inq.cfaSubsidy || 78000).toLocaleString()}</span>
+                      <span className="font-bold text-emerald-700 dark:text-emerald-400 font-mono">₹{(inq.cfaSubsidyEstimated || inq.cfaSubsidy || subsidyRules?.maxCentralSubsidyInr || 0).toLocaleString()}</span>
                     </div>
 
                     {inq.surveySchedule && (
@@ -651,7 +662,7 @@ ${quoteNotes ? `• Notes: "${quoteNotes}"` : ''}`;
                         onClick={() => {
                           setActiveInquiryModal(inq);
                           setActionType('survey');
-                          setSurveyDate(new Date(Date.now() + 86400000).toISOString().split('T')[0]);
+                          setSurveyDate(getIstTomorrowString());
                         }}
                         className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer"
                       >
@@ -1003,7 +1014,7 @@ ${quoteNotes ? `• Notes: "${quoteNotes}"` : ''}`;
                 { step: "02", title: "Technical Sanction", desc: "DISCOM Junior Engineer inspects transformer capacity.", done: true },
                 { step: "03", title: "Installation & CEI", desc: "ALMM modules & inverter installed; CEI safety test report.", done: true },
                 { step: "04", title: "Bi-Directional Meter", desc: "DISCOM installs smart bi-directional net-meter at consumer premises.", done: false },
-                { step: "05", title: "CFA Subsidy Release", desc: "Direct Bank Transfer (DBT) of ₹78,000 to citizen account.", done: false }
+                { step: "05", title: "CFA Subsidy Release", desc: "Direct Bank Transfer (DBT) release to citizen account.", done: false }
               ].map((st, i) => (
                 <div 
                   key={i} 
@@ -1072,7 +1083,7 @@ ${quoteNotes ? `• Notes: "${quoteNotes}"` : ''}`;
                   Empanelled Solar PV Modules & Inverters Catalog
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Tier-1 equipment approved for the direct ₹78,000 PM Surya Ghar Central subsidy.
+                  Tier-1 equipment approved for the direct PM Surya Ghar Central subsidy.
                 </p>
               </div>
 
@@ -1150,21 +1161,13 @@ ${quoteNotes ? `• Notes: "${quoteNotes}"` : ''}`;
                 Official PM Surya Ghar Direct Benefit Transfer (DBT) Slabs
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-                  <span className="text-slate-400 text-[10px] font-mono block">1.0 kW System</span>
-                  <span className="text-lg font-bold font-mono text-emerald-600 block mt-0.5">₹30,000 CFA</span>
-                  <span className="text-[10px] text-slate-500">₹30,000 / kW slab</span>
-                </div>
-                <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-                  <span className="text-slate-400 text-[10px] font-mono block">2.0 kW System</span>
-                  <span className="text-lg font-bold font-mono text-emerald-600 block mt-0.5">₹60,000 CFA</span>
-                  <span className="text-[10px] text-slate-500">₹30,000 / kW slab</span>
-                </div>
-                <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-                  <span className="text-slate-400 text-[10px] font-mono block">3.0 kW+ System</span>
-                  <span className="text-lg font-bold font-mono text-emerald-600 block mt-0.5">₹78,000 CFA</span>
-                  <span className="text-[10px] text-slate-500">Maximum Central cap</span>
-                </div>
+                {(subsidyRules?.centralSubsidyTiers || []).map((tier, idx) => (
+                  <div key={idx} className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                    <span className="text-slate-400 text-[10px] font-mono block">{tier.capacityKw.toFixed(1)} kW System</span>
+                    <span className="text-lg font-bold font-mono text-emerald-600 block mt-0.5">₹{tier.subsidyAmountInr.toLocaleString('en-IN')} CFA</span>
+                    <span className="text-[10px] text-slate-500">Tier {idx + 1} slab</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

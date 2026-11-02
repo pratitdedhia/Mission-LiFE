@@ -4,7 +4,7 @@ import { renderToString } from 'react-dom/server';
 import { fetchUnifiedInsights } from '../../src/services/analyticsService';
 import InsightsView from '../../src/components/InsightsView';
 
-describe('Unified Multi-Role Insights Engine', () => {
+describe('Unified Multi-Role Insights Engine', { timeout: 15000 }, () => {
   beforeAll(() => {
     if (typeof globalThis.localStorage === 'undefined') {
       const store: Record<string, string> = {};

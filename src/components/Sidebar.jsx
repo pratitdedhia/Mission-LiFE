@@ -19,11 +19,11 @@ import {
   TrendingUp,
   Cpu
 } from 'lucide-react';
-import { TRANSLATIONS } from '../data/initialData';
+import { useTranslation } from 'react-i18next';
 import { BRANDING } from '../config/branding';
 
 export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, user, onOpenAuth }) {
-  const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+  const { t } = useTranslation();
   const userRole = user?.role || 'citizen';
 
   // Base navigation items tailored by role (Strict RBAC: admin only for role === 'admin')
@@ -63,21 +63,21 @@ export default function Sidebar({ activeTab, setActiveTab, lang, onOpenPledge, u
       { id: 'admin_impact', label: 'Impact Analytics', icon: TrendingUp, badge: 'Planning' },
       { id: 'admin_users', label: 'User Login Controls', icon: Users, badge: 'RBAC' },
       { id: 'admin_solar', label: 'Rooftop Pipeline', icon: SunMedium, badge: 'MNRE' },
-      { id: 'directory', label: t.navDirectory, icon: BookOpen }
+      { id: 'directory', label: t('nav.directory', { defaultValue: 'Vendors Directory' }), icon: BookOpen }
     ];
   } else {
     // Default Citizen role - strict RBAC: no student portal or admin view exposed to citizens
     navItems = [
-      { id: 'dashboard', label: t.navDashboard, icon: LayoutDashboard },
+      { id: 'dashboard', label: t('nav.dashboard', { defaultValue: 'Home' }), icon: LayoutDashboard },
       { id: 'insights', label: 'Insights', icon: TrendingUp, badge: 'Analytics' },
       { id: 'scan', label: 'Appliance Scanner', icon: Camera, badge: 'YOLOv8' },
       { id: 'inventory', label: 'My Appliances', icon: Cpu, badge: 'IoT' },
-      { id: 'footprint', label: t.navFootprint, icon: Footprints },
-      { id: 'missions', label: t.navMissions, icon: CheckCircle2 },
-      { id: 'community', label: t.navCommunity, icon: Users },
-      { id: 'solar', label: t.navSolar, icon: SunMedium },
-      { id: 'directory', label: t.navDirectory, icon: BookOpen },
-      { id: 'coach', label: t.navCoach, icon: Bot }
+      { id: 'footprint', label: t('nav.footprint', { defaultValue: 'Footprint Tracker' }), icon: Footprints },
+      { id: 'missions', label: t('nav.missions', { defaultValue: 'Daily Challenges' }), icon: CheckCircle2 },
+      { id: 'community', label: t('nav.community', { defaultValue: 'Community & Feed' }), icon: Users },
+      { id: 'solar', label: t('nav.solar', { defaultValue: 'Solar Advisor' }), icon: SunMedium },
+      { id: 'directory', label: t('nav.directory', { defaultValue: 'Green Directory' }), icon: BookOpen },
+      { id: 'coach', label: t('nav.coach', { defaultValue: 'LiFE AI Coach' }), icon: Bot }
     ];
   }
 
