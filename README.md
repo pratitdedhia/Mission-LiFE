@@ -40,8 +40,8 @@ To facilitate thorough evaluation without tedious registration, 5 pre-configured
 | :--- | :--- | :--- | :--- |
 | **Citizen** | Pooja Patel (`usr_citizen_pooja`) | Ahmedabad (UGVCL) | Live Wokwi potentiometer telemetry, peak ToD nudges, appliance inventory, and solar feasibility. |
 | **Student** | Priyan Patel (`usr_student_priyan`) | IIT Gandhinagar | ID verification proof submission, collegiate habit points, and squad contributions. |
-| **Campus Leader** | Arun Verma (`usr_leader_arun`) | IIT Gandhinagar Eco Squad | ID card audit approval queue, privacy-safe departmental metrics, and inter-collegiate rankings. |
-| **Solar Partner** | Ketan Joshi (`usr_partner_ketan`) | Surya Urja Solutions (A-Grade) | 6-stage PM Surya Ghar pipeline, quote generation, and two-way citizen chat liaison. |
+| **Campus Leader** | Aarav Mehta (`usr_campus_aarav`) | IIT Gandhinagar Eco Squad | ID card audit approval queue, privacy-safe departmental metrics, and inter-collegiate rankings. |
+| **Solar Partner** | Rajesh Shah (`usr_vendor_rajesh`) | Surya Urja Solutions Gujarat | 6-stage PM Surya Ghar pipeline, quote generation, and two-way citizen chat liaison. |
 | **State Admin** | Dr. Neha Joshi (`usr_admin_neha`) | Directorate of Energy Conservation | Statewide cross-role aggregations, 33-district energy heatmap, and audited CSV data export. |
 
 ---
@@ -291,7 +291,7 @@ Accessible via the **Insights** tab for all five profiles, providing customized 
 ## 15. Verification, Testing & CI Guards
 
 ```powershell
-# 1. Run Vitest test suite (79 passing tests across 10 suites)
+# 1. Run Vitest test suite (80 passing tests across 10 suites)
 cmd /c npx vitest run
 
 # 2. Run Pytest backend test suite (11 passing tests across 3 suites)
@@ -389,7 +389,7 @@ cmd /c npx tsx scripts/seed.ts --only config
 
 | Judging Criterion | Weight | How Mission LiFE Satisfies It |
 | :--- | :---: | :--- |
-| **Technical Execution & Code Quality** | **40%** | Zero-hardcoding contract, React 19 + Tailwind v4, Pydantic validation, token bucket rate limiting, 79 Vitest tests, 11 Pytest tests, 0 audit vulnerabilities. |
+| **Technical Execution & Code Quality** | **40%** | Zero-hardcoding contract, React 19 + Tailwind v4, Pydantic validation, token bucket rate limiting, 80 Vitest tests, 11 Pytest tests, 0 audit vulnerabilities. |
 | **Architecture & Scalability** | **30%** | Dynamic configuration caching (5-min TTL), two-tier RBAC rules, persistent disk buffer, Wokwi IoT bridge, lazy-loaded ML weights. |
 | **UI/UX Excellence** | **20%** | 5 specialized stakeholder portals, responsive SVG insights charts, dark/light theme, multi-lingual (English, Gujarati, Hindi). |
 | **Innovation & Problem Fit** | **10%** | Solves Gujarat's 6–10 PM peak load stress under GERC ToD regulations and streamlines PM Surya Ghar rooftop solar onboarding. |
