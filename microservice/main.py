@@ -301,9 +301,18 @@ def get_yolo_model():
         if _yolo_model is None:
             try:
                 from ultralytics import YOLO
-                weights_path = os.environ.get("YOLO_WEIGHTS_PATH", "yolov8n.pt")
-                if os.path.exists(weights_path) or weights_path == "yolov8n.pt":
-                    _yolo_model = YOLO(weights_path)
+                custom_weights = os.path.join(os.path.dirname(__file__), "appliance_best.pt")
+                weights_path = os.environ.get("YOLO_WEIGHTS_PATH")
+                if not weights_path:
+                    if os.path.exists(custom_weights):
+                        weights_path = custom_weights
+                    elif os.path.exists("appliance_best.pt"):
+                        weights_path = "appliance_best.pt"
+                    else:
+                        weights_path = "yolov8n.pt"
+
+                logger.info(f"Loading YOLOv8 weights: {weights_path}")
+                _yolo_model = YOLO(weights_path)
             except Exception as e:
                 logger.info(f"YOLOv8 model lazy loading notice: {e}")
                 _yolo_model = None
@@ -563,6 +572,23 @@ async def scan_appliance(file: UploadFile = File(...)):
             detail="Appliance vision model is currently unavailable."
         )
 
+    CUSTOM_CLASS_MAPPING = {
+        "air": "air_conditioner",
+        "air conditioner": "air_conditioner",
+        "hot water shower machine": "water_heater_geyser",
+        "microwave oven": "microwave",
+        "electric cooker": "induction_cooktop",
+        "electriccooker": "induction_cooktop",
+        "super kettle": "induction_cooktop",
+        "refrigerator": "refrigerator",
+        "microwave": "microwave",
+        "tv": "television",
+        "television": "television",
+        "fan": "ceiling_fan",
+        "washing machine": "washing_machine",
+        "laptop": "laptop",
+    }
+
     try:
         results = yolo(image, verbose=False)
         for r in results:
@@ -571,11 +597,16 @@ async def scan_appliance(file: UploadFile = File(...)):
                 class_name = yolo.names.get(cls_id, "").lower()
                 conf = float(box.conf[0].item())
 
+                # 1. Direct custom/standard alias mapping
+                mapped_key = CUSTOM_CLASS_MAPPING.get(class_name)
                 appliance_key = None
-                for candidate in appliance_specs:
-                    if candidate in class_name or class_name in candidate:
-                        appliance_key = candidate
-                        break
+                if mapped_key and mapped_key in appliance_specs:
+                    appliance_key = mapped_key
+                else:
+                    for candidate in appliance_specs:
+                        if candidate in class_name or class_name in candidate:
+                            appliance_key = candidate
+                            break
 
                 if appliance_key and conf >= 0.25:
                     specs = appliance_specs[appliance_key]

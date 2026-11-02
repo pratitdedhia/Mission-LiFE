@@ -145,3 +145,23 @@ def test_insights_role_authorization(client):
     assert r_admin.status_code == 200
     assert r_admin.json()["role"] == "admin"
 
+
+def test_appliance_scan_endpoint(client):
+    """POST /api/scan with valid image returns structured appliance vision response."""
+    import io
+    import numpy as np
+    import cv2
+
+    # Create a small valid test JPEG
+    dummy = np.full((120, 160, 3), 200, dtype=np.uint8)
+    _, encoded = cv2.imencode(".jpg", dummy)
+    buf = io.BytesIO(encoded.tobytes())
+
+    response = client.post("/api/scan", files={"file": ("test.jpg", buf, "image/jpeg")})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "detection" in data
+    assert "appliances_detected_count" in data
+    assert "total_estimated_instant_wattage" in data
+

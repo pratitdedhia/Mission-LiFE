@@ -52,3 +52,11 @@ ui-debug.log*
 
 # Microservice runtime disk ledger
 microservice/telemetry_store.jsonl
+
+# ML training datasets, scratch runs, and weights
+microservice/dataset/
+microservice/dataset_curated/
+microservice/runs/
+scratch_test_run/
+*.pt
+!microservice/appliance_best.pt

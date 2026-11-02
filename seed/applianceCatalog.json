@@ -10,7 +10,7 @@
     "monthlyCo2e": 172.5,
     "tip": "Set thermostat to 24°C–26°C with ceiling fan on low speed to save 24% domestic power.",
     "targetMissions": ["clean_ac_filter", "ac_warrior"],
-    "yoloClass": "refrigerator"
+    "yoloClass": "air"
   },
   {
     "type": "refrigerator",
@@ -62,7 +62,7 @@
     "monthlyCo2e": 58.2,
     "tip": "Install a 15-minute timer shutoff; never leave heating elements on standby throughout the day.",
     "targetMissions": ["geyser_timer_shutoff"],
-    "yoloClass": "toaster"
+    "yoloClass": "hot water shower machine"
   },
   {
     "type": "television",
