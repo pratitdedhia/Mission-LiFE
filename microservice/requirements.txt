@@ -1,6 +1,5 @@
 # Pinned production requirements for FastAPI Telemetry & Vision Microservice
-# CPU-only PyTorch index for Render deployment:
-# --extra-index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
 
 fastapi==0.110.0
 uvicorn==0.28.0

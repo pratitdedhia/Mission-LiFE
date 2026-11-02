@@ -42,7 +42,9 @@ To facilitate thorough evaluation without tedious registration, 5 pre-configured
 | **Student** | Priyan Patel (`usr_student_priyan`) | IIT Gandhinagar | ID verification proof submission, collegiate habit points, and squad contributions. |
 | **Campus Leader** | Aarav Mehta (`usr_campus_aarav`) | IIT Gandhinagar Eco Squad | ID card audit approval queue, privacy-safe departmental metrics, and inter-collegiate rankings. |
 | **Solar Partner** | Rajesh Shah (`usr_vendor_rajesh`) | Surya Urja Solutions Gujarat | 6-stage PM Surya Ghar pipeline, quote generation, and two-way citizen chat liaison. |
-| **State Admin** | Dr. Neha Joshi (`usr_admin_neha`) | Directorate of Energy Conservation | Statewide cross-role aggregations, 33-district energy heatmap, and audited CSV data export. |
+| **State Admin** | Dr. Neha Joshi (`usr_admin_neha`) | Directorate of Energy Conservation | Statewide cross-role aggregations, 33-district energy heatmap, and audited CSV data export. Manual sign-in: `admin@gmail.com` / `admin`. |
+
+> **Note on Registration Security:** Public user registration strictly excludes State Administrator accounts. New users can register only as **Citizen**, **Student**, **Solar Partner**, or **Campus Leader** (subject to institutional / state clearance workflows). State Administrator access is restricted to official GEDA credentials or the 1-Click Evaluation Preset.
 
 ---
 
@@ -389,7 +391,7 @@ cmd /c npx tsx scripts/seed.ts --only config
 
 | Judging Criterion | Weight | How Mission LiFE Satisfies It |
 | :--- | :---: | :--- |
-| **Technical Execution & Code Quality** | **40%** | Zero-hardcoding contract, React 19 + Tailwind v4, Pydantic validation, token bucket rate limiting, 80 Vitest tests, 11 Pytest tests, 0 audit vulnerabilities. |
+| **Technical Execution & Code Quality** | **40%** | Zero-hardcoding contract, React 19 + Tailwind v4, Pydantic validation, token bucket rate limiting, 81 Vitest tests, 11 Pytest tests, 0 audit vulnerabilities. |
 | **Architecture & Scalability** | **30%** | Dynamic configuration caching (5-min TTL), two-tier RBAC rules, persistent disk buffer, Wokwi IoT bridge, lazy-loaded ML weights. |
 | **UI/UX Excellence** | **20%** | 5 specialized stakeholder portals, responsive SVG insights charts, dark/light theme, multi-lingual (English, Gujarati, Hindi). |
 | **Innovation & Problem Fit** | **10%** | Solves Gujarat's 6–10 PM peak load stress under GERC ToD regulations and streamlines PM Surya Ghar rooftop solar onboarding. |

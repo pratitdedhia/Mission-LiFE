@@ -12,7 +12,6 @@ import {
   Sparkles,
   GraduationCap,
   SunMedium,
-  Building2,
   Check,
   Upload,
   FileCheck,
@@ -78,17 +77,6 @@ const ROLES = [
     approvalAuthority: 'GEDA State Admin',
     badgeColor: 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800',
     description: 'Designated campus climate lead • Approved by GEDA State Admin to audit student verifications.'
-  },
-  { 
-    id: 'admin', 
-    label: 'State Admin', 
-    icon: '🏛️',
-    fullTitle: 'GEDA State Energy Officer',
-    approvalBadge: 'To be approved by Campus Leader',
-    approvalType: 'campus_leader',
-    approvalAuthority: 'Campus Leader / Oversight Directorate',
-    badgeColor: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700',
-    description: 'State agency energy officer • High-level oversight for Gujarat Energy Development Agency planning.'
   }
 ];
 
@@ -129,11 +117,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
   const [leaderRoleTitle, setLeaderRoleTitle] = useState('Eco-Squad Convener & Youth Fellow');
   const [leaderPhone, setLeaderPhone] = useState('');
   const [leaderYear, setLeaderYear] = useState('3rd Year');
-
-  // State Admin-specific registration state
-  const [adminDepartment, setAdminDepartment] = useState('Directorate of Energy Conservation & Solar');
-  const [adminEmployeeCode, setAdminEmployeeCode] = useState('');
-  const [adminPhone, setAdminPhone] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -239,11 +222,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
           setError("Please provide your contact phone number.");
           return;
         }
-      } else if (selectedRole === 'admin') {
-        if (!adminEmployeeCode.trim()) {
-          setError("Please enter your GEDA Officer Employee Code or State Authorization Passcode.");
-          return;
-        }
       }
     } else {
       if (!email.trim()) {
@@ -317,13 +295,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
         roleTitle: leaderRoleTitle.trim(),
         phone: leaderPhone.trim(),
         yearOfStudy: leaderYear
-      };
-    } else if (selectedRole === 'admin') {
-      extraMetadata = {
-        ...extraMetadata,
-        department: adminDepartment,
-        employeeCode: adminEmployeeCode.trim().toUpperCase(),
-        phone: adminPhone.trim() || "+91 79 2325 7200"
       };
     }
 
@@ -454,9 +425,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                     {submittedApproval.role === 'campus_leader' && (
                       "Your Campus Youth Leader fellowship registration is pending approval by the GEDA State Directorate. Once cleared, you will have authority to audit student IDs and launch campus sprints."
                     )}
-                    {submittedApproval.role === 'admin' && (
-                      "State Administrator access has been requested. Per dual-governance protocol, clearance is reviewed by the Campus Leadership Directorate."
-                    )}
                   </p>
                 </div>
               </div>
@@ -487,7 +455,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
                 {mode === 'signup' 
-                  ? 'Register as citizen, student, solar partner, campus leader, or state admin'
+                  ? 'Register as citizen, student, solar partner, or campus leader'
                   : 'Sign in to access your role-based dashboard'}
               </p>
             </div>
@@ -521,7 +489,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
               </button>
             </div>
 
-            {/* ROLE SELECTOR: 5 IDENTITIES WITH APPROVAL STATUS PILLS (Registration Only) */}
+            {/* ROLE SELECTOR: 4 IDENTITIES WITH APPROVAL STATUS PILLS (Registration Only) */}
             {mode === 'signup' && (
               <div className="mb-5 space-y-2">
                 <div className="flex items-center justify-between">
@@ -533,7 +501,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                   </span>
                 </div>
 
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
                   {ROLES.map((role) => {
                     const isSelected = selectedRole === role.id;
                     return (
@@ -620,8 +588,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                       placeholder={
                         selectedRole === 'student' ? "e.g. Priyan Patel" :
                         selectedRole === 'solar_vendor' ? "e.g. Rajesh Shah" :
-                        selectedRole === 'campus_leader' ? "e.g. Aarav Mehta" :
-                        selectedRole === 'admin' ? "e.g. Dr. Neha Joshi" : "e.g. Pooja Patel"
+                        selectedRole === 'campus_leader' ? "e.g. Aarav Mehta" : "e.g. Pooja Patel"
                       }
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
@@ -635,8 +602,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1 text-[11px]">
                   {selectedRole === 'student' ? "Institutional Student Email (.ac.in / .edu) *" : 
-                   selectedRole === 'solar_vendor' ? "Business / Work Email *" : 
-                   selectedRole === 'admin' ? "Official Government Email (@geda.gujarat.gov.in) *" : "Email Address *"}
+                   selectedRole === 'solar_vendor' ? "Business / Work Email *" : "Email Address *"}
                 </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
@@ -646,8 +612,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                     placeholder={
                       selectedRole === 'student' ? "student.priyan@iitgn.ac.in" :
                       selectedRole === 'solar_vendor' ? "vendor.rajesh@suryaurjagujarat.in" :
-                      selectedRole === 'campus_leader' ? "campus.aarav@iitgn.ac.in" :
-                      selectedRole === 'admin' ? "admin.neha@geda.gujarat.gov.in" : "citizen.pooja@gujaratlife.in"
+                      selectedRole === 'campus_leader' ? "campus.aarav@iitgn.ac.in" : "citizen.pooja@gujaratlife.in"
                     }
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -949,67 +914,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                         value={leaderPhone}
                         onChange={(e) => setLeaderPhone(e.target.value)}
                         className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ================================================================= */}
-              {/* ROLE-SPECIFIC FIELDS: STATE ADMIN (TO BE APPROVED BY CAMPUS LEADER) */}
-              {/* ================================================================= */}
-              {mode === 'signup' && selectedRole === 'admin' && (
-                <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-3">
-                  <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-700">
-                    <span className="text-[11px] font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <Building2 className="w-3.5 h-3.5 text-slate-700 dark:text-slate-300" />
-                      <span>GEDA Directorate Clearance Credentials</span>
-                    </span>
-                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-mono font-bold">
-                      Campus Leader Clearance
-                    </span>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1 text-[11px]">
-                      Directorate Wing / Department *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Directorate of Energy Conservation & Solar"
-                      value={adminDepartment}
-                      onChange={(e) => setAdminDepartment(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1 text-[11px]">
-                        Officer / Passcode Code *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. GEDA-OFFICER-2026-AHM"
-                        value={adminEmployeeCode}
-                        onChange={(e) => setAdminEmployeeCode(e.target.value)}
-                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white uppercase font-mono"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1 text-[11px]">
-                        Official Phone *
-                      </label>
-                      <input
-                        type="tel"
-                        required
-                        placeholder="e.g. +91 79 2325 7200"
-                        value={adminPhone}
-                        onChange={(e) => setAdminPhone(e.target.value)}
-                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white"
                       />
                     </div>
                   </div>

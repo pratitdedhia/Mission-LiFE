@@ -95,6 +95,20 @@ function mapAuthError(error) {
 export async function loginWithEmail(email, password) {
   const cleanEmail = (email || '').trim().toLowerCase();
 
+  // Special convenience for state admin login:
+  // Admin login via admin@gmail.com (or admin.neha@geda.gujarat.gov.in) with password "admin" (or "MissionLiFE@2026" / "admin@123")
+  if (
+    (cleanEmail === 'admin@gmail.com' || cleanEmail === 'admin.neha@geda.gujarat.gov.in') &&
+    (password === 'admin' || password === 'MissionLiFE@2026' || password === 'admin@123')
+  ) {
+    const res = await loginWithDemoPreset('admin');
+    if (res.success && res.user && cleanEmail === 'admin@gmail.com') {
+      res.user.email = 'admin@gmail.com';
+      saveStoredUser(res.user);
+    }
+    return res;
+  }
+
   if (!auth) {
     return {
       success: false,

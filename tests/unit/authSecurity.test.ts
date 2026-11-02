@@ -127,6 +127,27 @@ describe('C1 & C2: Authentication Security & Privilege Escalation Prevention', (
       expect(res.user.role).toBe('citizen');
       expect(res.user.role).not.toBe('admin');
     });
+
+    it('admin login via admin@gmail.com with password admin routes to authorized state admin persona', async () => {
+      mockSignInWithEmailAndPassword.mockResolvedValueOnce({
+        user: { uid: 'usr_admin_neha', email: 'admin.neha@geda.gujarat.gov.in', displayName: 'Dr. Neha Joshi' }
+      });
+      mockGetDoc.mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({
+          role: 'admin',
+          roleTitle: 'GEDA State Energy Officer',
+          name: 'Dr. Neha Joshi',
+          department: 'Directorate of Energy Conservation'
+        })
+      });
+
+      const res = await loginWithEmail('admin@gmail.com', 'admin');
+
+      expect(res.success).toBe(true);
+      expect(res.user.role).toBe('admin');
+      expect(res.user.name).toContain('Neha Joshi');
+    });
   });
 
   describe('C2: Privilege Escalation Prevention (registerWithEmail & LocalStorage)', () => {
